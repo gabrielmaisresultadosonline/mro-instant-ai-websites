@@ -187,7 +187,7 @@ REGRAS OBRIGATÓRIAS:
 - Use Tailwind via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Responsivo TOTAL (mobile-first, breakpoints sm md lg)
 - Estrutura semântica completa (header, main, sections, footer)
-- Inclua TODAS as imagens fornecidas pelo usuário no contexto adequado, usando as URLs exatas
+- Inclua TODAS as imagens fornecidas pelo usuário no contexto adequado, usando as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders, NÃO substitua por emojis ou SVG. Se houver uma imagem com tag "logo", ela DEVE aparecer no header. Se houver "banner"/"hero", DEVE aparecer no topo. Cada imagem fornecida tem que ser usada em pelo menos um lugar.
 - Use Google Fonts (Inter ou Space Grotesk) via <link>
 - Animações suaves com classes Tailwind
 - Microcopy em português brasileiro
@@ -195,8 +195,8 @@ REGRAS OBRIGATÓRIAS:
 - IMPORTANTE — Botões/links de WhatsApp: SEMPRE use o link direto no formato https://wa.me/55XXXXXXXXXXX (DDI 55 + DDD + número, só dígitos). Se o usuário informou um número, use-o; se não informou, use https://wa.me/5511999999999 como placeholder. Use target="_blank" rel="noopener" e texto "Falar no WhatsApp".
 - NÃO escreva nenhuma explicação, NÃO use markdown — apenas o HTML.
 
-Imagens (use cada URL LITERALMENTE no contexto descrito pela tag):
-${(data.images ?? []).map((im) => `- [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
+Imagens fornecidas pelo usuário (USE CADA URL LITERALMENTE em uma tag <img src="..."> — é OBRIGATÓRIO):
+${(data.images ?? []).map((im) => `- tag="${im.label}" → ${im.url}`).join("\n") || "(nenhuma imagem fornecida)"}
 
 Pedido original do usuário: "${data.prompt}"`;
 
