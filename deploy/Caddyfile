@@ -1,0 +1,30 @@
+{
+	email {$ADMIN_EMAIL_CERT}
+}
+
+# ---- Apex + www: serve the MRO.BIO app (landing, dashboard, admin) ----
+mro.bio, www.mro.bio {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
+
+# ---- Wildcard subdomain: every <slug>.mro.bio serves the published site ----
+*.mro.bio {
+	tls {
+		dns cloudflare {$CLOUDFLARE_API_TOKEN}
+	}
+	encode zstd gzip
+
+	# Capture the slug from the host name
+	@hassub host_regexp slug ^([a-z0-9][a-z0-9-]{1,28}[a-z0-9])\.mro\.bio$
+
+	handle @hassub {
+		rewrite * /api/public/site/{re.slug.1}{uri}
+		reverse_proxy app:3000
+	}
+
+	# Anything that doesn't match (invalid slug) goes to the apex landing
+	handle {
+		redir https://mro.bio{uri}
+	}
+}

@@ -1,0 +1,11 @@
+.git
+node_modules
+.output
+.cache
+dist
+build
+.DS_Store
+deploy/app.env
+deploy/caddy.env
+.env
+.env.local
