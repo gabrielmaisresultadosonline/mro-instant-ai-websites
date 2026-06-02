@@ -15,6 +15,7 @@ import { Route as AdministracaoRouteImport } from './routes/administracao'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as ApiPublicCertCheckRouteImport } from './routes/api/public/cert-check'
 import { Route as AuthenticatedSitesNovoRouteImport } from './routes/_authenticated/sites.novo'
 import { Route as AuthenticatedSitesIdRouteImport } from './routes/_authenticated/sites.$id'
 import { Route as ApiPublicSiteSlugRouteImport } from './routes/api/public/site/$slug'
@@ -49,6 +50,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicCertCheckRoute = ApiPublicCertCheckRouteImport.update({
+  id: '/api/public/cert-check',
+  path: '/api/public/cert-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSitesNovoRoute = AuthenticatedSitesNovoRouteImport.update({
   id: '/sites/novo',
   path: '/sites/novo',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
+  '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
 }
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
+  '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
 }
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/sites/$id': typeof AuthenticatedSitesIdRoute
   '/_authenticated/sites/novo': typeof AuthenticatedSitesNovoRoute
+  '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
 }
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/sites/$id'
     | '/sites/novo'
+    | '/api/public/cert-check'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/sites/$id'
     | '/sites/novo'
+    | '/api/public/cert-check'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
   id:
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/sites/$id'
     | '/_authenticated/sites/novo'
+    | '/api/public/cert-check'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
   fileRoutesById: FileRoutesById
@@ -148,6 +160,7 @@ export interface RootRouteChildren {
   AdministracaoRoute: typeof AdministracaoRoute
   CadastroRoute: typeof CadastroRoute
   LoginRoute: typeof LoginRoute
+  ApiPublicCertCheckRoute: typeof ApiPublicCertCheckRoute
   ApiPublicImgSplatRoute: typeof ApiPublicImgSplatRoute
   ApiPublicSiteSlugRoute: typeof ApiPublicSiteSlugRoute
 }
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/cert-check': {
+      id: '/api/public/cert-check'
+      path: '/api/public/cert-check'
+      fullPath: '/api/public/cert-check'
+      preLoaderRoute: typeof ApiPublicCertCheckRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/sites/novo': {
       id: '/_authenticated/sites/novo'
@@ -248,9 +268,20 @@ const rootRouteChildren: RootRouteChildren = {
   AdministracaoRoute: AdministracaoRoute,
   CadastroRoute: CadastroRoute,
   LoginRoute: LoginRoute,
+  ApiPublicCertCheckRoute: ApiPublicCertCheckRoute,
   ApiPublicImgSplatRoute: ApiPublicImgSplatRoute,
   ApiPublicSiteSlugRoute: ApiPublicSiteSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

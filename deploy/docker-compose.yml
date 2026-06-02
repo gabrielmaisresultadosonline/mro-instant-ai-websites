@@ -19,7 +19,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    env_file: ./caddy.env
+    environment:
+      ADMIN_EMAIL_CERT: ${ADMIN_EMAIL_CERT:-admin@mro.bio}
     depends_on: [app]
     networks: [web]
 
