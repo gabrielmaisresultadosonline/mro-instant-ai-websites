@@ -72,6 +72,7 @@ function SiteEditor() {
   const [cleanup, setCleanup] = useState<null | { historyLimit: number; inactives: { id: string; provider: string; created_at: string }[]; selected: Set<string> }>(null);
   const [uploadQueue, setUploadQueue] = useState<null | { file: File; previewUrl: string; label: string }[]>(null);
   const [renameTarget, setRenameTarget] = useState<null | { id: string; label: string }>(null);
+  const [viewer, setViewer] = useState<null | { url: string; label: string }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -310,28 +311,35 @@ function SiteEditor() {
             {imgs?.images.length === 0 ? (
               <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Clique em <strong>+ Enviar</strong> e dê uma etiqueta para cada uma.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
-                {imgs?.images.map((im) => {
-                  const isSel = selected.has(im.public_url);
-                  const hasTag = !!(im.label && im.label.trim());
-                  return (
-                    <div key={im.id} className={`group relative overflow-hidden rounded-md border-2 ${isSel ? "border-brand" : "border-border"}`}>
-                      <button type="button" onClick={() => toggleSelected(im.public_url)} className="block w-full">
-                        <img src={im.public_url} alt={im.label ?? ""} className="aspect-square w-full object-cover" />
-                        {isSel && <span className="absolute right-1 top-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-brand-foreground">✓</span>}
-                      </button>
-                      <div className="flex items-center justify-between gap-1 border-t border-border bg-background/60 px-1.5 py-1">
-                        <button type="button" onClick={() => setRenameTarget({ id: im.id, label: im.label ?? "" })}
-                          className={`flex-1 truncate text-left text-[10px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}>
-                          {hasTag ? `#${im.label}` : "+ adicionar etiqueta"}
+              <>
+                <p className="mb-2 text-[10px] text-muted-foreground">Clique na imagem para ver em tamanho grande. Use o ✓ para selecionar quais entram na geração.</p>
+                <div className="grid grid-cols-3 gap-1.5 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5">
+                  {imgs?.images.map((im) => {
+                    const isSel = selected.has(im.public_url);
+                    const hasTag = !!(im.label && im.label.trim());
+                    return (
+                      <div key={im.id} className={`group relative overflow-hidden rounded-md border ${isSel ? "border-brand ring-1 ring-brand" : "border-border"}`}>
+                        <button type="button" onClick={() => setViewer({ url: im.public_url, label: im.label ?? "" })}
+                          className="block w-full" title="Ver maior">
+                          <img src={im.public_url} alt={im.label ?? ""} loading="lazy" className="aspect-square w-full object-cover" />
+                        </button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); toggleSelected(im.public_url); }}
+                          aria-label={isSel ? "Desmarcar" : "Selecionar"}
+                          className={`absolute left-1 top-1 grid h-5 w-5 place-items-center rounded-full border text-[10px] font-bold shadow ${isSel ? "border-brand bg-brand text-brand-foreground" : "border-white/70 bg-black/40 text-white"}`}>
+                          {isSel ? "✓" : ""}
                         </button>
                         <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { await deleteImageFn({ data: { id: im.id } }); qc.invalidateQueries({ queryKey: ["my-images"] }); } }}
-                          className="rounded px-1 text-[10px] text-muted-foreground hover:text-destructive">×</button>
+                          aria-label="Excluir"
+                          className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/50 text-[11px] leading-none text-white hover:bg-destructive">×</button>
+                        <button type="button" onClick={() => setRenameTarget({ id: im.id, label: im.label ?? "" })}
+                          className={`block w-full truncate border-t border-border bg-background/70 px-1 py-0.5 text-left text-[9px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}>
+                          {hasTag ? `#${im.label}` : "+ etiqueta"}
+                        </button>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </section>
         </aside>
@@ -621,6 +629,17 @@ function SiteEditor() {
             <button onClick={saveRename} className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">Salvar etiqueta</button>
           </div>
         </Modal>
+      )}
+
+      {viewer && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/85 p-3 sm:p-6" onClick={() => setViewer(null)}>
+          <button onClick={() => setViewer(null)} aria-label="Fechar"
+            className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20">×</button>
+          <div className="flex max-h-full max-w-full flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <img src={viewer.url} alt={viewer.label} className="max-h-[85vh] max-w-[95vw] rounded-lg object-contain shadow-2xl" />
+            {viewer.label && <p className="rounded bg-black/50 px-3 py-1 text-xs font-semibold text-white">#{viewer.label}</p>}
+          </div>
+        </div>
       )}
     </main>
   );
