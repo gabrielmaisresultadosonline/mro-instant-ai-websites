@@ -111,11 +111,14 @@ export const getSiteInsights = createServerFn({ method: "GET" })
 
 export const generateSiteHtml = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string; prompt: string; imageUrls?: string[] }) =>
+  .inputValidator((i: { id: string; prompt: string; images?: { url: string; label: string }[] }) =>
     z.object({
       id: z.string().uuid(),
       prompt: z.string().trim().min(5).max(4000),
-      imageUrls: z.array(z.string().url()).max(20).optional(),
+      images: z.array(z.object({
+        url: z.string().min(1).max(2000),
+        label: z.string().trim().min(1).max(80),
+      })).max(20).optional(),
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
