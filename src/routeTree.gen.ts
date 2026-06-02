@@ -14,6 +14,7 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AdministracaoRouteImport } from './routes/administracao'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ObObrigadoRouteImport } from './routes/ob/obrigado'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as ApiPublicCertCheckRouteImport } from './routes/api/public/cert-check'
 import { Route as AuthenticatedSitesNovoRouteImport } from './routes/_authenticated/sites.novo'
@@ -43,6 +44,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObObrigadoRoute = ObObrigadoRouteImport.update({
+  id: '/ob/obrigado',
+  path: '/ob/obrigado',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/ob/obrigado': typeof ObObrigadoRoute
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/ob/obrigado': typeof ObObrigadoRoute
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/ob/obrigado': typeof ObObrigadoRoute
   '/_authenticated/sites/$id': typeof AuthenticatedSitesIdRoute
   '/_authenticated/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/dashboard'
+    | '/ob/obrigado'
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/dashboard'
+    | '/ob/obrigado'
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/ob/obrigado'
     | '/_authenticated/sites/$id'
     | '/_authenticated/sites/novo'
     | '/api/public/cert-check'
@@ -160,6 +172,7 @@ export interface RootRouteChildren {
   AdministracaoRoute: typeof AdministracaoRoute
   CadastroRoute: typeof CadastroRoute
   LoginRoute: typeof LoginRoute
+  ObObrigadoRoute: typeof ObObrigadoRoute
   ApiPublicCertCheckRoute: typeof ApiPublicCertCheckRoute
   ApiPublicImgSplatRoute: typeof ApiPublicImgSplatRoute
   ApiPublicSiteSlugRoute: typeof ApiPublicSiteSlugRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ob/obrigado': {
+      id: '/ob/obrigado'
+      path: '/ob/obrigado'
+      fullPath: '/ob/obrigado'
+      preLoaderRoute: typeof ObObrigadoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/dashboard': {
@@ -268,6 +288,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdministracaoRoute: AdministracaoRoute,
   CadastroRoute: CadastroRoute,
   LoginRoute: LoginRoute,
+  ObObrigadoRoute: ObObrigadoRoute,
   ApiPublicCertCheckRoute: ApiPublicCertCheckRoute,
   ApiPublicImgSplatRoute: ApiPublicImgSplatRoute,
   ApiPublicSiteSlugRoute: ApiPublicSiteSlugRoute,
@@ -275,3 +296,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
