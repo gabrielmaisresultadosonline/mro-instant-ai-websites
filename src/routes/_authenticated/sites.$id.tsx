@@ -188,8 +188,21 @@ function SiteEditor() {
             className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
             {site.is_published ? "🟢 Despublicar" : "🟡 Publicar"}
           </button>
-          <a href={`/api/public/site/${site.slug}`} target="_blank" rel="noreferrer"
-            className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">Ver site</a>
+          <a href={`https://${site.slug}.mro.bio`} target="_blank" rel="noreferrer"
+            className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">Ver site ↗</a>
+          <button
+            onClick={async () => {
+              const url = `https://${site.slug}.mro.bio`;
+              try {
+                await navigator.clipboard.writeText(url);
+                alert(`Link copiado: ${url}`);
+              } catch {
+                prompt("Copie o link:", url);
+              }
+            }}
+            className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
+            📋 Copiar link
+          </button>
           <button onClick={() => { if (confirm("Excluir este site para sempre?")) deleteMut.mutate(); }}
             className="rounded-md border border-destructive/40 px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10">Excluir</button>
         </div>
