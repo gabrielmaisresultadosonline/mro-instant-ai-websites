@@ -11,10 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as AdministracaoRouteImport } from './routes/administracao'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedSitesNovoRouteImport } from './routes/_authenticated/sites.novo'
+import { Route as AuthenticatedSitesIdRouteImport } from './routes/_authenticated/sites.$id'
+import { Route as ApiPublicSiteSlugRouteImport } from './routes/api/public/site/$slug'
+import { Route as ApiPublicImgSplatRouteImport } from './routes/api/public/img/$'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -24,6 +28,11 @@ const LoginRoute = LoginRouteImport.update({
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdministracaoRoute = AdministracaoRouteImport.update({
+  id: '/administracao',
+  path: '/administracao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -45,50 +54,102 @@ const AuthenticatedSitesNovoRoute = AuthenticatedSitesNovoRouteImport.update({
   path: '/sites/novo',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSitesIdRoute = AuthenticatedSitesIdRouteImport.update({
+  id: '/sites/$id',
+  path: '/sites/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicSiteSlugRoute = ApiPublicSiteSlugRouteImport.update({
+  id: '/api/public/site/$slug',
+  path: '/api/public/site/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicImgSplatRoute = ApiPublicImgSplatRouteImport.update({
+  id: '/api/public/img/$',
+  path: '/api/public/img/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/administracao': typeof AdministracaoRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
+  '/api/public/img/$': typeof ApiPublicImgSplatRoute
+  '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/administracao': typeof AdministracaoRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
+  '/api/public/img/$': typeof ApiPublicImgSplatRoute
+  '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/administracao': typeof AdministracaoRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/sites/$id': typeof AuthenticatedSitesIdRoute
   '/_authenticated/sites/novo': typeof AuthenticatedSitesNovoRoute
+  '/api/public/img/$': typeof ApiPublicImgSplatRoute
+  '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cadastro' | '/login' | '/dashboard' | '/sites/novo'
+  fullPaths:
+    | '/'
+    | '/administracao'
+    | '/cadastro'
+    | '/login'
+    | '/dashboard'
+    | '/sites/$id'
+    | '/sites/novo'
+    | '/api/public/img/$'
+    | '/api/public/site/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cadastro' | '/login' | '/dashboard' | '/sites/novo'
+  to:
+    | '/'
+    | '/administracao'
+    | '/cadastro'
+    | '/login'
+    | '/dashboard'
+    | '/sites/$id'
+    | '/sites/novo'
+    | '/api/public/img/$'
+    | '/api/public/site/$slug'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/administracao'
     | '/cadastro'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/_authenticated/sites/$id'
     | '/_authenticated/sites/novo'
+    | '/api/public/img/$'
+    | '/api/public/site/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AdministracaoRoute: typeof AdministracaoRoute
   CadastroRoute: typeof CadastroRoute
   LoginRoute: typeof LoginRoute
+  ApiPublicImgSplatRoute: typeof ApiPublicImgSplatRoute
+  ApiPublicSiteSlugRoute: typeof ApiPublicSiteSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -105,6 +166,13 @@ declare module '@tanstack/react-router' {
       path: '/cadastro'
       fullPath: '/cadastro'
       preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administracao': {
+      id: '/administracao'
+      path: '/administracao'
+      fullPath: '/administracao'
+      preLoaderRoute: typeof AdministracaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -135,16 +203,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSitesNovoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sites/$id': {
+      id: '/_authenticated/sites/$id'
+      path: '/sites/$id'
+      fullPath: '/sites/$id'
+      preLoaderRoute: typeof AuthenticatedSitesIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/site/$slug': {
+      id: '/api/public/site/$slug'
+      path: '/api/public/site/$slug'
+      fullPath: '/api/public/site/$slug'
+      preLoaderRoute: typeof ApiPublicSiteSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/img/$': {
+      id: '/api/public/img/$'
+      path: '/api/public/img/$'
+      fullPath: '/api/public/img/$'
+      preLoaderRoute: typeof ApiPublicImgSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSitesIdRoute: typeof AuthenticatedSitesIdRoute
   AuthenticatedSitesNovoRoute: typeof AuthenticatedSitesNovoRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSitesIdRoute: AuthenticatedSitesIdRoute,
   AuthenticatedSitesNovoRoute: AuthenticatedSitesNovoRoute,
 }
 
@@ -154,9 +245,22 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AdministracaoRoute: AdministracaoRoute,
   CadastroRoute: CadastroRoute,
   LoginRoute: LoginRoute,
+  ApiPublicImgSplatRoute: ApiPublicImgSplatRoute,
+  ApiPublicSiteSlugRoute: ApiPublicSiteSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
