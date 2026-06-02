@@ -66,7 +66,7 @@ export const saveSite = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const update: Record<string, unknown> = { html: data.html };
+    const update: { html: string; title?: string; pixels?: Record<string, string>; is_published?: boolean } = { html: data.html };
     if (data.title !== undefined) update.title = data.title;
     if (data.pixels !== undefined) update.pixels = data.pixels;
     if (data.is_published !== undefined) update.is_published = data.is_published;
