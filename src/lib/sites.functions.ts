@@ -5,13 +5,19 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
 const RESERVED = new Set(["www", "app", "admin", "administracao", "api", "mail", "blog", "dashboard", "login", "cadastro"]);
 
+const MONTHLY_LIMIT = 3;
+const HISTORY_LIMIT = 4;
+const HISTORY_TTL_DAYS = 45;
+const PROVIDERS = ["deepseek", "claude", "openai"] as const;
+type Provider = typeof PROVIDERS[number];
+
 export const listMySites = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("sites")
-      .select("id, slug, title, is_published, edits_this_week, week_started_at, updated_at, created_at")
+      .select("id, slug, title, is_published, gens_this_month, month_started_at, next_provider_idx, edits_this_week, week_started_at, updated_at, created_at")
       .eq("owner_id", userId)
       .order("updated_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -57,10 +63,10 @@ export const getSite = createServerFn({ method: "GET" })
 
 export const saveSite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string; html: string; title?: string; pixels?: Record<string, string>; is_published?: boolean }) =>
+  .inputValidator((i: { id: string; html?: string; title?: string; pixels?: Record<string, string>; is_published?: boolean }) =>
     z.object({
       id: z.string().uuid(),
-      html: z.string().max(500000),
+      html: z.string().max(500000).optional(),
       title: z.string().max(120).optional(),
       pixels: z.record(z.string(), z.string().max(120)).optional(),
       is_published: z.boolean().optional(),
@@ -68,7 +74,8 @@ export const saveSite = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const update: { html: string; title?: string; pixels?: Record<string, string>; is_published?: boolean } = { html: data.html };
+    const update: { html?: string; title?: string; pixels?: Record<string, string>; is_published?: boolean } = {};
+    if (data.html !== undefined) update.html = data.html;
     if (data.title !== undefined) update.title = data.title;
     if (data.pixels !== undefined) update.pixels = data.pixels;
     if (data.is_published !== undefined) update.is_published = data.is_published;
@@ -109,9 +116,83 @@ export const getSiteInsights = createServerFn({ method: "GET" })
     return { total, last, topRegions };
   });
 
+// --- Generation history helpers ---
+
+async function cleanupOldGenerations(supabase: ReturnType<typeof import("@supabase/supabase-js").createClient>, siteId: string, userId: string) {
+  // Auto-delete inactive generations older than HISTORY_TTL_DAYS
+  const cutoff = new Date(Date.now() - HISTORY_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  await supabase.from("site_generations")
+    .delete()
+    .eq("site_id", siteId)
+    .eq("owner_id", userId)
+    .eq("is_active", false)
+    .lt("created_at", cutoff);
+}
+
+export const listGenerations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { siteId: string }) => z.object({ siteId: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    // @ts-expect-error generic client type from helper
+    await cleanupOldGenerations(supabase, data.siteId, userId);
+    const { data: rows, error } = await supabase
+      .from("site_generations")
+      .select("id, provider, prompt, brief, is_active, created_at")
+      .eq("site_id", data.siteId)
+      .eq("owner_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return { generations: rows ?? [] };
+  });
+
+export const getGenerationHtml = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { id: string }) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: row, error } = await supabase
+      .from("site_generations")
+      .select("id, provider, html, prompt, brief, created_at")
+      .eq("id", data.id).eq("owner_id", userId).single();
+    if (error || !row) throw new Error("Geração não encontrada");
+    return row;
+  });
+
+export const activateGeneration = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { id: string }) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: gen, error } = await supabase
+      .from("site_generations")
+      .select("id, site_id, html")
+      .eq("id", data.id).eq("owner_id", userId).single();
+    if (error || !gen) throw new Error("Geração não encontrada");
+    // deactivate others
+    await supabase.from("site_generations").update({ is_active: false })
+      .eq("site_id", gen.site_id).eq("owner_id", userId);
+    await supabase.from("site_generations").update({ is_active: true }).eq("id", gen.id);
+    // apply HTML to site
+    await supabase.from("sites").update({ html: gen.html }).eq("id", gen.site_id).eq("owner_id", userId);
+    return { ok: true };
+  });
+
+export const deleteGeneration = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { id: string }) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("site_generations").delete()
+      .eq("id", data.id).eq("owner_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const generateSiteHtml = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string; prompt: string; images?: { url: string; label: string }[] }) =>
+  .inputValidator((i: { id: string; prompt: string; images?: { url: string; label: string }[]; confirmDeleteIds?: string[] }) =>
     z.object({
       id: z.string().uuid(),
       prompt: z.string().trim().min(5).max(4000),
@@ -119,6 +200,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
         url: z.string().min(1).max(2000),
         label: z.string().trim().min(1).max(80),
       })).max(20).optional(),
+      confirmDeleteIds: z.array(z.string().uuid()).max(10).optional(),
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
@@ -127,18 +209,47 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       .from("sites").select("*").eq("id", data.id).eq("owner_id", userId).single();
     if (siteErr || !site) throw new Error("Site não encontrado");
 
-    const weekStart = new Date(site.week_started_at as string).getTime();
+    // Monthly window reset (30 days)
+    const monthStart = new Date(site.month_started_at as string).getTime();
     const now = Date.now();
-    let edits = site.edits_this_week as number;
-    let weekStartedAt = site.week_started_at as string;
-    if (now - weekStart > 7 * 24 * 60 * 60 * 1000) {
-      edits = 0;
-      weekStartedAt = new Date().toISOString();
+    let gens = site.gens_this_month as number;
+    let monthStartedAt = site.month_started_at as string;
+    let providerIdx = site.next_provider_idx as number;
+    if (now - monthStart > 30 * 24 * 60 * 60 * 1000) {
+      gens = 0;
+      monthStartedAt = new Date().toISOString();
     }
-    const WEEKLY_LIMIT = 3;
-    if (edits >= WEEKLY_LIMIT) {
-      throw new Error(`Você já gerou ${WEEKLY_LIMIT} vezes esta semana. Tente novamente em alguns dias.`);
+    if (gens >= MONTHLY_LIMIT) {
+      const daysLeft = Math.ceil((30 * 24 * 60 * 60 * 1000 - (now - new Date(monthStartedAt).getTime())) / (24 * 60 * 60 * 1000));
+      throw new Error(`Limite mensal atingido: você já usou as ${MONTHLY_LIMIT} gerações do mês. Libera em ~${daysLeft} dia(s).`);
     }
+
+    // Cleanup old inactive generations first
+    // @ts-expect-error generic
+    await cleanupOldGenerations(supabase, data.id, userId);
+
+    // If user passed confirmDeleteIds, delete them now (history-cap UX flow)
+    if (data.confirmDeleteIds && data.confirmDeleteIds.length > 0) {
+      await supabase.from("site_generations").delete()
+        .in("id", data.confirmDeleteIds).eq("owner_id", userId).eq("is_active", false);
+    }
+
+    // Enforce history cap
+    const { data: existing } = await supabase
+      .from("site_generations").select("id, provider, created_at, is_active")
+      .eq("site_id", data.id).eq("owner_id", userId)
+      .order("created_at", { ascending: true });
+    if ((existing?.length ?? 0) >= HISTORY_LIMIT) {
+      const inactives = (existing ?? []).filter((g) => !g.is_active);
+      return {
+        needsCleanup: true as const,
+        historyLimit: HISTORY_LIMIT,
+        inactives: inactives.map((g) => ({ id: g.id, provider: g.provider, created_at: g.created_at })),
+      };
+    }
+
+    // Choose provider via round-robin
+    const provider: Provider = PROVIDERS[providerIdx % PROVIDERS.length];
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: settings } = await supabaseAdmin
@@ -146,138 +257,132 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       .select("openai_token, deepseek_token, claude_token")
       .eq("id", true)
       .single();
-    const openaiToken = settings?.openai_token;
-    const deepseekToken = settings?.deepseek_token;
-    const claudeToken = settings?.claude_token;
-
-    if (!openaiToken || !deepseekToken || !claudeToken) {
-      throw new Error("As chaves da I.A da MRO ainda não foram configuradas por completo. Avise o administrador.");
+    const tokens = {
+      openai: settings?.openai_token,
+      deepseek: settings?.deepseek_token,
+      claude: settings?.claude_token,
+    };
+    if (!tokens[provider]) {
+      throw new Error(`A chave da I.A "${provider}" não foi configurada. Avise o administrador.`);
     }
 
-    const ideaPrompt = `Você é um diretor criativo. O usuário pediu este site:
+    // Step 1 — briefing (uses whichever chat model is available, prefers openai > deepseek > claude)
+    const briefPrompt = `Você é um diretor criativo. O usuário pediu este site:
 "${data.prompt}"
 
-Imagens disponíveis (use as URLs LITERALMENTE, com a tag indicada como referência semântica):
+Imagens disponíveis (use as URLs LITERALMENTE):
 ${(data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
 
-Responda em português um briefing curto e prático com: nome/título sugerido, paleta de cores (3 cores hex), seções (5 a 8) com título e 1 frase de copy cada, CTAs principais, e onde colocar cada imagem (referenciando a tag). Sem explicações sobre o briefing, vá direto.`;
+Responda em português um briefing curto e prático: nome/título, paleta (3 hex), seções (5-8) com título e copy, CTAs, e onde colocar cada imagem. Direto, sem explicações.`;
 
-    const ideaRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${openaiToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: ideaPrompt }],
-        temperature: 0.8,
-      }),
-    });
-    if (!ideaRes.ok) {
-      console.error("openai error", ideaRes.status, await ideaRes.text());
-      throw new Error("A I.A da MRO está com instabilidade (etapa 1). Tente novamente.");
-    }
-    const ideaJson = await ideaRes.json() as { choices: { message: { content: string } }[] };
-    const brief = ideaJson.choices?.[0]?.message?.content ?? "";
+    let brief = "";
+    try {
+      if (tokens.openai) {
+        const r = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: briefPrompt }], temperature: 0.8 }),
+        });
+        if (r.ok) {
+          const j = await r.json() as { choices: { message: { content: string } }[] };
+          brief = j.choices?.[0]?.message?.content ?? "";
+        }
+      }
+    } catch (e) { console.error("brief error", e); }
 
-    const codePrompt = `Gere um site HTML COMPLETO, em português, em UMA única página, baseado neste briefing:
+    const codePrompt = `Gere um site HTML COMPLETO em português, UMA página, baseado neste briefing:
 
-${brief}
+${brief || data.prompt}
 
 REGRAS OBRIGATÓRIAS:
-- Documento HTML completo começando com <!DOCTYPE html>
-- Use Tailwind via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Responsivo TOTAL (mobile-first, breakpoints sm md lg)
-- Estrutura semântica completa (header, main, sections, footer)
-- Inclua TODAS as imagens fornecidas pelo usuário no contexto adequado, usando as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders, NÃO substitua por emojis ou SVG. Se houver uma imagem com tag "logo", ela DEVE aparecer no header. Se houver "banner"/"hero", DEVE aparecer no topo. Cada imagem fornecida tem que ser usada em pelo menos um lugar.
-- Use Google Fonts (Inter ou Space Grotesk) via <link>
-- Animações suaves com classes Tailwind
-- Microcopy em português brasileiro
+- HTML completo começando com <!DOCTYPE html>
+- Tailwind via CDN: <script src="https://cdn.tailwindcss.com"></script>
+- Responsivo mobile-first
+- Estrutura semântica (header, main, sections, footer)
+- Use TODAS as imagens fornecidas com as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders. Tag "logo" no header, "banner"/"hero" no topo.
+- Google Fonts (Inter ou Space Grotesk)
+- WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX, target="_blank" rel="noopener"
 - Inclua <title>, meta description, og tags
-- IMPORTANTE — Botões/links de WhatsApp: SEMPRE use o link direto no formato https://wa.me/55XXXXXXXXXXX (DDI 55 + DDD + número, só dígitos). Se o usuário informou um número, use-o; se não informou, use https://wa.me/5511999999999 como placeholder. Use target="_blank" rel="noopener" e texto "Falar no WhatsApp".
-- NÃO escreva nenhuma explicação, NÃO use markdown — apenas o HTML.
+- NÃO escreva nada fora do HTML, sem markdown
 
-Imagens fornecidas pelo usuário (USE CADA URL LITERALMENTE em uma tag <img src="..."> — é OBRIGATÓRIO):
-${(data.images ?? []).map((im) => `- tag="${im.label}" → ${im.url}`).join("\n") || "(nenhuma imagem fornecida)"}
+Imagens fornecidas (USE LITERALMENTE):
+${(data.images ?? []).map((im) => `- tag="${im.label}" → ${im.url}`).join("\n") || "(nenhuma)"}
 
-Pedido original do usuário: "${data.prompt}"`;
+Pedido do usuário: "${data.prompt}"`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
     }
 
-    const deepseekP = (async () => {
+    let html = "";
+    if (provider === "deepseek") {
       const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${deepseekToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: [{ role: "user", content: codePrompt }],
-          temperature: 0.6,
-          max_tokens: 8000,
-        }),
+        headers: { Authorization: `Bearer ${tokens.deepseek}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: codePrompt }], temperature: 0.6, max_tokens: 8000 }),
       });
-      if (!r.ok) {
-        console.error("deepseek error", r.status, await r.text());
-        throw new Error("Falha ao gerar a Versão 1.");
-      }
+      if (!r.ok) { console.error("deepseek", r.status, await r.text()); throw new Error("Falha ao gerar com DeepSeek. Tente novamente."); }
       const j = await r.json() as { choices: { message: { content: string } }[] };
-      return cleanHtml(j.choices?.[0]?.message?.content ?? "");
-    })();
-
-    const claudeP = (async () => {
+      html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
+    } else if (provider === "claude") {
       const models = ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
-      let lastError = "";
+      let lastErr = "";
       for (const model of models) {
         const r = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
-          headers: {
-            "x-api-key": claudeToken,
-            "anthropic-version": "2023-06-01",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            max_tokens: 8000,
-            temperature: 0.7,
-            messages: [{ role: "user", content: codePrompt }],
-          }),
+          headers: { "x-api-key": tokens.claude!, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+          body: JSON.stringify({ model, max_tokens: 8000, temperature: 0.7, messages: [{ role: "user", content: codePrompt }] }),
         });
-        if (!r.ok) {
-          lastError = await r.text();
-          console.error("claude error", r.status, model, lastError);
-          if (r.status === 404 || r.status === 410) continue;
-          throw new Error("Falha ao gerar a Versão 2. Verifique o token da I.A em /administracao.");
-        }
+        if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error("Falha ao gerar com Claude."); }
         const j = await r.json() as { content: { type: string; text: string }[] };
-        const text = (j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
-        const cleaned = cleanHtml(text);
-        if (cleaned) return cleaned;
-        lastError = "A resposta da I.A veio vazia.";
+        html = cleanHtml((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
+        if (html) break;
       }
-      throw new Error(`Falha ao gerar a Versão 2. Nenhum modelo disponível para este token. ${lastError}`.slice(0, 300));
-    })();
-
-    const [vA, vB] = await Promise.allSettled([deepseekP, claudeP]);
-    const versionA = vA.status === "fulfilled" ? vA.value : "";
-    const versionB = vB.status === "fulfilled" ? vB.value : "";
-    const errorA = vA.status === "rejected" ? (vA.reason as Error).message : null;
-    const errorB = vB.status === "rejected" ? (vB.reason as Error).message : null;
-    if (!versionA && !versionB) {
-      throw new Error("A I.A da MRO está com instabilidade. Tente novamente em instantes.");
+      if (!html) throw new Error(`Falha ao gerar com Claude. ${lastErr}`.slice(0, 300));
+    } else {
+      // openai
+      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: codePrompt }], temperature: 0.7, max_tokens: 8000 }),
+      });
+      if (!r.ok) { console.error("openai", r.status, await r.text()); throw new Error("Falha ao gerar com ChatGPT."); }
+      const j = await r.json() as { choices: { message: { content: string } }[] };
+      html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
     }
 
+    if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
+
+    // Save generation
+    const { data: genRow, error: genErr } = await supabase.from("site_generations")
+      .insert({
+        site_id: data.id,
+        owner_id: userId,
+        provider,
+        prompt: data.prompt,
+        brief,
+        html,
+        is_active: false,
+      })
+      .select("id, provider, created_at")
+      .single();
+    if (genErr) throw new Error(genErr.message);
+
+    // Update site counters + provider cursor
     await supabase.from("sites").update({
       last_prompt: data.prompt,
-      edits_this_week: edits + 1,
-      week_started_at: weekStartedAt,
+      gens_this_month: gens + 1,
+      month_started_at: monthStartedAt,
+      next_provider_idx: (providerIdx + 1) % PROVIDERS.length,
     }).eq("id", data.id).eq("owner_id", userId);
 
     return {
-      versionA,
-      versionB,
-      errorA,
-      errorB,
+      needsCleanup: false as const,
+      generationId: genRow.id,
+      provider,
+      html,
       brief,
-      editsUsed: edits + 1,
-      weeklyLimit: WEEKLY_LIMIT,
+      gensUsed: gens + 1,
+      monthlyLimit: MONTHLY_LIMIT,
     };
   });
