@@ -195,8 +195,8 @@ REGRAS OBRIGATÓRIAS:
 - IMPORTANTE — Botões/links de WhatsApp: SEMPRE use o link direto no formato https://wa.me/55XXXXXXXXXXX (DDI 55 + DDD + número, só dígitos). Se o usuário informou um número, use-o; se não informou, use https://wa.me/5511999999999 como placeholder. Use target="_blank" rel="noopener" e texto "Falar no WhatsApp".
 - NÃO escreva nenhuma explicação, NÃO use markdown — apenas o HTML.
 
-Imagens (use as URLs literalmente):
-${(data.imageUrls ?? []).map((u) => u).join("\n") || "(nenhuma)"}
+Imagens (use cada URL LITERALMENTE no contexto descrito pela tag):
+${(data.images ?? []).map((im) => `- [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
 
 Pedido original do usuário: "${data.prompt}"`;
 
