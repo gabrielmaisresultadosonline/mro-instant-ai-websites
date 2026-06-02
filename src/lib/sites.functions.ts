@@ -157,10 +157,10 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     const ideaPrompt = `Você é um diretor criativo. O usuário pediu este site:
 "${data.prompt}"
 
-Imagens disponíveis para usar (URLs absolutas):
-${(data.imageUrls ?? []).map((u, i) => `${i + 1}. ${u}`).join("\n") || "(nenhuma)"}
+Imagens disponíveis (use as URLs LITERALMENTE, com a tag indicada como referência semântica):
+${(data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
 
-Responda em português um briefing curto e prático com: nome/título sugerido, paleta de cores (3 cores hex), seções (5 a 8) com título e 1 frase de copy cada, CTAs principais, e onde colocar cada imagem. Sem explicações sobre o briefing, vá direto.`;
+Responda em português um briefing curto e prático com: nome/título sugerido, paleta de cores (3 cores hex), seções (5 a 8) com título e 1 frase de copy cada, CTAs principais, e onde colocar cada imagem (referenciando a tag). Sem explicações sobre o briefing, vá direto.`;
 
     const ideaRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
