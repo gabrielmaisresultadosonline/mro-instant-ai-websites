@@ -92,10 +92,10 @@ function SiteEditor() {
       const base = typeof window !== "undefined" ? window.location.origin : "";
       const absoluteUrls = urls.map((u) => (u.startsWith("http") ? u : `${base}${u}`));
       const res = await genFn({ data: { id, prompt, imageUrls: absoluteUrls } });
-      setVersions({ a: res.versionA, b: res.versionB });
+      setVersions({ a: res.versionA, b: res.versionB, errorA: res.errorA ?? null, errorB: res.errorB ?? null });
       setActiveVersion(res.versionA ? "a" : "b");
       setTab("preview");
-      toast.success(`Duas versões geradas! Usos: ${res.editsUsed}/${res.weeklyLimit} esta semana`);
+      toast.success(`Geração concluída! Usos: ${res.editsUsed}/${res.weeklyLimit} esta semana`);
       qc.invalidateQueries({ queryKey: ["site", id] });
     } catch (e) {
       toast.error((e as Error).message);
