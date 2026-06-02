@@ -131,17 +131,32 @@ function SiteEditor() {
     const uid = userData.user?.id;
     if (!uid) return;
     for (const file of Array.from(files)) {
+      const suggested = file.name.replace(/\.[^.]+$/, "").slice(0, 60);
+      const tag = window.prompt(`Tag para "${file.name}" (ex.: logo, banner, foto-equipe):`, suggested);
+      if (!tag || !tag.trim()) { toast.error(`Imagem "${file.name}" ignorada — sem tag.`); continue; }
       const ext = file.name.split(".").pop() || "jpg";
       const path = `${uid}/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("site-images").upload(path, file, { upsert: false, contentType: file.type });
       if (error) { toast.error(error.message); continue; }
       try {
-        await registerImageFn({ data: { path, label: file.name.slice(0, 60) } });
+        await registerImageFn({ data: { path, label: tag.trim().slice(0, 80) } });
       } catch (e) { toast.error((e as Error).message); }
     }
     qc.invalidateQueries({ queryKey: ["my-images"] });
     if (fileRef.current) fileRef.current.value = "";
     toast.success("Imagens enviadas");
+  }
+
+  async function handleRenameTag(imageId: string, currentLabel: string | null) {
+    const next = window.prompt("Nova tag (ex.: logo, banner):", currentLabel ?? "");
+    if (next === null) return;
+    const v = next.trim();
+    if (!v) { toast.error("Tag não pode ficar vazia."); return; }
+    try {
+      await updateImageLabelFn({ data: { id: imageId, label: v.slice(0, 80) } });
+      qc.invalidateQueries({ queryKey: ["my-images"] });
+      toast.success("Tag atualizada");
+    } catch (e) { toast.error((e as Error).message); }
   }
 
   function toggleSelected(url: string) {
