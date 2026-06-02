@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { adminLogin, adminListUsers, adminListSites, adminDeleteUser, adminGetSettings, adminSaveSettings } from "@/lib/admin.functions";
+import { adminLogin, adminListUsers, adminListSites, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/administracao")({
   ssr: false,
