@@ -47,6 +47,8 @@ function SiteEditor() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
   const [tab, setTab] = useState<"preview" | "pixels" | "insights">("preview");
+  const [versions, setVersions] = useState<{ a: string; b: string } | null>(null);
+  const [activeVersion, setActiveVersion] = useState<"a" | "b">("a");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -90,9 +92,10 @@ function SiteEditor() {
       const base = typeof window !== "undefined" ? window.location.origin : "";
       const absoluteUrls = urls.map((u) => (u.startsWith("http") ? u : `${base}${u}`));
       const res = await genFn({ data: { id, prompt, imageUrls: absoluteUrls } });
-      setHtml(res.html);
-      await saveFn({ data: { id, html: res.html } });
-      toast.success(`Site gerado! Edições usadas: ${res.editsUsed}/4`);
+      setVersions({ a: res.versionA, b: res.versionB });
+      setActiveVersion(res.versionA ? "a" : "b");
+      setTab("preview");
+      toast.success(`Duas versões geradas! Usos: ${res.editsUsed}/${res.weeklyLimit} esta semana`);
       qc.invalidateQueries({ queryKey: ["site", id] });
     } catch (e) {
       toast.error((e as Error).message);
@@ -100,6 +103,18 @@ function SiteEditor() {
       setGenerating(false);
     }
   }
+
+  async function applyVersion(which: "a" | "b") {
+    if (!versions) return;
+    const chosen = which === "a" ? versions.a : versions.b;
+    if (!chosen) { toast.error("Esta versão não foi gerada."); return; }
+    setHtml(chosen);
+    await saveFn({ data: { id, html: chosen } });
+    setVersions(null);
+    toast.success(`Versão ${which === "a" ? "1" : "2"} aplicada ao seu site`);
+    qc.invalidateQueries({ queryKey: ["site", id] });
+  }
+
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
