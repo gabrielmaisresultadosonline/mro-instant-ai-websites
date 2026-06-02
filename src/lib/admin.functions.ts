@@ -153,3 +153,111 @@ export const adminResetUserGenerations = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ============================================================
+// Kiwify / Subscriptions / Email outbox admin
+// ============================================================
+
+export const adminListSubscriptions = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string }) => z.object({ token: z.string() }).parse(i))
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, name, email, subscription_status, subscription_expires_at, subscription_activated_at, grace_period_ends_at, kiwify_order_id, last_payment_at")
+      .order("subscription_expires_at", { ascending: true, nullsFirst: false });
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminListEmailOutbox = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; status?: string }) =>
+    z.object({ token: z.string(), status: z.enum(["pending", "sent", "failed", "all"]).default("all") }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let q = supabaseAdmin
+      .from("email_outbox")
+      .select("id, to_email, to_name, subject, template, status, attempts, last_error, created_at, sent_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (data.status !== "all") q = q.eq("status", data.status);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminListKiwifyLog = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string }) => z.object({ token: z.string() }).parse(i))
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("kiwify_webhook_log")
+      .select("id, event, order_id, email, status, error, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminGrantSubscription = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; userId: string; days: number }) =>
+    z.object({ token: z.string(), userId: z.string().uuid(), days: z.number().int().min(1).max(3650) }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin.from("profiles").select("subscription_expires_at, subscription_activated_at").eq("id", data.userId).single();
+    const base = Math.max(Date.now(), row?.subscription_expires_at ? new Date(row.subscription_expires_at).getTime() : 0);
+    const newExp = new Date(base + data.days * 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        subscription_status: "active",
+        subscription_expires_at: newExp,
+        subscription_activated_at: row?.subscription_activated_at ?? new Date().toISOString(),
+        grace_period_ends_at: null,
+        reminder_2d_sent_at: null,
+        reminder_1d_sent_at: null,
+        expired_notice_sent_at: null,
+      })
+      .eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("subscription_events").insert({
+      profile_id: data.userId,
+      event_type: "admin_granted",
+      details: { days: data.days, new_expires_at: newExp },
+    });
+    return { ok: true, expires_at: newExp };
+  });
+
+export const adminRevokeSubscription = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; userId: string }) => z.object({ token: z.string(), userId: z.string().uuid() }).parse(i))
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ subscription_status: "canceled", subscription_expires_at: new Date().toISOString() })
+      .eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("subscription_events").insert({ profile_id: data.userId, event_type: "admin_revoked", details: {} });
+    return { ok: true };
+  });
+
+export const adminRetryEmail = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; emailId: string }) => z.object({ token: z.string(), emailId: z.string().uuid() }).parse(i))
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("email_outbox")
+      .update({ status: "pending", attempts: 0, last_error: null, locked_at: null })
+      .eq("id", data.emailId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
