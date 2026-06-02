@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      activation_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          profile_id: string | null
+          purpose: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          profile_id?: string | null
+          purpose: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          profile_id?: string | null
+          purpose?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activation_tokens_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_settings: {
         Row: {
           claude_token: string | null
@@ -38,13 +79,104 @@ export type Database = {
         }
         Relationships: []
       }
+      email_outbox: {
+        Row: {
+          attempts: number
+          body_html: string
+          body_text: string
+          created_at: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          template: string
+          to_email: string
+          to_name: string | null
+        }
+        Insert: {
+          attempts?: number
+          body_html: string
+          body_text: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template: string
+          to_email: string
+          to_name?: string | null
+        }
+        Update: {
+          attempts?: number
+          body_html?: string
+          body_text?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template?: string
+          to_email?: string
+          to_name?: string | null
+        }
+        Relationships: []
+      }
+      kiwify_webhook_log: {
+        Row: {
+          created_at: string
+          email: string | null
+          error: string | null
+          event: string | null
+          id: string
+          order_id: string | null
+          payload: Json
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          error?: string | null
+          event?: string | null
+          id?: string
+          order_id?: string | null
+          payload: Json
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          error?: string | null
+          event?: string | null
+          id?: string
+          order_id?: string | null
+          payload?: Json
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cpf: string
           created_at: string
           email: string
+          expired_notice_sent_at: string | null
+          grace_period_ends_at: string | null
           id: string
+          kiwify_customer_email: string | null
+          kiwify_order_id: string | null
+          last_payment_at: string | null
           name: string
+          reminder_1d_sent_at: string | null
+          reminder_2d_sent_at: string | null
+          subscription_activated_at: string | null
+          subscription_expires_at: string | null
+          subscription_status: string
           updated_at: string
           whatsapp: string
         }
@@ -52,8 +184,18 @@ export type Database = {
           cpf: string
           created_at?: string
           email: string
+          expired_notice_sent_at?: string | null
+          grace_period_ends_at?: string | null
           id: string
+          kiwify_customer_email?: string | null
+          kiwify_order_id?: string | null
+          last_payment_at?: string | null
           name: string
+          reminder_1d_sent_at?: string | null
+          reminder_2d_sent_at?: string | null
+          subscription_activated_at?: string | null
+          subscription_expires_at?: string | null
+          subscription_status?: string
           updated_at?: string
           whatsapp: string
         }
@@ -61,8 +203,18 @@ export type Database = {
           cpf?: string
           created_at?: string
           email?: string
+          expired_notice_sent_at?: string | null
+          grace_period_ends_at?: string | null
           id?: string
+          kiwify_customer_email?: string | null
+          kiwify_order_id?: string | null
+          last_payment_at?: string | null
           name?: string
+          reminder_1d_sent_at?: string | null
+          reminder_2d_sent_at?: string | null
+          subscription_activated_at?: string | null
+          subscription_expires_at?: string | null
+          subscription_status?: string
           updated_at?: string
           whatsapp?: string
         }
@@ -247,6 +399,38 @@ export type Database = {
           week_started_at?: string
         }
         Relationships: []
+      }
+      subscription_events: {
+        Row: {
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          profile_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          profile_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
