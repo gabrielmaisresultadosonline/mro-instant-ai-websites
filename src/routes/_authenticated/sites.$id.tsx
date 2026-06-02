@@ -70,6 +70,8 @@ function SiteEditor() {
   const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
   const [rulesSeen, setRulesSeen] = useState(false);
   const [cleanup, setCleanup] = useState<null | { historyLimit: number; inactives: { id: string; provider: string; created_at: string }[]; selected: Set<string> }>(null);
+  const [uploadQueue, setUploadQueue] = useState<null | { file: File; previewUrl: string; label: string }[]>(null);
+  const [renameTarget, setRenameTarget] = useState<null | { id: string; label: string }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -174,37 +176,56 @@ function SiteEditor() {
     } catch (e) { toast.error((e as Error).message); }
   }
 
-  async function handleUpload(files: FileList | null) {
+  function queueUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
+    const items = Array.from(files).map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+      label: file.name.replace(/\.[^.]+$/, "").slice(0, 60),
+    }));
+    setUploadQueue(items);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function confirmUploadQueue() {
+    if (!uploadQueue) return;
+    const missing = uploadQueue.filter((i) => !i.label.trim());
+    if (missing.length > 0) {
+      toast.error("Defina uma etiqueta para cada imagem antes de salvar.");
+      return;
+    }
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
     if (!uid) return;
-    for (const file of Array.from(files)) {
-      const suggested = file.name.replace(/\.[^.]+$/, "").slice(0, 60);
-      const tag = window.prompt(`Tag para "${file.name}" (ex.: logo, banner, foto-equipe):`, suggested);
-      if (!tag || !tag.trim()) { toast.error(`Imagem "${file.name}" ignorada — sem tag.`); continue; }
-      const ext = file.name.split(".").pop() || "jpg";
+    for (const item of uploadQueue) {
+      const ext = item.file.name.split(".").pop() || "jpg";
       const path = `${uid}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("site-images").upload(path, file, { upsert: false, contentType: file.type });
-      if (error) { toast.error(error.message); continue; }
+      const { error } = await supabase.storage.from("site-images").upload(path, item.file, { upsert: false, contentType: item.file.type });
+      if (error) { toast.error(`${item.file.name}: ${error.message}`); continue; }
       try {
-        await registerImageFn({ data: { path, label: tag.trim().slice(0, 80) } });
+        await registerImageFn({ data: { path, label: item.label.trim().slice(0, 80) } });
       } catch (e) { toast.error((e as Error).message); }
     }
+    uploadQueue.forEach((i) => URL.revokeObjectURL(i.previewUrl));
+    setUploadQueue(null);
     qc.invalidateQueries({ queryKey: ["my-images"] });
-    if (fileRef.current) fileRef.current.value = "";
-    toast.success("Imagens enviadas");
+    toast.success("Imagens salvas na nuvem com suas etiquetas.");
   }
 
-  async function handleRenameTag(imageId: string, currentLabel: string | null) {
-    const next = window.prompt("Nova tag (ex.: logo, banner):", currentLabel ?? "");
-    if (next === null) return;
-    const v = next.trim();
-    if (!v) { toast.error("Tag não pode ficar vazia."); return; }
+  function cancelUploadQueue() {
+    uploadQueue?.forEach((i) => URL.revokeObjectURL(i.previewUrl));
+    setUploadQueue(null);
+  }
+
+  async function saveRename() {
+    if (!renameTarget) return;
+    const v = renameTarget.label.trim();
+    if (!v) { toast.error("Etiqueta não pode ficar vazia."); return; }
     try {
-      await updateImageLabelFn({ data: { id: imageId, label: v.slice(0, 80) } });
+      await updateImageLabelFn({ data: { id: renameTarget.id, label: v.slice(0, 80) } });
       qc.invalidateQueries({ queryKey: ["my-images"] });
-      toast.success("Tag atualizada");
+      setRenameTarget(null);
+      toast.success("Etiqueta atualizada");
     } catch (e) { toast.error((e as Error).message); }
   }
 
@@ -274,18 +295,22 @@ function SiteEditor() {
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display text-base font-bold">Imagens</h2>
               <label className="cursor-pointer rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent/40">
                 + Enviar
                 <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
-                  onChange={(e) => handleUpload(e.target.files)} />
+                  onChange={(e) => queueUpload(e.target.files)} />
               </label>
             </div>
+            <div className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">Sempre salve uma etiqueta</strong> ao enviar (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>).
+              A etiqueta diz à I.A MRO <strong>o que cada imagem é</strong> — isso faz o site sair muito melhor. Tudo fica salvo na nuvem e você acessa de qualquer lugar.
+            </div>
             {imgs?.images.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Faça upload e dê uma tag (logo, banner, etc.) para a I.A entender.</p>
+              <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Clique em <strong>+ Enviar</strong> e dê uma etiqueta para cada uma.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
                 {imgs?.images.map((im) => {
                   const isSel = selected.has(im.public_url);
                   const hasTag = !!(im.label && im.label.trim());
@@ -296,9 +321,9 @@ function SiteEditor() {
                         {isSel && <span className="absolute right-1 top-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-brand-foreground">✓</span>}
                       </button>
                       <div className="flex items-center justify-between gap-1 border-t border-border bg-background/60 px-1.5 py-1">
-                        <button type="button" onClick={() => handleRenameTag(im.id, im.label)}
+                        <button type="button" onClick={() => setRenameTarget({ id: im.id, label: im.label ?? "" })}
                           className={`flex-1 truncate text-left text-[10px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}>
-                          {hasTag ? `#${im.label}` : "+ adicionar tag"}
+                          {hasTag ? `#${im.label}` : "+ adicionar etiqueta"}
                         </button>
                         <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { await deleteImageFn({ data: { id: im.id } }); qc.invalidateQueries({ queryKey: ["my-images"] }); } }}
                           className="rounded px-1 text-[10px] text-muted-foreground hover:text-destructive">×</button>
@@ -536,6 +561,64 @@ function SiteEditor() {
               className="rounded-md btn-brand px-4 py-2 text-sm font-semibold disabled:opacity-50">
               Remover {cleanup.selected.size} e gerar
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {uploadQueue && (
+        <Modal onClose={cancelUploadQueue}>
+          <h3 className="font-display text-lg font-bold">Dê uma etiqueta para cada imagem</h3>
+          <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed">
+            A <strong>etiqueta</strong> identifica o que é a imagem (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>, <em>fundo-hero</em>).
+            Isso é <strong>essencial</strong>: é com ela que a nossa I.A MRO sabe onde colocar cada imagem ao gerar o seu site.
+            Tudo fica salvo na <strong>nuvem</strong> — você acessa de qualquer lugar.
+          </div>
+          <div className="mt-4 max-h-[55vh] space-y-3 overflow-y-auto pr-1">
+            {uploadQueue.map((it, idx) => (
+              <div key={idx} className="flex items-start gap-3 rounded-md border border-border p-2">
+                <img src={it.previewUrl} alt="" className="h-16 w-16 flex-shrink-0 rounded object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] text-muted-foreground">{it.file.name}</p>
+                  <input
+                    autoFocus={idx === 0}
+                    value={it.label}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setUploadQueue((q) => q ? q.map((x, i) => i === idx ? { ...x, label: v } : x) : q);
+                    }}
+                    placeholder="Etiqueta (ex.: logo, banner)"
+                    maxLength={80}
+                    className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:border-brand focus:outline-none" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button onClick={cancelUploadQueue} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
+            <button onClick={confirmUploadQueue} className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
+              Salvar {uploadQueue.length} imagem{uploadQueue.length === 1 ? "" : "s"} na nuvem
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {renameTarget && (
+        <Modal onClose={() => setRenameTarget(null)}>
+          <h3 className="font-display text-lg font-bold">Editar etiqueta</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            A etiqueta diz à I.A MRO o que é essa imagem (ex.: <em>logo</em>, <em>banner</em>, <em>produto-1</em>). Quanto melhor a etiqueta, melhor o site.
+          </p>
+          <input
+            autoFocus
+            value={renameTarget.label}
+            onChange={(e) => setRenameTarget({ ...renameTarget, label: e.target.value })}
+            onKeyDown={(e) => { if (e.key === "Enter") saveRename(); }}
+            placeholder="Ex.: logo, banner, foto-equipe"
+            maxLength={80}
+            className="mt-3 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button onClick={() => setRenameTarget(null)} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
+            <button onClick={saveRename} className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">Salvar etiqueta</button>
           </div>
         </Modal>
       )}
