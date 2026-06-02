@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/ob/obrigado")({
   head: () => ({
@@ -33,21 +33,8 @@ function ObrigadoPage() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
-          <Link
-            to="/login"
-            className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-3 font-medium hover:opacity-90 transition"
-          >
-            Acessar minha conta
-          </Link>
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-6 py-3 font-medium hover:bg-accent transition"
-          >
-            Voltar ao início
-          </Link>
-        </div>
       </div>
+
     </main>
   );
 }
