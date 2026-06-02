@@ -321,7 +321,7 @@ Pedido do usuário: "${data.prompt}"`;
         headers: { Authorization: `Bearer ${tokens.deepseek}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: codePrompt }], temperature: 0.6, max_tokens: 8000 }),
       });
-      if (!r.ok) { console.error("deepseek", r.status, await r.text()); throw new Error("Falha ao gerar com DeepSeek. Tente novamente."); }
+      if (!r.ok) { console.error("deepseek", r.status, await r.text()); throw new Error("Falha ao gerar com a I.A MRO (v1). Tente novamente."); }
       const j = await r.json() as { choices: { message: { content: string } }[] };
       html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
     } else if (provider === "claude") {
