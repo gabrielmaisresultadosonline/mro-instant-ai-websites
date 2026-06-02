@@ -238,11 +238,13 @@ function SiteEditor() {
                   <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                     <div className="flex gap-1 rounded-md border border-border p-1">
                       {(["a", "b"] as const).map((v) => {
-                        const enabled = v === "a" ? !!versions.a : !!versions.b;
+                        const hasHtml = v === "a" ? !!versions.a : !!versions.b;
+                        const hasError = v === "a" ? !!versions.errorA : !!versions.errorB;
+                        const enabled = hasHtml || hasError;
                         return (
                           <button key={v} disabled={!enabled} onClick={() => setActiveVersion(v)}
                             className={`rounded px-3 py-1.5 text-xs font-semibold disabled:opacity-40 ${activeVersion === v ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
-                            MRO I.A — Versão {v === "a" ? "1" : "2"}
+                            MRO I.A — Versão {v === "a" ? "1" : "2"}{hasError && !hasHtml ? " (erro)" : ""}
                           </button>
                         );
                       })}

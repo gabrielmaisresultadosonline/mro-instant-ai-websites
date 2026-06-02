@@ -221,27 +221,36 @@ Pedido original do usuário: "${data.prompt}"`;
     })();
 
     const claudeP = (async () => {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": claudeToken,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 8000,
-          temperature: 0.7,
-          messages: [{ role: "user", content: codePrompt }],
-        }),
-      });
-      if (!r.ok) {
-        console.error("claude error", r.status, await r.text());
-        throw new Error("Falha ao gerar a Versão 2.");
+      const models = ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
+      let lastError = "";
+      for (const model of models) {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": claudeToken,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 8000,
+            temperature: 0.7,
+            messages: [{ role: "user", content: codePrompt }],
+          }),
+        });
+        if (!r.ok) {
+          lastError = await r.text();
+          console.error("claude error", r.status, model, lastError);
+          if (r.status === 404 || r.status === 410) continue;
+          throw new Error("Falha ao gerar a Versão 2. Verifique o token da I.A em /administracao.");
+        }
+        const j = await r.json() as { content: { type: string; text: string }[] };
+        const text = (j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
+        const cleaned = cleanHtml(text);
+        if (cleaned) return cleaned;
+        lastError = "A resposta da I.A veio vazia.";
       }
-      const j = await r.json() as { content: { type: string; text: string }[] };
-      const text = (j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
-      return cleanHtml(text);
+      throw new Error(`Falha ao gerar a Versão 2. Nenhum modelo disponível para este token. ${lastError}`.slice(0, 300));
     })();
 
     const [vA, vB] = await Promise.allSettled([deepseekP, claudeP]);
