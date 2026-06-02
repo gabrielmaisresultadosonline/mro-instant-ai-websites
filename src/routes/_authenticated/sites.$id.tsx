@@ -246,7 +246,12 @@ function SiteEditor() {
     <main className="mx-auto max-w-7xl px-5 py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Link to="/dashboard" className="text-xs text-muted-foreground hover:underline">← Voltar</Link>
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1 rounded-md border border-amber-500/70 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-colors"
+          >
+            ← Voltar
+          </Link>
           <h1 className="mt-1 font-display text-2xl font-bold">{site.title || site.slug}</h1>
           <p className="text-sm text-muted-foreground">
             <span className="font-mono">{site.slug}.mro.bio</span>
