@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights } from "@/lib/sites.functions";
-import { listMyImages, registerImage, deleteImage } from "@/lib/images.functions";
+import { listMyImages, registerImage, deleteImage, updateImageLabel } from "@/lib/images.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
