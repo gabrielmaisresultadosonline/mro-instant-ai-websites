@@ -70,6 +70,8 @@ function SiteEditor() {
   const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
   const [rulesSeen, setRulesSeen] = useState(false);
   const [cleanup, setCleanup] = useState<null | { historyLimit: number; inactives: { id: string; provider: string; created_at: string }[]; selected: Set<string> }>(null);
+  const [uploadQueue, setUploadQueue] = useState<null | { file: File; previewUrl: string; label: string }[]>(null);
+  const [renameTarget, setRenameTarget] = useState<null | { id: string; label: string }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
