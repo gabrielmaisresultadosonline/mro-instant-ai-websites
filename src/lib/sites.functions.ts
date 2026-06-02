@@ -221,7 +221,7 @@ Pedido original do usuário: "${data.prompt}"`;
     })();
 
     const claudeP = (async () => {
-      const models = ["claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
+      const models = ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
       let lastError = "";
       for (const model of models) {
         const r = await fetch("https://api.anthropic.com/v1/messages", {
