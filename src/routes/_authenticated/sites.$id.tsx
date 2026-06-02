@@ -95,7 +95,8 @@ function SiteEditor() {
     }
     setGenerating(true);
     try {
-      const base = typeof window !== "undefined" ? window.location.origin : "";
+      // Fallback para imagens antigas salvas com caminho relativo: força mro.bio
+      const base = "https://mro.bio";
       const images = chosen.map((im) => ({
         url: im.public_url.startsWith("http") ? im.public_url : `${base}${im.public_url}`,
         label: im.label!.trim(),

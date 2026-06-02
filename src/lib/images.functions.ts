@@ -26,8 +26,9 @@ export const registerImage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     if (!data.path.startsWith(`${userId}/`)) throw new Error("Caminho inválido.");
-    // Build public-style URL through our proxy endpoint
-    const publicUrl = `/api/public/img/${encodeURIComponent(data.path)}`;
+    // Build ABSOLUTE public URL through our proxy endpoint — assim a I.A
+    // recebe links completos e o site publicado em qualquer subdomínio funciona.
+    const publicUrl = `https://mro.bio/api/public/img/${encodeURIComponent(data.path)}`;
     const { data: row, error } = await supabase
       .from("site_images")
       .insert({ owner_id: userId, path: data.path, public_url: publicUrl, label: data.label ?? null })
