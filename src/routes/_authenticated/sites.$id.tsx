@@ -4,7 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights } from "@/lib/sites.functions";
+import {
+  getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights,
+  listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
+} from "@/lib/sites.functions";
 import { listMyImages, registerImage, deleteImage, updateImageLabel } from "@/lib/images.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,6 +17,12 @@ export const Route = createFileRoute("/_authenticated/sites/$id")({
 });
 
 type Pixels = { ga4?: string; gtm?: string; meta?: string; tiktok?: string };
+
+const PROVIDER_LABEL: Record<string, string> = {
+  deepseek: "DeepSeek",
+  claude: "Claude",
+  openai: "ChatGPT",
+};
 
 function SiteEditor() {
   const { id } = Route.useParams();
@@ -28,6 +37,10 @@ function SiteEditor() {
   const registerImageFn = useServerFn(registerImage);
   const deleteImageFn = useServerFn(deleteImage);
   const updateImageLabelFn = useServerFn(updateImageLabel);
+  const listGensFn = useServerFn(listGenerations);
+  const getGenHtmlFn = useServerFn(getGenerationHtml);
+  const activateGenFn = useServerFn(activateGeneration);
+  const deleteGenFn = useServerFn(deleteGeneration);
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
@@ -41,15 +54,22 @@ function SiteEditor() {
     queryKey: ["insights", id],
     queryFn: () => insightsFn({ data: { id } }),
   });
+  const { data: gens } = useQuery({
+    queryKey: ["generations", id],
+    queryFn: () => listGensFn({ data: { siteId: id } }),
+  });
 
   const [prompt, setPrompt] = useState("");
   const [html, setHtml] = useState("");
   const [pixels, setPixels] = useState<Pixels>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"preview" | "pixels" | "insights">("preview");
-  const [versions, setVersions] = useState<{ a: string; b: string; errorA: string | null; errorB: string | null } | null>(null);
-  const [activeVersion, setActiveVersion] = useState<"a" | "b">("a");
+  const [tab, setTab] = useState<"preview" | "history" | "pixels" | "insights">("preview");
+  const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
+  const [confirmInfo, setConfirmInfo] = useState(false);   // popup pre-generate (info check)
+  const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
+  const [rulesSeen, setRulesSeen] = useState(false);
+  const [cleanup, setCleanup] = useState<null | { historyLimit: number; inactives: { id: string; provider: string; created_at: string }[]; selected: Set<string> }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,9 +80,13 @@ function SiteEditor() {
     }
   }, [site]);
 
+  const monthlyUsed = (site?.gens_this_month as number | undefined) ?? 0;
+  const monthlyLimit = 3;
+  const monthlyLeft = Math.max(0, monthlyLimit - monthlyUsed);
+
   const saveMut = useMutation({
     mutationFn: async (payload: { html?: string; pixels?: Pixels; is_published?: boolean }) => {
-      return saveFn({ data: { id, html: payload.html ?? html, pixels: payload.pixels ?? pixels, is_published: payload.is_published } });
+      return saveFn({ data: { id, html: payload.html, pixels: payload.pixels ?? pixels, is_published: payload.is_published } });
     },
     onSuccess: () => {
       toast.success("Alterações salvas");
@@ -82,31 +106,39 @@ function SiteEditor() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  async function handleGenerate() {
-    if (prompt.trim().length < 5) {
-      toast.error("Descreva o site com mais detalhes.");
-      return;
-    }
+  function openGenerateFlow() {
+    if (prompt.trim().length < 5) { toast.error("Descreva o site com mais detalhes."); return; }
     const chosen = (imgs?.images ?? []).filter((im) => selected.has(im.public_url));
     const missing = chosen.filter((im) => !im.label || !im.label.trim());
-    if (missing.length > 0) {
-      toast.error("Defina uma tag (ex.: logo, banner) para cada imagem selecionada.");
+    if (missing.length > 0) { toast.error("Defina uma tag (ex.: logo, banner) para cada imagem selecionada."); return; }
+    if (monthlyLeft <= 0) {
+      toast.error("Você já usou suas 3 gerações deste mês. Aguarde a renovação.");
       return;
     }
+    if (!rulesSeen) { setConfirmRules(true); return; }
+    setConfirmInfo(true);
+  }
+
+  async function runGenerate(confirmDeleteIds?: string[]) {
     setGenerating(true);
     try {
-      // Fallback para imagens antigas salvas com caminho relativo: força mro.bio
+      const chosen = (imgs?.images ?? []).filter((im) => selected.has(im.public_url));
       const base = "https://mro.bio";
       const images = chosen.map((im) => ({
         url: im.public_url.startsWith("http") ? im.public_url : `${base}${im.public_url}`,
         label: im.label!.trim(),
       }));
-      const res = await genFn({ data: { id, prompt, images } });
-      setVersions({ a: res.versionA, b: res.versionB, errorA: res.errorA ?? null, errorB: res.errorB ?? null });
-      setActiveVersion(res.versionA ? "a" : "b");
+      const res = await genFn({ data: { id, prompt, images, confirmDeleteIds } });
+      if (res.needsCleanup) {
+        setCleanup({ historyLimit: res.historyLimit, inactives: res.inactives, selected: new Set() });
+        toast.message("Histórico cheio — escolha quais gerações antigas remover.");
+        return;
+      }
+      setPreview({ id: res.generationId, provider: res.provider, html: res.html });
       setTab("preview");
-      toast.success(`Geração concluída! Usos: ${res.editsUsed}/${res.weeklyLimit} esta semana`);
       qc.invalidateQueries({ queryKey: ["site", id] });
+      qc.invalidateQueries({ queryKey: ["generations", id] });
+      toast.success(`Gerado com ${PROVIDER_LABEL[res.provider]} — ${res.gensUsed}/${res.monthlyLimit} no mês`);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -114,17 +146,33 @@ function SiteEditor() {
     }
   }
 
-  async function applyVersion(which: "a" | "b") {
-    if (!versions) return;
-    const chosen = which === "a" ? versions.a : versions.b;
-    if (!chosen) { toast.error("Esta versão não foi gerada."); return; }
-    setHtml(chosen);
-    await saveFn({ data: { id, html: chosen } });
-    setVersions(null);
-    toast.success(`Versão ${which === "a" ? "1" : "2"} aplicada ao seu site`);
-    qc.invalidateQueries({ queryKey: ["site", id] });
-  }
+  const activateMut = useMutation({
+    mutationFn: (genId: string) => activateGenFn({ data: { id: genId } }),
+    onSuccess: () => {
+      toast.success("Versão ativada — agora é o site publicado.");
+      setPreview(null);
+      qc.invalidateQueries({ queryKey: ["site", id] });
+      qc.invalidateQueries({ queryKey: ["generations", id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
+  const deleteGenMut = useMutation({
+    mutationFn: (genId: string) => deleteGenFn({ data: { id: genId } }),
+    onSuccess: () => {
+      toast.success("Geração removida");
+      qc.invalidateQueries({ queryKey: ["generations", id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  async function openHistoryItem(genId: string) {
+    try {
+      const row = await getGenHtmlFn({ data: { id: genId } });
+      setPreview({ id: row.id, provider: row.provider, html: row.html });
+      setTab("preview");
+    } catch (e) { toast.error((e as Error).message); }
+  }
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -181,7 +229,7 @@ function SiteEditor() {
           <p className="text-sm text-muted-foreground">
             <span className="font-mono">{site.slug}.mro.bio</span>
             {" · "}
-            <span>{site.edits_this_week}/3 gerações/sem</span>
+            <span>{monthlyUsed}/{monthlyLimit} gerações no mês</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -194,12 +242,8 @@ function SiteEditor() {
           <button
             onClick={async () => {
               const url = `https://${site.slug}.mro.bio`;
-              try {
-                await navigator.clipboard.writeText(url);
-                alert(`Link copiado: ${url}`);
-              } catch {
-                window.prompt("Copie o link:", url);
-              }
+              try { await navigator.clipboard.writeText(url); alert(`Link copiado: ${url}`); }
+              catch { window.prompt("Copie o link:", url); }
             }}
             className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
             📋 Copiar link
@@ -218,14 +262,15 @@ function SiteEditor() {
               <span className="chip">I.A da MRO</span>
             </div>
             <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={6}
-              placeholder="Ex.: Quero um site de coach de emagrecimento para mulheres 30+, tom amigável, com depoimentos e botão de WhatsApp."
+              placeholder="Ex.: Quero um site de coach de emagrecimento para mulheres 30+, tom amigável, com depoimentos e botão de WhatsApp. Inclua nome, endereço, telefone e principais serviços."
               className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none" />
-            <button onClick={handleGenerate} disabled={generating}
+            <button onClick={openGenerateFlow} disabled={generating || monthlyLeft <= 0}
               className="mt-3 w-full rounded-md btn-brand py-2.5 text-sm font-semibold disabled:opacity-60">
-              {generating ? "Gerando 2 versões…" : "✨ Gerar 2 versões com I.A"}
+              {generating ? "Gerando com I.A…" : monthlyLeft <= 0 ? "Limite mensal atingido" : "✨ Gerar com I.A"}
             </button>
-            <p className="mt-2 text-[11px] text-muted-foreground">A I.A cria <strong>duas versões</strong> do site — você escolhe qual aplicar. Limite: 3 gerações por semana.</p>
-
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Você tem <strong>{monthlyLeft}</strong> de {monthlyLimit} gerações disponíveis este mês. Cada geração usa uma I.A diferente em ordem (DeepSeek → Claude → ChatGPT) e fica salva no histórico.
+            </p>
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4">
@@ -252,8 +297,7 @@ function SiteEditor() {
                       </button>
                       <div className="flex items-center justify-between gap-1 border-t border-border bg-background/60 px-1.5 py-1">
                         <button type="button" onClick={() => handleRenameTag(im.id, im.label)}
-                          className={`flex-1 truncate text-left text-[10px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}
-                          title="Clique para editar a tag">
+                          className={`flex-1 truncate text-left text-[10px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}>
                           {hasTag ? `#${im.label}` : "+ adicionar tag"}
                         </button>
                         <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { await deleteImageFn({ data: { id: im.id } }); qc.invalidateQueries({ queryKey: ["my-images"] }); } }}
@@ -270,78 +314,88 @@ function SiteEditor() {
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
           <div className="flex gap-1 border-b border-border p-2">
-            {(["preview", "pixels", "insights"] as const).map((t) => (
+            {(["preview", "history", "pixels", "insights"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1.5 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
-                {t === "preview" ? "Pré-visualização" : t === "pixels" ? "Pixels" : "Insights"}
+                {t === "preview" ? "Pré-visualização" : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)` : t === "pixels" ? "Pixels" : "Insights"}
               </button>
             ))}
           </div>
 
           {tab === "preview" && (
             <div className="p-2">
-              {versions ? (
+              {preview ? (
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                    <div className="flex gap-1 rounded-md border border-border p-1">
-                      {(["a", "b"] as const).map((v) => {
-                        const hasHtml = v === "a" ? !!versions.a : !!versions.b;
-                        const hasError = v === "a" ? !!versions.errorA : !!versions.errorB;
-                        const enabled = hasHtml || hasError;
-                        return (
-                          <button key={v} disabled={!enabled} onClick={() => setActiveVersion(v)}
-                            className={`rounded px-3 py-1.5 text-xs font-semibold disabled:opacity-40 ${activeVersion === v ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
-                            MRO I.A — Versão {v === "a" ? "1" : "2"}{hasError && !hasHtml ? " (erro)" : ""}
-                          </button>
-                        );
-                      })}
+                    <div className="text-xs">
+                      <span className="rounded-md bg-foreground px-2 py-1 font-semibold text-background">
+                        I.A: {PROVIDER_LABEL[preview.provider] ?? preview.provider}
+                      </span>
+                      <span className="ml-2 text-muted-foreground">Gostou? Ative para usar como seu site. Quer outra ideia? Gere de novo (usa outra I.A).</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => setVersions(null)}
+                      <button onClick={() => setPreview(null)}
                         className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40">
-                        Descartar
+                        Fechar
                       </button>
-                      <button onClick={handleGenerate} disabled={generating}
+                      <button onClick={openGenerateFlow} disabled={generating || monthlyLeft <= 0}
                         className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40 disabled:opacity-60">
-                        🔄 Gerar de novo
+                        🔄 Gerar outra ({monthlyLeft} restantes)
                       </button>
-                      <button onClick={() => applyVersion(activeVersion)}
+                      <button onClick={() => activateMut.mutate(preview.id)} disabled={activateMut.isPending}
                         className="rounded-md btn-brand px-3 py-1.5 text-xs font-semibold">
-                        ✓ Aplicar Versão {activeVersion === "a" ? "1" : "2"}
+                        ✓ Ativar esta versão
                       </button>
                     </div>
                   </div>
-                  {(() => {
-                    const activeHtml = activeVersion === "a" ? versions.a : versions.b;
-                    const activeErr = activeVersion === "a" ? versions.errorA : versions.errorB;
-                    if (activeHtml) {
-                      return (
-                        <iframe title="Preview" srcDoc={activeHtml} sandbox="allow-scripts allow-same-origin"
-                          className="h-[70vh] w-full rounded-md border border-border bg-white" />
-                      );
-                    }
-                    return (
-                      <div className="grid h-[70vh] place-items-center rounded-md border border-amber-500/30 bg-amber-500/5 p-6 text-center text-sm">
-                        <div>
-                          <p className="font-semibold">Versão {activeVersion === "a" ? "1" : "2"} não foi gerada.</p>
-                          <p className="mt-2 text-muted-foreground">{activeErr ?? "Falha desconhecida."}</p>
-                          <p className="mt-2 text-xs text-muted-foreground">Verifique a chave correspondente em <code>/administracao</code> e gere de novo. Você ainda pode aplicar a outra versão.</p>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  <iframe title="Preview" srcDoc={preview.html} sandbox="allow-scripts allow-same-origin"
+                    className="h-[70vh] w-full rounded-md border border-border bg-white" />
                 </div>
               ) : html ? (
                 <iframe title="Preview" srcDoc={html} sandbox="allow-scripts allow-same-origin"
                   className="h-[70vh] w-full rounded-md border border-border bg-white" />
               ) : (
                 <div className="grid h-[70vh] place-items-center text-center text-sm text-muted-foreground">
-                  Descreva o site e clique em <strong className="mx-1">Gerar 2 versões com I.A</strong>.
+                  Descreva o site e clique em <strong className="mx-1">Gerar com I.A</strong>.
                 </div>
               )}
             </div>
           )}
 
+          {tab === "history" && (
+            <div className="space-y-2 p-4">
+              <p className="text-xs text-muted-foreground">
+                Até <strong>4 versões</strong> ficam salvas em nuvem. As inativas são apagadas automaticamente após 45 dias. A versão ativa é a que está publicada.
+              </p>
+              {(gens?.generations.length ?? 0) === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma geração ainda.</p>
+              ) : (
+                <ul className="divide-y divide-border rounded-lg border border-border">
+                  {gens!.generations.map((g) => (
+                    <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                      <div className="text-sm">
+                        <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold">{PROVIDER_LABEL[g.provider] ?? g.provider}</span>
+                        {g.is_active && <span className="ml-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-500">ATIVA</span>}
+                        <span className="ml-2 text-xs text-muted-foreground">{new Date(g.created_at).toLocaleString("pt-BR")}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={() => openHistoryItem(g.id)}
+                          className="rounded border border-border px-2 py-1 text-[11px] hover:bg-accent/40">👁 Ver</button>
+                        {!g.is_active && (
+                          <>
+                            <button onClick={() => activateMut.mutate(g.id)} disabled={activateMut.isPending}
+                              className="rounded btn-brand px-2 py-1 text-[11px] font-semibold">Ativar</button>
+                            <button onClick={() => { if (confirm("Excluir esta geração?")) deleteGenMut.mutate(g.id); }}
+                              className="rounded border border-destructive/40 px-2 py-1 text-[11px] text-destructive hover:bg-destructive/10">×</button>
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {tab === "pixels" && (
             <div className="space-y-3 p-5">
@@ -399,6 +453,102 @@ function SiteEditor() {
           )}
         </section>
       </div>
+
+      {/* POPUP — Regras mensais (mostrado na 1ª vez) */}
+      {confirmRules && (
+        <Modal onClose={() => setConfirmRules(false)}>
+          <h3 className="font-display text-lg font-bold">Como funcionam as gerações com I.A</h3>
+          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <li>• Você tem <strong className="text-foreground">3 gerações por mês</strong>. Após 30 dias, libera mais 3 (sempre 3 disponíveis no total — não acumula).</li>
+            <li>• Cada geração usa uma I.A diferente em sequência: <strong>1ª DeepSeek → 2ª Claude → 3ª ChatGPT</strong>. Assim você compara estilos e escolhe a melhor.</li>
+            <li>• Todas as gerações ficam salvas no <strong>Histórico</strong> (máx. 4). Você pode ativar qualquer uma a qualquer momento — só a ativa fica publicada.</li>
+            <li>• As versões inativas são apagadas automaticamente após <strong>45 dias</strong> para não pesar nossa hospedagem.</li>
+            <li>• <strong>Não desperdice</strong>: quanto mais detalhes você der no texto, melhor o resultado e menos tentativas você precisa.</li>
+          </ul>
+          <div className="mt-5 flex justify-end gap-2">
+            <button onClick={() => setConfirmRules(false)} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
+            <button onClick={() => { setRulesSeen(true); setConfirmRules(false); setConfirmInfo(true); }}
+              className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">Entendi, continuar</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* POPUP — Checklist de informações */}
+      {confirmInfo && (
+        <Modal onClose={() => setConfirmInfo(false)}>
+          <h3 className="font-display text-lg font-bold">Antes de gerar — uma última conferida</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Quanto mais informação você passar, melhor a I.A entrega. Releia sua descrição e confirme que ela responde:
+          </p>
+          <ul className="mt-3 space-y-1.5 text-sm">
+            <li>✓ <strong>Nome / marca</strong> do site ou negócio</li>
+            <li>✓ <strong>O que você faz / vende / oferece</strong> (conteúdo)</li>
+            <li>✓ <strong>Para quem</strong> é o site (público)</li>
+            <li>✓ <strong>Qual é a sua ideia</strong> — tom, estilo, o que deve aparecer</li>
+            <li>✓ <strong>Contato</strong> (WhatsApp, endereço, redes — se quiser)</li>
+          </ul>
+          <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+            Você tem <strong>{monthlyLeft}</strong> geraç{monthlyLeft === 1 ? "ão" : "ões"} restante{monthlyLeft === 1 ? "" : "s"} este mês. Esta vai usar <strong>{PROVIDER_LABEL[(["deepseek", "claude", "openai"] as const)[(site.next_provider_idx as number) % 3]]}</strong>.
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button onClick={() => setConfirmInfo(false)} className="rounded-md border border-border px-3 py-2 text-sm">Voltar e editar</button>
+            <button onClick={() => { setConfirmInfo(false); runGenerate(); }}
+              className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">Sim, gerar agora</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* POPUP — Histórico cheio */}
+      {cleanup && (
+        <Modal onClose={() => setCleanup(null)}>
+          <h3 className="font-display text-lg font-bold">Histórico cheio ({cleanup.historyLimit}/{cleanup.historyLimit})</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Para gerar uma nova versão, escolha quais gerações antigas (inativas) podem ser removidas. Isso libera espaço sem afetar o site publicado.
+          </p>
+          {cleanup.inactives.length === 0 ? (
+            <p className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+              Todas as suas versões estão ativas — não dá para remover nenhuma. Aguarde 45 dias ou desative manualmente no histórico.
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-border rounded-md border border-border">
+              {cleanup.inactives.map((g) => {
+                const sel = cleanup.selected.has(g.id);
+                return (
+                  <li key={g.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={sel} onChange={() => {
+                        const next = new Set(cleanup.selected);
+                        if (sel) next.delete(g.id); else next.add(g.id);
+                        setCleanup({ ...cleanup, selected: next });
+                      }} />
+                      <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold">{PROVIDER_LABEL[g.provider] ?? g.provider}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(g.created_at).toLocaleString("pt-BR")}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="mt-5 flex justify-end gap-2">
+            <button onClick={() => setCleanup(null)} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
+            <button onClick={() => { const ids = Array.from(cleanup.selected); setCleanup(null); runGenerate(ids); }}
+              disabled={cleanup.selected.size === 0}
+              className="rounded-md btn-brand px-4 py-2 text-sm font-semibold disabled:opacity-50">
+              Remover {cleanup.selected.size} e gerar
+            </button>
+          </div>
+        </Modal>
+      )}
     </main>
+  );
+}
+
+function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
   );
 }
