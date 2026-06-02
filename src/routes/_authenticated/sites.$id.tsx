@@ -630,6 +630,17 @@ function SiteEditor() {
           </div>
         </Modal>
       )}
+
+      {viewer && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/85 p-3 sm:p-6" onClick={() => setViewer(null)}>
+          <button onClick={() => setViewer(null)} aria-label="Fechar"
+            className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20">×</button>
+          <div className="flex max-h-full max-w-full flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <img src={viewer.url} alt={viewer.label} className="max-h-[85vh] max-w-[95vw] rounded-lg object-contain shadow-2xl" />
+            {viewer.label && <p className="rounded bg-black/50 px-3 py-1 text-xs font-semibold text-white">#{viewer.label}</p>}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
