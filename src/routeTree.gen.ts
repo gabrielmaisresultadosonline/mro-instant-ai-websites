@@ -14,13 +14,17 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AdministracaoRouteImport } from './routes/administracao'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RedefinirSenhaTokenRouteImport } from './routes/redefinir-senha.$token'
 import { Route as ObObrigadoRouteImport } from './routes/ob/obrigado'
+import { Route as AtivarTokenRouteImport } from './routes/ativar.$token'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as ApiPublicCertCheckRouteImport } from './routes/api/public/cert-check'
 import { Route as AuthenticatedSitesNovoRouteImport } from './routes/_authenticated/sites.novo'
 import { Route as AuthenticatedSitesIdRouteImport } from './routes/_authenticated/sites.$id'
+import { Route as ApiPublicWebhooksKiwifyRouteImport } from './routes/api/public/webhooks/kiwify'
 import { Route as ApiPublicSiteSlugRouteImport } from './routes/api/public/site/$slug'
 import { Route as ApiPublicImgSplatRouteImport } from './routes/api/public/img/$'
+import { Route as ApiPublicCronSubscriptionsRouteImport } from './routes/api/public/cron/subscriptions'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -46,9 +50,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RedefinirSenhaTokenRoute = RedefinirSenhaTokenRouteImport.update({
+  id: '/redefinir-senha/$token',
+  path: '/redefinir-senha/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ObObrigadoRoute = ObObrigadoRouteImport.update({
   id: '/ob/obrigado',
   path: '/ob/obrigado',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AtivarTokenRoute = AtivarTokenRouteImport.update({
+  id: '/ativar/$token',
+  path: '/ativar/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -71,6 +85,11 @@ const AuthenticatedSitesIdRoute = AuthenticatedSitesIdRouteImport.update({
   path: '/sites/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicWebhooksKiwifyRoute = ApiPublicWebhooksKiwifyRouteImport.update({
+  id: '/api/public/webhooks/kiwify',
+  path: '/api/public/webhooks/kiwify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSiteSlugRoute = ApiPublicSiteSlugRouteImport.update({
   id: '/api/public/site/$slug',
   path: '/api/public/site/$slug',
@@ -81,6 +100,12 @@ const ApiPublicImgSplatRoute = ApiPublicImgSplatRouteImport.update({
   path: '/api/public/img/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronSubscriptionsRoute =
+  ApiPublicCronSubscriptionsRouteImport.update({
+    id: '/api/public/cron/subscriptions',
+    path: '/api/public/cron/subscriptions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,12 +113,16 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
+  '/redefinir-senha/$token': typeof RedefinirSenhaTokenRoute
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
+  '/api/public/webhooks/kiwify': typeof ApiPublicWebhooksKiwifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -101,12 +130,16 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
+  '/redefinir-senha/$token': typeof RedefinirSenhaTokenRoute
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
+  '/api/public/webhooks/kiwify': typeof ApiPublicWebhooksKiwifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,12 +149,16 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
+  '/redefinir-senha/$token': typeof RedefinirSenhaTokenRoute
   '/_authenticated/sites/$id': typeof AuthenticatedSitesIdRoute
   '/_authenticated/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
+  '/api/public/webhooks/kiwify': typeof ApiPublicWebhooksKiwifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,12 +168,16 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/dashboard'
+    | '/ativar/$token'
     | '/ob/obrigado'
+    | '/redefinir-senha/$token'
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
+    | '/api/public/webhooks/kiwify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,12 +185,16 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/dashboard'
+    | '/ativar/$token'
     | '/ob/obrigado'
+    | '/redefinir-senha/$token'
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
+    | '/api/public/webhooks/kiwify'
   id:
     | '__root__'
     | '/'
@@ -158,12 +203,16 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/ativar/$token'
     | '/ob/obrigado'
+    | '/redefinir-senha/$token'
     | '/_authenticated/sites/$id'
     | '/_authenticated/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
+    | '/api/public/webhooks/kiwify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -172,10 +221,14 @@ export interface RootRouteChildren {
   AdministracaoRoute: typeof AdministracaoRoute
   CadastroRoute: typeof CadastroRoute
   LoginRoute: typeof LoginRoute
+  AtivarTokenRoute: typeof AtivarTokenRoute
   ObObrigadoRoute: typeof ObObrigadoRoute
+  RedefinirSenhaTokenRoute: typeof RedefinirSenhaTokenRoute
   ApiPublicCertCheckRoute: typeof ApiPublicCertCheckRoute
+  ApiPublicCronSubscriptionsRoute: typeof ApiPublicCronSubscriptionsRoute
   ApiPublicImgSplatRoute: typeof ApiPublicImgSplatRoute
   ApiPublicSiteSlugRoute: typeof ApiPublicSiteSlugRoute
+  ApiPublicWebhooksKiwifyRoute: typeof ApiPublicWebhooksKiwifyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -215,11 +268,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/redefinir-senha/$token': {
+      id: '/redefinir-senha/$token'
+      path: '/redefinir-senha/$token'
+      fullPath: '/redefinir-senha/$token'
+      preLoaderRoute: typeof RedefinirSenhaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ob/obrigado': {
       id: '/ob/obrigado'
       path: '/ob/obrigado'
       fullPath: '/ob/obrigado'
       preLoaderRoute: typeof ObObrigadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ativar/$token': {
+      id: '/ativar/$token'
+      path: '/ativar/$token'
+      fullPath: '/ativar/$token'
+      preLoaderRoute: typeof AtivarTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/dashboard': {
@@ -250,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSitesIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/webhooks/kiwify': {
+      id: '/api/public/webhooks/kiwify'
+      path: '/api/public/webhooks/kiwify'
+      fullPath: '/api/public/webhooks/kiwify'
+      preLoaderRoute: typeof ApiPublicWebhooksKiwifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/site/$slug': {
       id: '/api/public/site/$slug'
       path: '/api/public/site/$slug'
@@ -262,6 +336,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/img/$'
       fullPath: '/api/public/img/$'
       preLoaderRoute: typeof ApiPublicImgSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/subscriptions': {
+      id: '/api/public/cron/subscriptions'
+      path: '/api/public/cron/subscriptions'
+      fullPath: '/api/public/cron/subscriptions'
+      preLoaderRoute: typeof ApiPublicCronSubscriptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -288,11 +369,25 @@ const rootRouteChildren: RootRouteChildren = {
   AdministracaoRoute: AdministracaoRoute,
   CadastroRoute: CadastroRoute,
   LoginRoute: LoginRoute,
+  AtivarTokenRoute: AtivarTokenRoute,
   ObObrigadoRoute: ObObrigadoRoute,
+  RedefinirSenhaTokenRoute: RedefinirSenhaTokenRoute,
   ApiPublicCertCheckRoute: ApiPublicCertCheckRoute,
+  ApiPublicCronSubscriptionsRoute: ApiPublicCronSubscriptionsRoute,
   ApiPublicImgSplatRoute: ApiPublicImgSplatRoute,
   ApiPublicSiteSlugRoute: ApiPublicSiteSlugRoute,
+  ApiPublicWebhooksKiwifyRoute: ApiPublicWebhooksKiwifyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
