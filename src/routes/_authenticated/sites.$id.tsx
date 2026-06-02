@@ -281,6 +281,7 @@ function SiteEditor() {
                       </div>
                     );
                   })()}
+                </div>
               ) : html ? (
                 <iframe title="Preview" srcDoc={html} sandbox="allow-scripts allow-same-origin"
                   className="h-[70vh] w-full rounded-md border border-border bg-white" />
