@@ -321,7 +321,7 @@ Pedido do usuário: "${data.prompt}"`;
         headers: { Authorization: `Bearer ${tokens.deepseek}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: codePrompt }], temperature: 0.6, max_tokens: 8000 }),
       });
-      if (!r.ok) { console.error("deepseek", r.status, await r.text()); throw new Error("Falha ao gerar com DeepSeek. Tente novamente."); }
+      if (!r.ok) { console.error("deepseek", r.status, await r.text()); throw new Error("Falha ao gerar com a I.A MRO (v1). Tente novamente."); }
       const j = await r.json() as { choices: { message: { content: string } }[] };
       html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
     } else if (provider === "claude") {
@@ -333,12 +333,12 @@ Pedido do usuário: "${data.prompt}"`;
           headers: { "x-api-key": tokens.claude!, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
           body: JSON.stringify({ model, max_tokens: 8000, temperature: 0.7, messages: [{ role: "user", content: codePrompt }] }),
         });
-        if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error("Falha ao gerar com Claude."); }
+        if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error("Falha ao gerar com a I.A MRO (v2)."); }
         const j = await r.json() as { content: { type: string; text: string }[] };
         html = cleanHtml((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
         if (html) break;
       }
-      if (!html) throw new Error(`Falha ao gerar com Claude. ${lastErr}`.slice(0, 300));
+      if (!html) throw new Error(`Falha ao gerar com a I.A MRO (v2). ${lastErr}`.slice(0, 300));
     } else {
       // openai
       const r = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -346,7 +346,7 @@ Pedido do usuário: "${data.prompt}"`;
         headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: codePrompt }], temperature: 0.7, max_tokens: 8000 }),
       });
-      if (!r.ok) { console.error("openai", r.status, await r.text()); throw new Error("Falha ao gerar com ChatGPT."); }
+      if (!r.ok) { console.error("openai", r.status, await r.text()); throw new Error("Falha ao gerar com a I.A MRO (v3)."); }
       const j = await r.json() as { choices: { message: { content: string } }[] };
       html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
     }
