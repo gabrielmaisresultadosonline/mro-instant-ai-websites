@@ -31,6 +31,8 @@ export const createSite = createServerFn({ method: "POST" })
       throw new Error("Slug inválido. Use 3-30 letras/números/hífens.");
     }
     const { supabase, userId } = context;
+    const { data: mine } = await supabase.from("sites").select("id").eq("owner_id", userId).limit(1);
+    if (mine && mine.length > 0) throw new Error("Você já possui um site. Cada conta pode ter apenas um.");
     const { data: existing } = await supabase.from("sites").select("id").eq("slug", data.slug).maybeSingle();
     if (existing) throw new Error("Esse nome já está em uso. Tente outro.");
     const { data: row, error } = await supabase
