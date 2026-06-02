@@ -52,7 +52,7 @@ async function run(): Promise<Response> {
   for (const p of r2 ?? []) {
     await enqueueEmail(supabaseAdmin, { email: p.email, name: p.name }, {
       name: "reminder_2d",
-      data: { name: p.name, expiresAt: new Date(p.subscription_expires_at).toLocaleDateString("pt-BR"), renewUrl: RENEW_URL },
+      data: { name: p.name, expiresAt: new Date(p.subscription_expires_at as string).toLocaleDateString("pt-BR"), renewUrl: RENEW_URL },
     });
     await supabaseAdmin.from("profiles").update({ reminder_2d_sent_at: now.toISOString() }).eq("id", p.id);
     stats.reminded_2d++;
@@ -70,7 +70,7 @@ async function run(): Promise<Response> {
   for (const p of r1 ?? []) {
     await enqueueEmail(supabaseAdmin, { email: p.email, name: p.name }, {
       name: "reminder_1d",
-      data: { name: p.name, expiresAt: new Date(p.subscription_expires_at).toLocaleDateString("pt-BR"), renewUrl: RENEW_URL },
+      data: { name: p.name, expiresAt: new Date(p.subscription_expires_at as string).toLocaleDateString("pt-BR"), renewUrl: RENEW_URL },
     });
     await supabaseAdmin.from("profiles").update({ reminder_1d_sent_at: now.toISOString() }).eq("id", p.id);
     stats.reminded_1d++;
