@@ -122,7 +122,7 @@ function Dashboard() {
         <Card label="Visitas totais" value={String(insights?.total ?? 0)} />
         <Card label="Site criado em" value={createdAt} />
         <Card label="Último acesso" value={lastVisit} sub={lastVisitLoc} />
-        <Card label="Gerações esta semana" value={`${site.edits_this_week}/3`} />
+        <Card label="Gerações no mês" value={`${(site as { gens_this_month?: number }).gens_this_month ?? 0}/3`} />
       </div>
 
       <section className="mt-8 rounded-xl border border-border bg-card p-5">
