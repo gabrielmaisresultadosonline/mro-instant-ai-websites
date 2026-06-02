@@ -134,6 +134,14 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     } catch (e) { toast.error((e as Error).message); }
   }
 
+  async function handleResetGen(uid: string, email: string) {
+    if (!confirm(`Renovar as gerações da semana de ${email}? Ele poderá gerar mais 3 versões.`)) return;
+    try {
+      await resetGenFn({ data: { token, userId: uid } });
+      toast.success("Gerações renovadas");
+    } catch (e) { toast.error((e as Error).message); }
+  }
+
   async function handleSaveTokens() {
     try {
       const payload: { token: string; openai_token?: string; deepseek_token?: string; claude_token?: string } = { token };
