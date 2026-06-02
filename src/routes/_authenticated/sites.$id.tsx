@@ -295,18 +295,22 @@ function SiteEditor() {
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display text-base font-bold">Imagens</h2>
               <label className="cursor-pointer rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent/40">
                 + Enviar
                 <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
-                  onChange={(e) => handleUpload(e.target.files)} />
+                  onChange={(e) => queueUpload(e.target.files)} />
               </label>
             </div>
+            <div className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">Sempre salve uma etiqueta</strong> ao enviar (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>).
+              A etiqueta diz à I.A MRO <strong>o que cada imagem é</strong> — isso faz o site sair muito melhor. Tudo fica salvo na nuvem e você acessa de qualquer lugar.
+            </div>
             {imgs?.images.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Faça upload e dê uma tag (logo, banner, etc.) para a I.A entender.</p>
+              <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Clique em <strong>+ Enviar</strong> e dê uma etiqueta para cada uma.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
                 {imgs?.images.map((im) => {
                   const isSel = selected.has(im.public_url);
                   const hasTag = !!(im.label && im.label.trim());
@@ -317,9 +321,9 @@ function SiteEditor() {
                         {isSel && <span className="absolute right-1 top-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-brand-foreground">✓</span>}
                       </button>
                       <div className="flex items-center justify-between gap-1 border-t border-border bg-background/60 px-1.5 py-1">
-                        <button type="button" onClick={() => handleRenameTag(im.id, im.label)}
+                        <button type="button" onClick={() => setRenameTarget({ id: im.id, label: im.label ?? "" })}
                           className={`flex-1 truncate text-left text-[10px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}>
-                          {hasTag ? `#${im.label}` : "+ adicionar tag"}
+                          {hasTag ? `#${im.label}` : "+ adicionar etiqueta"}
                         </button>
                         <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { await deleteImageFn({ data: { id: im.id } }); qc.invalidateQueries({ queryKey: ["my-images"] }); } }}
                           className="rounded px-1 text-[10px] text-muted-foreground hover:text-destructive">×</button>
