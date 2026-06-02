@@ -87,12 +87,20 @@ function SiteEditor() {
       toast.error("Descreva o site com mais detalhes.");
       return;
     }
+    const chosen = (imgs?.images ?? []).filter((im) => selected.has(im.public_url));
+    const missing = chosen.filter((im) => !im.label || !im.label.trim());
+    if (missing.length > 0) {
+      toast.error("Defina uma tag (ex.: logo, banner) para cada imagem selecionada.");
+      return;
+    }
     setGenerating(true);
     try {
-      const urls = Array.from(selected);
       const base = typeof window !== "undefined" ? window.location.origin : "";
-      const absoluteUrls = urls.map((u) => (u.startsWith("http") ? u : `${base}${u}`));
-      const res = await genFn({ data: { id, prompt, imageUrls: absoluteUrls } });
+      const images = chosen.map((im) => ({
+        url: im.public_url.startsWith("http") ? im.public_url : `${base}${im.public_url}`,
+        label: im.label!.trim(),
+      }));
+      const res = await genFn({ data: { id, prompt, images } });
       setVersions({ a: res.versionA, b: res.versionB, errorA: res.errorA ?? null, errorB: res.errorB ?? null });
       setActiveVersion(res.versionA ? "a" : "b");
       setTab("preview");
