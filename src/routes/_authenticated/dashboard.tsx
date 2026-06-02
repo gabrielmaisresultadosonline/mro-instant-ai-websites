@@ -89,10 +89,25 @@ function Dashboard() {
             {site.is_published ? "Despublicar" : "Publicar"}
           </button>
           {site.is_published && (
-            <a href={`/api/public/site/${site.slug}`} target="_blank" rel="noreferrer"
-              className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent/40">
-              Ver site ↗
-            </a>
+            <>
+              <a href={`https://${site.slug}.mro.bio`} target="_blank" rel="noreferrer"
+                className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent/40">
+                Ver site ↗
+              </a>
+              <button
+                onClick={async () => {
+                  const url = `https://${site.slug}.mro.bio`;
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    alert(`Link copiado: ${url}`);
+                  } catch {
+                    window.prompt("Copie o link:", url);
+                  }
+                }}
+                className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent/40">
+                📋 Copiar
+              </button>
+            </>
           )}
         </div>
       </div>
