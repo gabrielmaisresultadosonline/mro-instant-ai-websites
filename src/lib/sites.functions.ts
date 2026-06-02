@@ -247,6 +247,8 @@ Pedido original do usuário: "${data.prompt}"`;
     const [vA, vB] = await Promise.allSettled([deepseekP, claudeP]);
     const versionA = vA.status === "fulfilled" ? vA.value : "";
     const versionB = vB.status === "fulfilled" ? vB.value : "";
+    const errorA = vA.status === "rejected" ? (vA.reason as Error).message : null;
+    const errorB = vB.status === "rejected" ? (vB.reason as Error).message : null;
     if (!versionA && !versionB) {
       throw new Error("A I.A da MRO está com instabilidade. Tente novamente em instantes.");
     }
@@ -260,6 +262,8 @@ Pedido original do usuário: "${data.prompt}"`;
     return {
       versionA,
       versionB,
+      errorA,
+      errorB,
       brief,
       editsUsed: edits + 1,
       weeklyLimit: WEEKLY_LIMIT,
