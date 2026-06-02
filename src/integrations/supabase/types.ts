@@ -68,6 +68,50 @@ export type Database = {
         }
         Relationships: []
       }
+      site_generations: {
+        Row: {
+          brief: string
+          created_at: string
+          html: string
+          id: string
+          is_active: boolean
+          owner_id: string
+          prompt: string
+          provider: string
+          site_id: string
+        }
+        Insert: {
+          brief?: string
+          created_at?: string
+          html?: string
+          id?: string
+          is_active?: boolean
+          owner_id: string
+          prompt?: string
+          provider: string
+          site_id: string
+        }
+        Update: {
+          brief?: string
+          created_at?: string
+          html?: string
+          id?: string
+          is_active?: boolean
+          owner_id?: string
+          prompt?: string
+          provider?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_generations_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_images: {
         Row: {
           created_at: string
@@ -154,10 +198,13 @@ export type Database = {
         Row: {
           created_at: string
           edits_this_week: number
+          gens_this_month: number
           html: string
           id: string
           is_published: boolean
           last_prompt: string
+          month_started_at: string
+          next_provider_idx: number
           owner_id: string
           pixels: Json
           slug: string
@@ -168,10 +215,13 @@ export type Database = {
         Insert: {
           created_at?: string
           edits_this_week?: number
+          gens_this_month?: number
           html?: string
           id?: string
           is_published?: boolean
           last_prompt?: string
+          month_started_at?: string
+          next_provider_idx?: number
           owner_id: string
           pixels?: Json
           slug: string
@@ -182,10 +232,13 @@ export type Database = {
         Update: {
           created_at?: string
           edits_this_week?: number
+          gens_this_month?: number
           html?: string
           id?: string
           is_published?: boolean
           last_prompt?: string
+          month_started_at?: string
+          next_provider_idx?: number
           owner_id?: string
           pixels?: Json
           slug?: string
