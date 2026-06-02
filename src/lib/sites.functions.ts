@@ -111,11 +111,14 @@ export const getSiteInsights = createServerFn({ method: "GET" })
 
 export const generateSiteHtml = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string; prompt: string; imageUrls?: string[] }) =>
+  .inputValidator((i: { id: string; prompt: string; images?: { url: string; label: string }[] }) =>
     z.object({
       id: z.string().uuid(),
       prompt: z.string().trim().min(5).max(4000),
-      imageUrls: z.array(z.string().url()).max(20).optional(),
+      images: z.array(z.object({
+        url: z.string().min(1).max(2000),
+        label: z.string().trim().min(1).max(80),
+      })).max(20).optional(),
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
@@ -154,10 +157,10 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     const ideaPrompt = `Você é um diretor criativo. O usuário pediu este site:
 "${data.prompt}"
 
-Imagens disponíveis para usar (URLs absolutas):
-${(data.imageUrls ?? []).map((u, i) => `${i + 1}. ${u}`).join("\n") || "(nenhuma)"}
+Imagens disponíveis (use as URLs LITERALMENTE, com a tag indicada como referência semântica):
+${(data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
 
-Responda em português um briefing curto e prático com: nome/título sugerido, paleta de cores (3 cores hex), seções (5 a 8) com título e 1 frase de copy cada, CTAs principais, e onde colocar cada imagem. Sem explicações sobre o briefing, vá direto.`;
+Responda em português um briefing curto e prático com: nome/título sugerido, paleta de cores (3 cores hex), seções (5 a 8) com título e 1 frase de copy cada, CTAs principais, e onde colocar cada imagem (referenciando a tag). Sem explicações sobre o briefing, vá direto.`;
 
     const ideaRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -192,8 +195,8 @@ REGRAS OBRIGATÓRIAS:
 - IMPORTANTE — Botões/links de WhatsApp: SEMPRE use o link direto no formato https://wa.me/55XXXXXXXXXXX (DDI 55 + DDD + número, só dígitos). Se o usuário informou um número, use-o; se não informou, use https://wa.me/5511999999999 como placeholder. Use target="_blank" rel="noopener" e texto "Falar no WhatsApp".
 - NÃO escreva nenhuma explicação, NÃO use markdown — apenas o HTML.
 
-Imagens (use as URLs literalmente):
-${(data.imageUrls ?? []).map((u) => u).join("\n") || "(nenhuma)"}
+Imagens (use cada URL LITERALMENTE no contexto descrito pela tag):
+${(data.images ?? []).map((im) => `- [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
 
 Pedido original do usuário: "${data.prompt}"`;
 

@@ -37,6 +37,25 @@ export const registerImage = createServerFn({ method: "POST" })
     return row;
   });
 
+export const updateImageLabel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { id: string; label: string }) =>
+    z.object({
+      id: z.string().uuid(),
+      label: z.string().trim().min(1).max(80),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("site_images")
+      .update({ label: data.label })
+      .eq("id", data.id)
+      .eq("owner_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const deleteImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { id: string }) => z.object({ id: z.string().uuid() }).parse(i))

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights } from "@/lib/sites.functions";
-import { listMyImages, registerImage, deleteImage } from "@/lib/images.functions";
+import { listMyImages, registerImage, deleteImage, updateImageLabel } from "@/lib/images.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
@@ -27,6 +27,7 @@ function SiteEditor() {
   const listImagesFn = useServerFn(listMyImages);
   const registerImageFn = useServerFn(registerImage);
   const deleteImageFn = useServerFn(deleteImage);
+  const updateImageLabelFn = useServerFn(updateImageLabel);
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
@@ -86,12 +87,20 @@ function SiteEditor() {
       toast.error("Descreva o site com mais detalhes.");
       return;
     }
+    const chosen = (imgs?.images ?? []).filter((im) => selected.has(im.public_url));
+    const missing = chosen.filter((im) => !im.label || !im.label.trim());
+    if (missing.length > 0) {
+      toast.error("Defina uma tag (ex.: logo, banner) para cada imagem selecionada.");
+      return;
+    }
     setGenerating(true);
     try {
-      const urls = Array.from(selected);
       const base = typeof window !== "undefined" ? window.location.origin : "";
-      const absoluteUrls = urls.map((u) => (u.startsWith("http") ? u : `${base}${u}`));
-      const res = await genFn({ data: { id, prompt, imageUrls: absoluteUrls } });
+      const images = chosen.map((im) => ({
+        url: im.public_url.startsWith("http") ? im.public_url : `${base}${im.public_url}`,
+        label: im.label!.trim(),
+      }));
+      const res = await genFn({ data: { id, prompt, images } });
       setVersions({ a: res.versionA, b: res.versionB, errorA: res.errorA ?? null, errorB: res.errorB ?? null });
       setActiveVersion(res.versionA ? "a" : "b");
       setTab("preview");
@@ -122,17 +131,32 @@ function SiteEditor() {
     const uid = userData.user?.id;
     if (!uid) return;
     for (const file of Array.from(files)) {
+      const suggested = file.name.replace(/\.[^.]+$/, "").slice(0, 60);
+      const tag = window.prompt(`Tag para "${file.name}" (ex.: logo, banner, foto-equipe):`, suggested);
+      if (!tag || !tag.trim()) { toast.error(`Imagem "${file.name}" ignorada — sem tag.`); continue; }
       const ext = file.name.split(".").pop() || "jpg";
       const path = `${uid}/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("site-images").upload(path, file, { upsert: false, contentType: file.type });
       if (error) { toast.error(error.message); continue; }
       try {
-        await registerImageFn({ data: { path, label: file.name.slice(0, 60) } });
+        await registerImageFn({ data: { path, label: tag.trim().slice(0, 80) } });
       } catch (e) { toast.error((e as Error).message); }
     }
     qc.invalidateQueries({ queryKey: ["my-images"] });
     if (fileRef.current) fileRef.current.value = "";
     toast.success("Imagens enviadas");
+  }
+
+  async function handleRenameTag(imageId: string, currentLabel: string | null) {
+    const next = window.prompt("Nova tag (ex.: logo, banner):", currentLabel ?? "");
+    if (next === null) return;
+    const v = next.trim();
+    if (!v) { toast.error("Tag não pode ficar vazia."); return; }
+    try {
+      await updateImageLabelFn({ data: { id: imageId, label: v.slice(0, 80) } });
+      qc.invalidateQueries({ queryKey: ["my-images"] });
+      toast.success("Tag atualizada");
+    } catch (e) { toast.error((e as Error).message); }
   }
 
   function toggleSelected(url: string) {
@@ -200,19 +224,28 @@ function SiteEditor() {
               </label>
             </div>
             {imgs?.images.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Faça upload para a I.A poder usá-las.</p>
+              <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Faça upload e dê uma tag (logo, banner, etc.) para a I.A entender.</p>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {imgs?.images.map((im) => {
                   const isSel = selected.has(im.public_url);
+                  const hasTag = !!(im.label && im.label.trim());
                   return (
-                    <button key={im.id} type="button" onClick={() => toggleSelected(im.public_url)}
-                      className={`group relative aspect-square overflow-hidden rounded-md border-2 ${isSel ? "border-brand" : "border-border"}`}>
-                      <img src={im.public_url} alt={im.label ?? ""} className="h-full w-full object-cover" />
-                      {isSel && <span className="absolute right-1 top-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-brand-foreground">✓</span>}
-                      <span onClick={async (e) => { e.stopPropagation(); if (confirm("Excluir imagem?")) { await deleteImageFn({ data: { id: im.id } }); qc.invalidateQueries({ queryKey: ["my-images"] }); } }}
-                        className="absolute left-1 top-1 hidden cursor-pointer rounded bg-black/70 px-1 text-[10px] text-white group-hover:block">×</span>
-                    </button>
+                    <div key={im.id} className={`group relative overflow-hidden rounded-md border-2 ${isSel ? "border-brand" : "border-border"}`}>
+                      <button type="button" onClick={() => toggleSelected(im.public_url)} className="block w-full">
+                        <img src={im.public_url} alt={im.label ?? ""} className="aspect-square w-full object-cover" />
+                        {isSel && <span className="absolute right-1 top-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-brand-foreground">✓</span>}
+                      </button>
+                      <div className="flex items-center justify-between gap-1 border-t border-border bg-background/60 px-1.5 py-1">
+                        <button type="button" onClick={() => handleRenameTag(im.id, im.label)}
+                          className={`flex-1 truncate text-left text-[10px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}
+                          title="Clique para editar a tag">
+                          {hasTag ? `#${im.label}` : "+ adicionar tag"}
+                        </button>
+                        <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { await deleteImageFn({ data: { id: im.id } }); qc.invalidateQueries({ queryKey: ["my-images"] }); } }}
+                          className="rounded px-1 text-[10px] text-muted-foreground hover:text-destructive">×</button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
