@@ -138,3 +138,18 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const adminResetUserGenerations = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; userId: string }) =>
+    z.object({ token: z.string(), userId: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("sites")
+      .update({ edits_this_week: 0, week_started_at: new Date().toISOString() })
+      .eq("owner_id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

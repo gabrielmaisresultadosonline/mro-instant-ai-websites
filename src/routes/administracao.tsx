@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { adminLogin, adminListUsers, adminListSites, adminDeleteUser, adminGetSettings, adminSaveSettings } from "@/lib/admin.functions";
+import { adminLogin, adminListUsers, adminListSites, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/administracao")({
   ssr: false,
@@ -92,6 +92,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const usersFn = useServerFn(adminListUsers);
   const sitesFn = useServerFn(adminListSites);
   const delUserFn = useServerFn(adminDeleteUser);
+  const resetGenFn = useServerFn(adminResetUserGenerations);
   const getSettingsFn = useServerFn(adminGetSettings);
   const saveSettingsFn = useServerFn(adminSaveSettings);
 
@@ -130,6 +131,14 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       await delUserFn({ data: { token, userId: uid } });
       toast.success("Usuário excluído");
       void reload();
+    } catch (e) { toast.error((e as Error).message); }
+  }
+
+  async function handleResetGen(uid: string, email: string) {
+    if (!confirm(`Renovar as gerações da semana de ${email}? Ele poderá gerar mais 3 versões.`)) return;
+    try {
+      await resetGenFn({ data: { token, userId: uid } });
+      toast.success("Gerações renovadas");
     } catch (e) { toast.error((e as Error).message); }
   }
 
@@ -178,8 +187,12 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                   <td className="px-4 py-3">{u.site_count}</td>
                   <td className="px-4 py-3 text-xs text-white/60">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => handleDeleteUser(u.id, u.email)}
-                      className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10">Excluir</button>
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => handleResetGen(u.id, u.email)}
+                        className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Renovar gerações</button>
+                      <button onClick={() => handleDeleteUser(u.id, u.email)}
+                        className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10">Excluir</button>
+                    </div>
                   </td>
                 </tr>
               ))}
