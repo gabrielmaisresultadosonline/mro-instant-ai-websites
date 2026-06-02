@@ -16,18 +16,21 @@ export type Database = {
     Tables: {
       admin_settings: {
         Row: {
+          claude_token: string | null
           deepseek_token: string | null
           id: boolean
           openai_token: string | null
           updated_at: string
         }
         Insert: {
+          claude_token?: string | null
           deepseek_token?: string | null
           id?: boolean
           openai_token?: string | null
           updated_at?: string
         }
         Update: {
+          claude_token?: string | null
           deepseek_token?: string | null
           id?: boolean
           openai_token?: string | null
