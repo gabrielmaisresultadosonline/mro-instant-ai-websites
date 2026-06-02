@@ -47,7 +47,7 @@ function SiteEditor() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
   const [tab, setTab] = useState<"preview" | "pixels" | "insights">("preview");
-  const [versions, setVersions] = useState<{ a: string; b: string } | null>(null);
+  const [versions, setVersions] = useState<{ a: string; b: string; errorA: string | null; errorB: string | null } | null>(null);
   const [activeVersion, setActiveVersion] = useState<"a" | "b">("a");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -92,10 +92,10 @@ function SiteEditor() {
       const base = typeof window !== "undefined" ? window.location.origin : "";
       const absoluteUrls = urls.map((u) => (u.startsWith("http") ? u : `${base}${u}`));
       const res = await genFn({ data: { id, prompt, imageUrls: absoluteUrls } });
-      setVersions({ a: res.versionA, b: res.versionB });
+      setVersions({ a: res.versionA, b: res.versionB, errorA: res.errorA ?? null, errorB: res.errorB ?? null });
       setActiveVersion(res.versionA ? "a" : "b");
       setTab("preview");
-      toast.success(`Duas versões geradas! Usos: ${res.editsUsed}/${res.weeklyLimit} esta semana`);
+      toast.success(`Geração concluída! Usos: ${res.editsUsed}/${res.weeklyLimit} esta semana`);
       qc.invalidateQueries({ queryKey: ["site", id] });
     } catch (e) {
       toast.error((e as Error).message);
@@ -262,8 +262,25 @@ function SiteEditor() {
                       </button>
                     </div>
                   </div>
-                  <iframe title="Preview" srcDoc={activeVersion === "a" ? versions.a : versions.b} sandbox="allow-scripts allow-same-origin"
-                    className="h-[70vh] w-full rounded-md border border-border bg-white" />
+                  {(() => {
+                    const activeHtml = activeVersion === "a" ? versions.a : versions.b;
+                    const activeErr = activeVersion === "a" ? versions.errorA : versions.errorB;
+                    if (activeHtml) {
+                      return (
+                        <iframe title="Preview" srcDoc={activeHtml} sandbox="allow-scripts allow-same-origin"
+                          className="h-[70vh] w-full rounded-md border border-border bg-white" />
+                      );
+                    }
+                    return (
+                      <div className="grid h-[70vh] place-items-center rounded-md border border-amber-500/30 bg-amber-500/5 p-6 text-center text-sm">
+                        <div>
+                          <p className="font-semibold">Versão {activeVersion === "a" ? "1" : "2"} não foi gerada.</p>
+                          <p className="mt-2 text-muted-foreground">{activeErr ?? "Falha desconhecida."}</p>
+                          <p className="mt-2 text-xs text-muted-foreground">Verifique a chave correspondente em <code>/administracao</code> e gere de novo. Você ainda pode aplicar a outra versão.</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : html ? (
                 <iframe title="Preview" srcDoc={html} sandbox="allow-scripts allow-same-origin"
