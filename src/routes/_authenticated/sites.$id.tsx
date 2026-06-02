@@ -564,6 +564,64 @@ function SiteEditor() {
           </div>
         </Modal>
       )}
+
+      {uploadQueue && (
+        <Modal onClose={cancelUploadQueue}>
+          <h3 className="font-display text-lg font-bold">Dê uma etiqueta para cada imagem</h3>
+          <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed">
+            A <strong>etiqueta</strong> identifica o que é a imagem (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>, <em>fundo-hero</em>).
+            Isso é <strong>essencial</strong>: é com ela que a nossa I.A MRO sabe onde colocar cada imagem ao gerar o seu site.
+            Tudo fica salvo na <strong>nuvem</strong> — você acessa de qualquer lugar.
+          </div>
+          <div className="mt-4 max-h-[55vh] space-y-3 overflow-y-auto pr-1">
+            {uploadQueue.map((it, idx) => (
+              <div key={idx} className="flex items-start gap-3 rounded-md border border-border p-2">
+                <img src={it.previewUrl} alt="" className="h-16 w-16 flex-shrink-0 rounded object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] text-muted-foreground">{it.file.name}</p>
+                  <input
+                    autoFocus={idx === 0}
+                    value={it.label}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setUploadQueue((q) => q ? q.map((x, i) => i === idx ? { ...x, label: v } : x) : q);
+                    }}
+                    placeholder="Etiqueta (ex.: logo, banner)"
+                    maxLength={80}
+                    className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:border-brand focus:outline-none" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button onClick={cancelUploadQueue} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
+            <button onClick={confirmUploadQueue} className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
+              Salvar {uploadQueue.length} imagem{uploadQueue.length === 1 ? "" : "s"} na nuvem
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {renameTarget && (
+        <Modal onClose={() => setRenameTarget(null)}>
+          <h3 className="font-display text-lg font-bold">Editar etiqueta</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            A etiqueta diz à I.A MRO o que é essa imagem (ex.: <em>logo</em>, <em>banner</em>, <em>produto-1</em>). Quanto melhor a etiqueta, melhor o site.
+          </p>
+          <input
+            autoFocus
+            value={renameTarget.label}
+            onChange={(e) => setRenameTarget({ ...renameTarget, label: e.target.value })}
+            onKeyDown={(e) => { if (e.key === "Enter") saveRename(); }}
+            placeholder="Ex.: logo, banner, foto-equipe"
+            maxLength={80}
+            className="mt-3 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button onClick={() => setRenameTarget(null)} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
+            <button onClick={saveRename} className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">Salvar etiqueta</button>
+          </div>
+        </Modal>
+      )}
     </main>
   );
 }
