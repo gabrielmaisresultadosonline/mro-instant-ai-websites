@@ -92,6 +92,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const usersFn = useServerFn(adminListUsers);
   const sitesFn = useServerFn(adminListSites);
   const delUserFn = useServerFn(adminDeleteUser);
+  const resetGenFn = useServerFn(adminResetUserGenerations);
   const getSettingsFn = useServerFn(adminGetSettings);
   const saveSettingsFn = useServerFn(adminSaveSettings);
 
