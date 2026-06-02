@@ -19,9 +19,9 @@ export const Route = createFileRoute("/_authenticated/sites/$id")({
 type Pixels = { ga4?: string; gtm?: string; meta?: string; tiktok?: string };
 
 const PROVIDER_LABEL: Record<string, string> = {
-  deepseek: "DeepSeek",
-  claude: "Claude",
-  openai: "ChatGPT",
+  deepseek: "MRO v1",
+  claude: "MRO v2",
+  openai: "MRO v3",
 };
 
 function SiteEditor() {
