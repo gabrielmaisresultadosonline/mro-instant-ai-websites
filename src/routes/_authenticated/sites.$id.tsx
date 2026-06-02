@@ -197,7 +197,7 @@ function SiteEditor() {
                 await navigator.clipboard.writeText(url);
                 alert(`Link copiado: ${url}`);
               } catch {
-                prompt("Copie o link:", url);
+                window.prompt("Copie o link:", url);
               }
             }}
             className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
