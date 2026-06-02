@@ -457,10 +457,10 @@ function SiteEditor() {
       {/* POPUP — Regras mensais (mostrado na 1ª vez) */}
       {confirmRules && (
         <Modal onClose={() => setConfirmRules(false)}>
-          <h3 className="font-display text-lg font-bold">Como funcionam as gerações com I.A</h3>
+          <h3 className="font-display text-lg font-bold">Como funcionam as gerações com a I.A MRO</h3>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li>• Você tem <strong className="text-foreground">3 gerações por mês</strong>. Após 30 dias, libera mais 3 (sempre 3 disponíveis no total — não acumula).</li>
-            <li>• Cada geração usa uma I.A diferente em sequência: <strong>1ª DeepSeek → 2ª Claude → 3ª ChatGPT</strong>. Assim você compara estilos e escolhe a melhor.</li>
+            <li>• Cada geração usa uma versão diferente da nossa <strong>I.A MRO</strong> em sequência (<strong>MRO v1 → MRO v2 → MRO v3</strong>), para que você possa comparar estilos e escolher a melhor.</li>
             <li>• Todas as gerações ficam salvas no <strong>Histórico</strong> (máx. 4). Você pode ativar qualquer uma a qualquer momento — só a ativa fica publicada.</li>
             <li>• As versões inativas são apagadas automaticamente após <strong>45 dias</strong> para não pesar nossa hospedagem.</li>
             <li>• <strong>Não desperdice</strong>: quanto mais detalhes você der no texto, melhor o resultado e menos tentativas você precisa.</li>
