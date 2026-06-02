@@ -98,9 +98,10 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const [tab, setTab] = useState<"users" | "sites" | "settings">("users");
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number }>>([]);
   const [sites, setSites] = useState<Array<{ id: string; slug: string; title: string; owner_id: string; is_published: boolean; updated_at: string; visits: number }>>([]);
-  const [settings, setSettings] = useState<{ openai_configured: boolean; deepseek_configured: boolean; openai_mask: string; deepseek_mask: string } | null>(null);
+  const [settings, setSettings] = useState<{ openai_configured: boolean; deepseek_configured: boolean; claude_configured: boolean; openai_mask: string; deepseek_mask: string; claude_mask: string } | null>(null);
   const [openaiInput, setOpenaiInput] = useState("");
   const [deepseekInput, setDeepseekInput] = useState("");
+  const [claudeInput, setClaudeInput] = useState("");
 
   async function reload() {
     try {
@@ -134,15 +135,16 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
 
   async function handleSaveTokens() {
     try {
-      const payload: { token: string; openai_token?: string; deepseek_token?: string } = { token };
+      const payload: { token: string; openai_token?: string; deepseek_token?: string; claude_token?: string } = { token };
       if (openaiInput.trim()) payload.openai_token = openaiInput.trim();
       if (deepseekInput.trim()) payload.deepseek_token = deepseekInput.trim();
-      if (!payload.openai_token && !payload.deepseek_token) {
+      if (claudeInput.trim()) payload.claude_token = claudeInput.trim();
+      if (!payload.openai_token && !payload.deepseek_token && !payload.claude_token) {
         toast.error("Cole pelo menos uma chave."); return;
       }
       await saveSettingsFn({ data: payload });
       toast.success("Chaves salvas");
-      setOpenaiInput(""); setDeepseekInput("");
+      setOpenaiInput(""); setDeepseekInput(""); setClaudeInput("");
       void reload();
     } catch (e) { toast.error((e as Error).message); }
   }
@@ -230,12 +232,21 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           </div>
 
           <div className="rounded-lg border border-white/10 p-4">
-            <div className="text-xs uppercase tracking-wide text-white/60">DeepSeek (etapa de geração de HTML)</div>
+            <div className="text-xs uppercase tracking-wide text-white/60">DeepSeek (gera a Versão 1)</div>
             <div className="mt-1 text-sm font-semibold">
               {settings?.deepseek_configured ? `✅ Configurada (${settings.deepseek_mask})` : "❌ Não configurada"}
             </div>
             <input type="password" value={deepseekInput} onChange={(e) => setDeepseekInput(e.target.value)}
               placeholder="sk-..." className="mt-3 w-full rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+          </div>
+
+          <div className="rounded-lg border border-white/10 p-4">
+            <div className="text-xs uppercase tracking-wide text-white/60">Claude / Anthropic (gera a Versão 2)</div>
+            <div className="mt-1 text-sm font-semibold">
+              {settings?.claude_configured ? `✅ Configurada (${settings.claude_mask})` : "❌ Não configurada"}
+            </div>
+            <input type="password" value={claudeInput} onChange={(e) => setClaudeInput(e.target.value)}
+              placeholder="sk-ant-..." className="mt-3 w-full rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
           </div>
 
           <button onClick={handleSaveTokens} className="rounded-md btn-brand px-5 py-2.5 text-sm font-semibold">Salvar chaves</button>

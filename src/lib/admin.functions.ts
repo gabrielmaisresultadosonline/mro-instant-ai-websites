@@ -105,31 +105,35 @@ export const adminGetSettings = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin.from("admin_settings").select("openai_token, deepseek_token").eq("id", true).single();
+    const { data: row, error } = await supabaseAdmin.from("admin_settings").select("openai_token, deepseek_token, claude_token").eq("id", true).single();
     if (error) throw new Error(error.message);
-    // Return masked
+    const mask = (t?: string | null) => (t ? `${t.slice(0, 6)}…${t.slice(-4)}` : "");
     return {
       openai_configured: !!row?.openai_token,
       deepseek_configured: !!row?.deepseek_token,
-      openai_mask: row?.openai_token ? `${row.openai_token.slice(0, 6)}…${row.openai_token.slice(-4)}` : "",
-      deepseek_mask: row?.deepseek_token ? `${row.deepseek_token.slice(0, 6)}…${row.deepseek_token.slice(-4)}` : "",
+      claude_configured: !!row?.claude_token,
+      openai_mask: mask(row?.openai_token),
+      deepseek_mask: mask(row?.deepseek_token),
+      claude_mask: mask(row?.claude_token),
     };
   });
 
 export const adminSaveSettings = createServerFn({ method: "POST" })
-  .inputValidator((i: { token: string; openai_token?: string; deepseek_token?: string }) =>
+  .inputValidator((i: { token: string; openai_token?: string; deepseek_token?: string; claude_token?: string }) =>
     z.object({
       token: z.string(),
       openai_token: z.string().min(10).max(500).optional(),
       deepseek_token: z.string().min(10).max(500).optional(),
+      claude_token: z.string().min(10).max(500).optional(),
     }).parse(i),
   )
   .handler(async ({ data }) => {
     if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const update: { updated_at: string; openai_token?: string; deepseek_token?: string } = { updated_at: new Date().toISOString() };
+    const update: { updated_at: string; openai_token?: string; deepseek_token?: string; claude_token?: string } = { updated_at: new Date().toISOString() };
     if (data.openai_token) update.openai_token = data.openai_token;
     if (data.deepseek_token) update.deepseek_token = data.deepseek_token;
+    if (data.claude_token) update.claude_token = data.claude_token;
     const { error } = await supabaseAdmin.from("admin_settings").update(update).eq("id", true);
     if (error) throw new Error(error.message);
     return { ok: true };

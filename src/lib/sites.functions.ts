@@ -124,7 +124,6 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       .from("sites").select("*").eq("id", data.id).eq("owner_id", userId).single();
     if (siteErr || !site) throw new Error("Site não encontrado");
 
-    // Reset weekly window
     const weekStart = new Date(site.week_started_at as string).getTime();
     const now = Date.now();
     let edits = site.edits_this_week as number;
@@ -133,21 +132,25 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       edits = 0;
       weekStartedAt = new Date().toISOString();
     }
-    if (edits >= 4) {
-      throw new Error("Você já editou 4 vezes esta semana. Tente novamente em alguns dias.");
+    const WEEKLY_LIMIT = 3;
+    if (edits >= WEEKLY_LIMIT) {
+      throw new Error(`Você já gerou ${WEEKLY_LIMIT} vezes esta semana. Tente novamente em alguns dias.`);
     }
 
-    // Load tokens (admin only — use service-role via dynamic import)
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: settings } = await supabaseAdmin.from("admin_settings").select("openai_token, deepseek_token").eq("id", true).single();
+    const { data: settings } = await supabaseAdmin
+      .from("admin_settings")
+      .select("openai_token, deepseek_token, claude_token")
+      .eq("id", true)
+      .single();
     const openaiToken = settings?.openai_token;
     const deepseekToken = settings?.deepseek_token;
+    const claudeToken = settings?.claude_token;
 
-    if (!openaiToken || !deepseekToken) {
-      throw new Error("As chaves da I.A da MRO ainda não foram configuradas. Avise o administrador.");
+    if (!openaiToken || !deepseekToken || !claudeToken) {
+      throw new Error("As chaves da I.A da MRO ainda não foram configuradas por completo. Avise o administrador.");
     }
 
-    // Stage 1: ideas (OpenAI/ChatGPT)
     const ideaPrompt = `Você é um diretor criativo. O usuário pediu este site:
 "${data.prompt}"
 
@@ -166,14 +169,12 @@ Responda em português um briefing curto e prático com: nome/título sugerido, 
       }),
     });
     if (!ideaRes.ok) {
-      const t = await ideaRes.text();
-      console.error("openai error", ideaRes.status, t);
+      console.error("openai error", ideaRes.status, await ideaRes.text());
       throw new Error("A I.A da MRO está com instabilidade (etapa 1). Tente novamente.");
     }
     const ideaJson = await ideaRes.json() as { choices: { message: { content: string } }[] };
     const brief = ideaJson.choices?.[0]?.message?.content ?? "";
 
-    // Stage 2: HTML (DeepSeek)
     const codePrompt = `Gere um site HTML COMPLETO, em português, em UMA única página, baseado neste briefing:
 
 ${brief}
@@ -188,6 +189,7 @@ REGRAS OBRIGATÓRIAS:
 - Animações suaves com classes Tailwind
 - Microcopy em português brasileiro
 - Inclua <title>, meta description, og tags
+- IMPORTANTE — Botões/links de WhatsApp: SEMPRE use o link direto no formato https://wa.me/55XXXXXXXXXXX (DDI 55 + DDD + número, só dígitos). Se o usuário informou um número, use-o; se não informou, use https://wa.me/5511999999999 como placeholder. Use target="_blank" rel="noopener" e texto "Falar no WhatsApp".
 - NÃO escreva nenhuma explicação, NÃO use markdown — apenas o HTML.
 
 Imagens (use as URLs literalmente):
@@ -195,32 +197,71 @@ ${(data.imageUrls ?? []).map((u) => u).join("\n") || "(nenhuma)"}
 
 Pedido original do usuário: "${data.prompt}"`;
 
-    const codeRes = await fetch("https://api.deepseek.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${deepseekToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [{ role: "user", content: codePrompt }],
-        temperature: 0.6,
-        max_tokens: 8000,
-      }),
-    });
-    if (!codeRes.ok) {
-      const t = await codeRes.text();
-      console.error("deepseek error", codeRes.status, t);
-      throw new Error("A I.A da MRO está com instabilidade (etapa 2). Tente novamente.");
+    function cleanHtml(s: string) {
+      return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
     }
-    const codeJson = await codeRes.json() as { choices: { message: { content: string } }[] };
-    let html = codeJson.choices?.[0]?.message?.content ?? "";
-    // Strip code fences if present
-    html = html.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
 
-    // Persist prompt + increment edits
+    const deepseekP = (async () => {
+      const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${deepseekToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [{ role: "user", content: codePrompt }],
+          temperature: 0.6,
+          max_tokens: 8000,
+        }),
+      });
+      if (!r.ok) {
+        console.error("deepseek error", r.status, await r.text());
+        throw new Error("Falha ao gerar a Versão 1.");
+      }
+      const j = await r.json() as { choices: { message: { content: string } }[] };
+      return cleanHtml(j.choices?.[0]?.message?.content ?? "");
+    })();
+
+    const claudeP = (async () => {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": claudeToken,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 8000,
+          temperature: 0.7,
+          messages: [{ role: "user", content: codePrompt }],
+        }),
+      });
+      if (!r.ok) {
+        console.error("claude error", r.status, await r.text());
+        throw new Error("Falha ao gerar a Versão 2.");
+      }
+      const j = await r.json() as { content: { type: string; text: string }[] };
+      const text = (j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
+      return cleanHtml(text);
+    })();
+
+    const [vA, vB] = await Promise.allSettled([deepseekP, claudeP]);
+    const versionA = vA.status === "fulfilled" ? vA.value : "";
+    const versionB = vB.status === "fulfilled" ? vB.value : "";
+    if (!versionA && !versionB) {
+      throw new Error("A I.A da MRO está com instabilidade. Tente novamente em instantes.");
+    }
+
     await supabase.from("sites").update({
       last_prompt: data.prompt,
       edits_this_week: edits + 1,
       week_started_at: weekStartedAt,
     }).eq("id", data.id).eq("owner_id", userId);
 
-    return { html, brief, editsUsed: edits + 1 };
+    return {
+      versionA,
+      versionB,
+      brief,
+      editsUsed: edits + 1,
+      weeklyLimit: WEEKLY_LIMIT,
+    };
   });

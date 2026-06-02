@@ -47,6 +47,8 @@ function SiteEditor() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
   const [tab, setTab] = useState<"preview" | "pixels" | "insights">("preview");
+  const [versions, setVersions] = useState<{ a: string; b: string } | null>(null);
+  const [activeVersion, setActiveVersion] = useState<"a" | "b">("a");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -90,9 +92,10 @@ function SiteEditor() {
       const base = typeof window !== "undefined" ? window.location.origin : "";
       const absoluteUrls = urls.map((u) => (u.startsWith("http") ? u : `${base}${u}`));
       const res = await genFn({ data: { id, prompt, imageUrls: absoluteUrls } });
-      setHtml(res.html);
-      await saveFn({ data: { id, html: res.html } });
-      toast.success(`Site gerado! Edições usadas: ${res.editsUsed}/4`);
+      setVersions({ a: res.versionA, b: res.versionB });
+      setActiveVersion(res.versionA ? "a" : "b");
+      setTab("preview");
+      toast.success(`Duas versões geradas! Usos: ${res.editsUsed}/${res.weeklyLimit} esta semana`);
       qc.invalidateQueries({ queryKey: ["site", id] });
     } catch (e) {
       toast.error((e as Error).message);
@@ -100,6 +103,18 @@ function SiteEditor() {
       setGenerating(false);
     }
   }
+
+  async function applyVersion(which: "a" | "b") {
+    if (!versions) return;
+    const chosen = which === "a" ? versions.a : versions.b;
+    if (!chosen) { toast.error("Esta versão não foi gerada."); return; }
+    setHtml(chosen);
+    await saveFn({ data: { id, html: chosen } });
+    setVersions(null);
+    toast.success(`Versão ${which === "a" ? "1" : "2"} aplicada ao seu site`);
+    qc.invalidateQueries({ queryKey: ["site", id] });
+  }
+
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -141,7 +156,7 @@ function SiteEditor() {
           <p className="text-sm text-muted-foreground">
             <span className="font-mono">{site.slug}.mro.bio</span>
             {" · "}
-            <span>{site.edits_this_week}/4 edições/sem</span>
+            <span>{site.edits_this_week}/3 gerações/sem</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -169,9 +184,10 @@ function SiteEditor() {
               className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none" />
             <button onClick={handleGenerate} disabled={generating}
               className="mt-3 w-full rounded-md btn-brand py-2.5 text-sm font-semibold disabled:opacity-60">
-              {generating ? "Gerando…" : "✨ Gerar site com I.A"}
+              {generating ? "Gerando 2 versões…" : "✨ Gerar 2 versões com I.A"}
             </button>
-            <p className="mt-2 text-[11px] text-muted-foreground">As imagens selecionadas abaixo serão usadas pela I.A.</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">A I.A cria <strong>duas versões</strong> do site — você escolhe qual aplicar. Limite: 3 gerações por semana.</p>
+
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4">
@@ -217,16 +233,49 @@ function SiteEditor() {
 
           {tab === "preview" && (
             <div className="p-2">
-              {html ? (
+              {versions ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                    <div className="flex gap-1 rounded-md border border-border p-1">
+                      {(["a", "b"] as const).map((v) => {
+                        const enabled = v === "a" ? !!versions.a : !!versions.b;
+                        return (
+                          <button key={v} disabled={!enabled} onClick={() => setActiveVersion(v)}
+                            className={`rounded px-3 py-1.5 text-xs font-semibold disabled:opacity-40 ${activeVersion === v ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
+                            MRO I.A — Versão {v === "a" ? "1" : "2"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => setVersions(null)}
+                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40">
+                        Descartar
+                      </button>
+                      <button onClick={handleGenerate} disabled={generating}
+                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40 disabled:opacity-60">
+                        🔄 Gerar de novo
+                      </button>
+                      <button onClick={() => applyVersion(activeVersion)}
+                        className="rounded-md btn-brand px-3 py-1.5 text-xs font-semibold">
+                        ✓ Aplicar Versão {activeVersion === "a" ? "1" : "2"}
+                      </button>
+                    </div>
+                  </div>
+                  <iframe title="Preview" srcDoc={activeVersion === "a" ? versions.a : versions.b} sandbox="allow-scripts allow-same-origin"
+                    className="h-[70vh] w-full rounded-md border border-border bg-white" />
+                </div>
+              ) : html ? (
                 <iframe title="Preview" srcDoc={html} sandbox="allow-scripts allow-same-origin"
                   className="h-[70vh] w-full rounded-md border border-border bg-white" />
               ) : (
                 <div className="grid h-[70vh] place-items-center text-center text-sm text-muted-foreground">
-                  Descreva o site e clique em <strong className="mx-1">Gerar site com I.A</strong>.
+                  Descreva o site e clique em <strong className="mx-1">Gerar 2 versões com I.A</strong>.
                 </div>
               )}
             </div>
           )}
+
 
           {tab === "pixels" && (
             <div className="space-y-3 p-5">

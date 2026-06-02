@@ -1,0 +1,1 @@
+ALTER TABLE public.admin_settings ADD COLUMN IF NOT EXISTS claude_token text;
