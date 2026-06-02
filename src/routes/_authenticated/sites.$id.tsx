@@ -262,9 +262,25 @@ function SiteEditor() {
                       </button>
                     </div>
                   </div>
-                  <iframe title="Preview" srcDoc={activeVersion === "a" ? versions.a : versions.b} sandbox="allow-scripts allow-same-origin"
-                    className="h-[70vh] w-full rounded-md border border-border bg-white" />
-                </div>
+                  {(() => {
+                    const activeHtml = activeVersion === "a" ? versions.a : versions.b;
+                    const activeErr = activeVersion === "a" ? versions.errorA : versions.errorB;
+                    if (activeHtml) {
+                      return (
+                        <iframe title="Preview" srcDoc={activeHtml} sandbox="allow-scripts allow-same-origin"
+                          className="h-[70vh] w-full rounded-md border border-border bg-white" />
+                      );
+                    }
+                    return (
+                      <div className="grid h-[70vh] place-items-center rounded-md border border-amber-500/30 bg-amber-500/5 p-6 text-center text-sm">
+                        <div>
+                          <p className="font-semibold">Versão {activeVersion === "a" ? "1" : "2"} não foi gerada.</p>
+                          <p className="mt-2 text-muted-foreground">{activeErr ?? "Falha desconhecida."}</p>
+                          <p className="mt-2 text-xs text-muted-foreground">Verifique a chave correspondente em <code>/administracao</code> e gere de novo. Você ainda pode aplicar a outra versão.</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
               ) : html ? (
                 <iframe title="Preview" srcDoc={html} sandbox="allow-scripts allow-same-origin"
                   className="h-[70vh] w-full rounded-md border border-border bg-white" />
