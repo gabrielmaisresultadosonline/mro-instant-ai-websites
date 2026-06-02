@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: site } = await supabaseAdmin
           .from("sites")
-          .select("id, slug, html, pixels, is_published")
+          .select("id, slug, html, pixels, is_published, owner_id")
           .eq("slug", slug)
           .maybeSingle();
 
@@ -53,6 +53,26 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             { status: 404, headers: { "content-type": "text/html; charset=utf-8" } },
           );
         }
+
+        // Block published site if owner's subscription is not active
+        const { data: owner } = await supabaseAdmin
+          .from("profiles")
+          .select("subscription_status")
+          .eq("id", site.owner_id)
+          .maybeSingle();
+        if (owner && owner.subscription_status !== "active") {
+          return new Response(
+            `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
+            <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
+            <div>
+              <h1>⚠ Site temporariamente indisponível</h1>
+              <p>Este site encontra-se fora do ar por falta de pagamento.</p>
+              <p style="opacity:.7">Se você é o proprietário, regularize sua assinatura para reativar.</p>
+            </div>`,
+            { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
+          );
+        }
+
 
         // Fire-and-forget visit record
         try {
