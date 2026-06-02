@@ -269,7 +269,7 @@ function SiteEditor() {
               {generating ? "Gerando com I.A…" : monthlyLeft <= 0 ? "Limite mensal atingido" : "✨ Gerar com I.A"}
             </button>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Você tem <strong>{monthlyLeft}</strong> de {monthlyLimit} gerações disponíveis este mês. Cada geração usa uma I.A diferente em ordem (DeepSeek → Claude → ChatGPT) e fica salva no histórico.
+              Você tem <strong>{monthlyLeft}</strong> de {monthlyLimit} gerações disponíveis este mês. Cada geração usa uma versão diferente da nossa <strong>I.A MRO</strong> e fica salva no histórico.
             </p>
           </section>
 
