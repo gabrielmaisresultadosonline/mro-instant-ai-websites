@@ -176,37 +176,56 @@ function SiteEditor() {
     } catch (e) { toast.error((e as Error).message); }
   }
 
-  async function handleUpload(files: FileList | null) {
+  function queueUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
+    const items = Array.from(files).map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+      label: file.name.replace(/\.[^.]+$/, "").slice(0, 60),
+    }));
+    setUploadQueue(items);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function confirmUploadQueue() {
+    if (!uploadQueue) return;
+    const missing = uploadQueue.filter((i) => !i.label.trim());
+    if (missing.length > 0) {
+      toast.error("Defina uma etiqueta para cada imagem antes de salvar.");
+      return;
+    }
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
     if (!uid) return;
-    for (const file of Array.from(files)) {
-      const suggested = file.name.replace(/\.[^.]+$/, "").slice(0, 60);
-      const tag = window.prompt(`Tag para "${file.name}" (ex.: logo, banner, foto-equipe):`, suggested);
-      if (!tag || !tag.trim()) { toast.error(`Imagem "${file.name}" ignorada — sem tag.`); continue; }
-      const ext = file.name.split(".").pop() || "jpg";
+    for (const item of uploadQueue) {
+      const ext = item.file.name.split(".").pop() || "jpg";
       const path = `${uid}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("site-images").upload(path, file, { upsert: false, contentType: file.type });
-      if (error) { toast.error(error.message); continue; }
+      const { error } = await supabase.storage.from("site-images").upload(path, item.file, { upsert: false, contentType: item.file.type });
+      if (error) { toast.error(`${item.file.name}: ${error.message}`); continue; }
       try {
-        await registerImageFn({ data: { path, label: tag.trim().slice(0, 80) } });
+        await registerImageFn({ data: { path, label: item.label.trim().slice(0, 80) } });
       } catch (e) { toast.error((e as Error).message); }
     }
+    uploadQueue.forEach((i) => URL.revokeObjectURL(i.previewUrl));
+    setUploadQueue(null);
     qc.invalidateQueries({ queryKey: ["my-images"] });
-    if (fileRef.current) fileRef.current.value = "";
-    toast.success("Imagens enviadas");
+    toast.success("Imagens salvas na nuvem com suas etiquetas.");
   }
 
-  async function handleRenameTag(imageId: string, currentLabel: string | null) {
-    const next = window.prompt("Nova tag (ex.: logo, banner):", currentLabel ?? "");
-    if (next === null) return;
-    const v = next.trim();
-    if (!v) { toast.error("Tag não pode ficar vazia."); return; }
+  function cancelUploadQueue() {
+    uploadQueue?.forEach((i) => URL.revokeObjectURL(i.previewUrl));
+    setUploadQueue(null);
+  }
+
+  async function saveRename() {
+    if (!renameTarget) return;
+    const v = renameTarget.label.trim();
+    if (!v) { toast.error("Etiqueta não pode ficar vazia."); return; }
     try {
-      await updateImageLabelFn({ data: { id: imageId, label: v.slice(0, 80) } });
+      await updateImageLabelFn({ data: { id: renameTarget.id, label: v.slice(0, 80) } });
       qc.invalidateQueries({ queryKey: ["my-images"] });
-      toast.success("Tag atualizada");
+      setRenameTarget(null);
+      toast.success("Etiqueta atualizada");
     } catch (e) { toast.error((e as Error).message); }
   }
 
