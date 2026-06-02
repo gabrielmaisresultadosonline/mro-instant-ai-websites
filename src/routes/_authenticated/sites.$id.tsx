@@ -47,7 +47,7 @@ function SiteEditor() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
   const [tab, setTab] = useState<"preview" | "pixels" | "insights">("preview");
-  const [versions, setVersions] = useState<{ a: string; b: string } | null>(null);
+  const [versions, setVersions] = useState<{ a: string; b: string; errorA: string | null; errorB: string | null } | null>(null);
   const [activeVersion, setActiveVersion] = useState<"a" | "b">("a");
   const fileRef = useRef<HTMLInputElement>(null);
 
