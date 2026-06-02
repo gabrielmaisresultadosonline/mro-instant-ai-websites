@@ -333,12 +333,12 @@ Pedido do usuário: "${data.prompt}"`;
           headers: { "x-api-key": tokens.claude!, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
           body: JSON.stringify({ model, max_tokens: 8000, temperature: 0.7, messages: [{ role: "user", content: codePrompt }] }),
         });
-        if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error("Falha ao gerar com Claude."); }
+        if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error("Falha ao gerar com a I.A MRO (v2)."); }
         const j = await r.json() as { content: { type: string; text: string }[] };
         html = cleanHtml((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
         if (html) break;
       }
-      if (!html) throw new Error(`Falha ao gerar com Claude. ${lastErr}`.slice(0, 300));
+      if (!html) throw new Error(`Falha ao gerar com a I.A MRO (v2). ${lastErr}`.slice(0, 300));
     } else {
       // openai
       const r = await fetch("https://api.openai.com/v1/chat/completions", {
