@@ -346,7 +346,7 @@ Pedido do usuário: "${data.prompt}"`;
         headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: codePrompt }], temperature: 0.7, max_tokens: 8000 }),
       });
-      if (!r.ok) { console.error("openai", r.status, await r.text()); throw new Error("Falha ao gerar com ChatGPT."); }
+      if (!r.ok) { console.error("openai", r.status, await r.text()); throw new Error("Falha ao gerar com a I.A MRO (v3)."); }
       const j = await r.json() as { choices: { message: { content: string } }[] };
       html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
     }
