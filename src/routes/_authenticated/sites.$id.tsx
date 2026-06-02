@@ -27,6 +27,7 @@ function SiteEditor() {
   const listImagesFn = useServerFn(listMyImages);
   const registerImageFn = useServerFn(registerImage);
   const deleteImageFn = useServerFn(deleteImage);
+  const updateImageLabelFn = useServerFn(updateImageLabel);
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
