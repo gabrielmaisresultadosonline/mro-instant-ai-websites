@@ -218,8 +218,8 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                   <td className="px-4 py-3">{s.visits}</td>
                   <td className="px-4 py-3 text-xs text-white/60">{new Date(s.updated_at).toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3 text-right">
-                    <a href={`/api/public/site/${s.slug}`} target="_blank" rel="noreferrer"
-                      className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">Ver</a>
+                    <a href={`https://${s.slug}.mro.bio`} target="_blank" rel="noreferrer"
+                      className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">Ver ↗</a>
                   </td>
                 </tr>
               ))}
