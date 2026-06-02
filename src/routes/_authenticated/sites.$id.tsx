@@ -346,14 +346,15 @@ function SiteEditor() {
 
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
-          <div className="flex gap-1 border-b border-border p-2">
+          <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
             {(["preview", "history", "pixels", "insights"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
+                className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização" : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)` : t === "pixels" ? "Pixels" : "Insights"}
               </button>
             ))}
           </div>
+
 
           {tab === "preview" && (
             <div className="p-2">
