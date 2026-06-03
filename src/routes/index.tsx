@@ -381,7 +381,7 @@ function Pricing() {
 
               <ul className="mt-7 space-y-2.5 text-sm">
                 <li className="flex gap-2"><span className="text-brand font-bold">✓</span> 1 site em <span className="font-semibold">seunome.mro.bio</span></li>
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Geração e edição com I.A (até 4× por semana)</li>
+                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Geração e edição com I.A</li>
                 <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Insights de visitas em tempo real</li>
                 <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Pixel próprio + Facebook, Google e TikTok</li>
                 <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Biblioteca de imagens com sua logo</li>
