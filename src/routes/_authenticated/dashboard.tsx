@@ -236,7 +236,14 @@ function Dashboard() {
                 placeholder="Ex: Minha Empresa"
                 className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    title: val,
+                    slug: isSlugManual ? prev.slug : toSiteSlug(val)
+                  }));
+                }}
               />
             </div>
 
@@ -248,13 +255,16 @@ function Dashboard() {
                   required
                   placeholder="ex-empresa"
                   className="w-full rounded-lg border border-border bg-background pl-4 pr-20 py-2.5 text-sm outline-none focus:border-brand font-mono"
-                  value={formData.slug || toSiteSlug(formData.title)}
-                  onChange={(e) => setFormData({ ...formData, slug: toSiteSlug(e.target.value) })}
+                  value={formData.slug}
+                  onChange={(e) => {
+                    setIsSlugManual(true);
+                    setFormData({ ...formData, slug: toSiteSlug(e.target.value) });
+                  }}
                 />
                 <span className="absolute right-4 text-xs font-mono text-muted-foreground">.mro.bio</span>
               </div>
               <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Seu link será: <span className="font-mono">{(formData.slug || toSiteSlug(formData.title)) || "..."}.mro.bio</span>
+                Seu link será: <span className="font-mono">{formData.slug || "..."}.mro.bio</span>
               </p>
             </div>
 
