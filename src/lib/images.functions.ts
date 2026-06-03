@@ -41,7 +41,7 @@ export const registerImage = createServerFn({ method: "POST" })
       const { error: uploadError } = await supabaseAdmin.storage
         .from("site-images")
         .upload(path, buffer, { 
-          contentType: "image/jpeg", // Basic assumption
+          contentType: item?.type || "image/jpeg",
           upsert: true 
         });
         

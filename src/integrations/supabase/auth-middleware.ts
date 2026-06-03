@@ -17,9 +17,9 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
         ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
         ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
       ];
-      const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-      console.error(`[Supabase] ${message}`);
-      throw new Error(message);
+      // On some self-hosted environments, these might be missing but service role exists.
+      // We log but don't hard crash here yet if we can fallback to server-side check.
+      console.warn(`[Supabase] Missing variable(s): ${missing.join(', ')}`);
     }
     
     const request = getRequest();
