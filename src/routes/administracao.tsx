@@ -430,8 +430,27 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       )}
 
       {tab === "outbox" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="text-sm font-semibold">Enviar e-mail de teste</div>
+            <p className="mt-1 text-xs text-white/60">Enfileira um e-mail real (com prefixo <code>[TESTE]</code>) usando o template escolhido. Os dados são fictícios.</p>
+            <div className="mt-3 grid gap-2 md:grid-cols-[1fr_2fr_auto]">
+              <input type="email" value={testEmailTo} onChange={(e) => setTestEmailTo(e.target.value)} placeholder="destino@exemplo.com"
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <select value={testTemplate} onChange={(e) => setTestTemplate(e.target.value)}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none">
+                {TEMPLATES.map((t) => <option key={t.value} value={t.value} className="bg-foreground">{t.label}</option>)}
+              </select>
+              <button onClick={handleSendTest} disabled={sendingTest}
+                className="rounded-md btn-brand px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                {sendingTest ? "Enviando…" : "Enviar teste"}
+              </button>
+            </div>
+          </div>
+
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="min-w-full text-sm">
+
             <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
               <tr><th className="px-4 py-3">Para</th><th className="px-4 py-3">Assunto</th><th className="px-4 py-3">Template</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Tent.</th><th className="px-4 py-3">Criado</th><th className="px-4 py-3"></th></tr>
             </thead>
