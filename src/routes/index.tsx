@@ -423,6 +423,7 @@ function Pricing() {
                 href={KIWIFY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => fbEvent("AddToCart", { content_name: "Plano Anual", value: 67.00, currency: "BRL" })}
                 className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-md bg-green-600 hover:bg-green-700 px-6 py-4 text-base md:text-lg font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
               >
                 Comprar agora — R$ 6,97/mês
