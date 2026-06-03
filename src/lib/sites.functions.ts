@@ -345,13 +345,19 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     }
 
     // Step 1 — briefing (uses whichever chat model is available, prefers openai > deepseek > claude)
-    const briefPrompt = `Você é um diretor criativo. O usuário pediu este site:
+    const briefPrompt = `Você é um diretor criativo especializado em sites de alta conversão. O usuário pediu este site:
 "${data.prompt}"
 
 Imagens disponíveis (use as URLs LITERALMENTE):
 ${(data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
 
-Responda em português um briefing curto e prático: nome/título, paleta (3 hex), seções (5-8) com título e copy, CTAs, e onde colocar cada imagem. Direto, sem explicações.`;
+REGRAS DE IMAGENS E CONTEÚDO:
+1. Se houver imagens na lista acima, use-as obrigatoriamente.
+2. NÃO adicione imagens extras ou genéricas que não foram enviadas pelo usuário (sem placeholders, sem unsplash, sem pixabay).
+3. Gere o conteúdo estritamente com base no que foi pedido e nas informações fornecidas. Melhore o texto para ser profissional, mas não invente serviços ou informações que não existem no pedido.
+4. Identifique onde cada imagem listada acima deve ser usada com base na etiqueta ([logo], [banner], [foto], etc).
+
+Responda em português um briefing curto e prático: nome/título, paleta (3 hex), seções (5-8) com título e copy profissional, CTAs claros, e onde colocar cada imagem listada. Direto, sem explicações extras.`;
 
     let brief = "";
     try {
@@ -377,16 +383,18 @@ REGRAS OBRIGATÓRIAS:
 - Tailwind via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Responsivo mobile-first
 - Estrutura semântica (header, main, sections, footer)
-- Use TODAS as imagens fornecidas com as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders. Tag "logo" no header, "banner"/"hero" no topo.
+- Use TODAS as imagens fornecidas abaixo com as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders, NÃO use imagens externas não fornecidas.
+- Se a etiqueta for "logo", use obrigatoriamente no Header/Navbar.
+- Se a etiqueta for "banner" ou "hero", use obrigatoriamente no topo/primeira seção.
 - Google Fonts (Inter ou Space Grotesk)
-- WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX, target="_blank" rel="noopener"
+- WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX (use o número informado no pedido se houver), target="_blank" rel="noopener"
 - Inclua <title>, meta description, og tags
-- NÃO escreva nada fora do HTML, sem markdown
+- NÃO escreva nada fora do HTML, sem markdown. Entregue APENAS o código.
 
-Imagens fornecidas (USE LITERALMENTE):
-${(data.images ?? []).map((im) => `- tag="${im.label}" → ${im.url}`).join("\n") || "(nenhuma)"}
+Imagens fornecidas para uso (USE APENAS ESTAS):
+${(data.images ?? []).map((im) => `- etiqueta="${im.label}" → URL="${im.url}"`).join("\n") || "(nenhuma)"}
 
-Pedido do usuário: "${data.prompt}"`;
+Pedido original do usuário: "${data.prompt}"`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();

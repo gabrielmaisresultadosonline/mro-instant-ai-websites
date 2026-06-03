@@ -127,7 +127,7 @@ function SiteEditor() {
     setGenerating(true);
     try {
       const chosen = (imgs?.images ?? []).filter((im) => selected.has(im.public_url));
-      const base = "https://mro.bio";
+      const base = window.location.origin; // Usa a origem atual (dominio do painel)
       const images = chosen.map((im) => ({
         url: im.public_url.startsWith("http") ? im.public_url : `${base}${im.public_url}`,
         label: im.label!.trim(),
