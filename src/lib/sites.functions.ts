@@ -364,19 +364,27 @@ O cliente enviou este pedido:
 IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS REAIS PARA GERAR O SITE):
 ${imagesList}
 
-REGRAS RÍGIDAS DE ESTILO E CONTEÚDO:
-1. DESIGN PREMIUM: O site não pode ser "seco". Use seções com fundos alternados (claro/escuro), tipografia elegante, espaçamentos generosos (padding substancial), bordas arredondadas modernas e efeitos de hover.
-2. FIDELIDADE TOTAL: Se o cliente pediu "Essência dos Cachos", o site deve ser focado EXCLUSIVAMENTE nisso. Use linguagem persuasiva e específica para o nicho.
-3. SEM IMAGENS DA INTERNET: É proibido usar Unsplash, Google Images, Placeholders ou qualquer URL externa. Se não houver imagem do cliente para uma seção, use fundos coloridos, gradientes luxuosos ou ícones SVG modernos.
-4. LOGO: Se houver imagem com etiqueta "logo" (ou similar), ela DEVE ser usada no <header> de forma obrigatória.
-5. CORES: Respeite as cores do pedido. BOTÕES DE CTA DEVEM SER VERDES (#22c55e ou #16a34a) para transmitir ação.
+DIRETRIZES DE DESIGN DE ALTO NÍVEL (ESTÉTICA PREMIUM):
+1. IMPACTO VISUAL: O site deve ser deslumbrante e profissional. Use seções com fundos alternados, tipografia moderna e elegante, e espaçamentos (paddings e margins) generosos para criar respiro.
+2. ELEMENTOS MODERNOS: Incorpore bordas arredondadas (rounded-2xl ou rounded-3xl), sombras suaves (shadow-lg/xl), gradientes sutis e luxuosos, e padrões de fundo (patterns) discretos.
+3. INTERATIVIDADE: Adicione efeitos de hover refinados em botões e cards. O site deve parecer vivo, não estático.
+4. ESTRUTURA RICA: Mínimo de 6 seções bem definidas:
+   - Header: Navegação limpa com a logo do cliente.
+   - Hero: Título impactante, subtítulo persuasivo e CTA principal.
+   - Sobre Nós: Narrativa envolvente sobre a marca.
+   - Serviços/Produtos: Grid moderno com ícones ou imagens reais.
+   - Prova Social/Galeria: Depoimentos ou fotos reais do trabalho.
+   - Rodapé (Footer): Completo com contatos e links sociais.
+5. REGRAS DE IMAGENS: Proibido placeholders ou imagens externas (Unsplash, etc). Se não houver imagem para uma seção, use gradientes premium ou ícones SVG elegantes que combinem com a marca.
+6. CORES E CTAS: Respeite a paleta solicitada. Botões de CTA (Chamada para Ação) devem ser verdes vibrantes e atraentes (#22c55e ou #16a34a).
+7. RESPONSIVIDADE: O design deve ser impecável em dispositivos móveis e desktop.
 
 Responda em português um briefing técnico com:
 - Paleta de cores completa (HEX)
-- Estrutura de Seções (Mínimo 6 seções: Header, Hero Impactante, Sobre Nós Detalhado, Nossos Serviços/Diferenciais, Galeria ou Prova Social, Contato/Footer)
-- Mapeamento exato de quais LINKS de imagem reais serão usados em cada local, identificando cada uma pela sua ETIQUETA.
+- Estrutura de Seções detalhada
+- Mapeamento exato de quais LINKS de imagem reais serão usados em cada local.
 
-Seja direto, autoritário e focado em alta conversão.`;
+Seja autoritário, criativo e focado em converter visitantes em clientes.`;
 
     let brief = "";
     try {
@@ -396,11 +404,15 @@ Seja direto, autoritário e focado em alta conversão.`;
       }
     } catch (e) { console.error("brief error", e); }
 
-    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE INTERFACE DO MUNDO. Crie um site HTML/Tailwind COMPLETO, LUXUOSO, RESPONSIVO e ESTILOSO.
+    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL, ALTAMENTE ESTILOSO e RESPONSIVO.
 
-NÃO CRIE UM SITE SIMPLES OU SECO. Use designs modernos, animações de entrada (Intersections Observer ou Tailwind Animate), gradientes de fundo sutis e tipografia refinada.
+DIRETRIZES DE DESIGN PREMIUM:
+1. ARQUITETURA VISUAL: O site deve ser deslumbrante. Use seções com fundos contrastantes (ex: preto puro vs cinza grafite, ou branco vs bege suave), tipografia de luxo via Google Fonts (ex: 'Playfair Display' para títulos e 'Inter' para corpo) e espaçamentos (paddings) muito generosos (py-24 ou py-32).
+2. ELEMENTOS MODERNOS: Incorpore bordas arredondadas amplas (rounded-3xl), sombras suaves e profundas (shadow-2xl), e gradientes lineares sutis. Use "backdrop-blur-md" em elementos flutuantes ou no header.
+3. PADRÕES E TEXTURAS: Adicione padrões de fundo discretos (SVG patterns) ou gradientes de mesh para dar profundidade e sofisticação ao site.
+4. INTERATIVIDADE: Use transições suaves (transition-all duration-500) em todos os botões e cards. Adicione uma barra de navegação (header) fixa e elegante.
 
-BRIEFING:
+BRIEFING TÉCNICO:
 ${brief}
 
 PEDIDO DO CLIENTE:
@@ -410,15 +422,11 @@ IMAGENS DO CLIENTE (USE EXCLUSIVAMENTE ESTES LINKS):
 ${imagesList}
 
 REGRAS TÉCNICAS INVIOLÁVEIS:
-1. LOGOTIPO: Se houver imagem com etiqueta "logo", insira-a no <header> usando <img src="LINK_DA_IMAGEM" class="h-16 w-auto object-contain" alt="Logo">. Se houver logo, NÃO use título em texto no cabeçalho.
-2. IMAGENS OBRIGATÓRIAS: Para as seções de Hero, Galeria, Sobre ou Serviços, você DEVE usar os links reais fornecidos acima que correspondem às etiquetas. NUNCA deixe de usar as imagens se elas foram enviadas.
-3. PROIBIDO IMAGENS EXTERNAS: NUNCA use unsplash.com, placeholder.com ou qualquer link que não esteja na lista acima. Se faltar imagem para uma seção e não houver nenhuma correspondente na lista, use gradientes CSS sofisticados ou ícones SVG.
-4. BOTÕES: Todos os botões de CTA (Chamada para Ação) devem ser VERDES (bg-green-600, hover:bg-green-700) com texto branco e cantos arredondados.
-5. ESTILO: Use Tailwind CSS. O design deve ser rico, com seções bem separadas, sombras (shadow-lg), e transições suaves. Mínimo de 6 seções. Use gradientes sutis e paddings generosos.
-6. WHATSAPP: Botão flutuante ou link de contato usando https://wa.me/55...
-7. SAÍDA: Retorne APENAS o código HTML completo dentro de <html>...</html>. Sem markdown, sem introduções.
-
-DÊ VIDA AO SITE. USE OS LINKS REAIS DAS IMAGENS FORNECIDAS ACIMA. SE O CLIENTE MANDOU UMA LOGO, ELA TEM QUE APARECER NO HEADER.`;
+1. LOGOTIPO: Se houver imagem com etiqueta "logo", use-a no <header> com <img src="URL" class="h-16 w-auto object-contain">. Se houver logo, não use texto no nome da marca.
+2. IMAGENS REAIS: Use os links acima em seções de Hero, Galeria e Serviços. NUNCA invente URLs ou use placeholders externos.
+3. CTAs VERDES: Todos os botões de ação principal DEVEM ser verdes vibrantes (bg-green-600, hover:bg-green-700) para máxima conversão.
+4. ESTRUTURA RICA: Mínimo de 6 seções (Header, Hero Impactante, Sobre Nós, Serviços com Cards, Galeria/Social, Contato/Footer).
+5. SAÍDA: Retorne APENAS o código HTML completo.`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
