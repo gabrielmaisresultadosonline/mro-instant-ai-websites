@@ -345,13 +345,19 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     }
 
     // Step 1 — briefing (uses whichever chat model is available, prefers openai > deepseek > claude)
-    const briefPrompt = `Você é um diretor criativo. O usuário pediu este site:
+    const briefPrompt = `Você é um diretor criativo especializado em sites de alta conversão. O usuário pediu este site:
 "${data.prompt}"
 
 Imagens disponíveis (use as URLs LITERALMENTE):
 ${(data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
 
-Responda em português um briefing curto e prático: nome/título, paleta (3 hex), seções (5-8) com título e copy, CTAs, e onde colocar cada imagem. Direto, sem explicações.`;
+REGRAS DE IMAGENS E CONTEÚDO:
+1. Se houver imagens na lista acima, use-as obrigatoriamente.
+2. NÃO adicione imagens extras ou genéricas que não foram enviadas pelo usuário (sem placeholders, sem unsplash, sem pixabay).
+3. Gere o conteúdo estritamente com base no que foi pedido e nas informações fornecidas. Melhore o texto para ser profissional, mas não invente serviços ou informações que não existem no pedido.
+4. Identifique onde cada imagem listada acima deve ser usada com base na etiqueta ([logo], [banner], [foto], etc).
+
+Responda em português um briefing curto e prático: nome/título, paleta (3 hex), seções (5-8) com título e copy profissional, CTAs claros, e onde colocar cada imagem listada. Direto, sem explicações extras.`;
 
     let brief = "";
     try {
