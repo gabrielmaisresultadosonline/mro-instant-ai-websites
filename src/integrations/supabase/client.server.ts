@@ -6,24 +6,33 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+  const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [
       ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
       ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-    console.error(`[Supabase] ${message}`);
+    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Please check your .env or app.env file.`;
+    console.error(`[Supabase Admin] ${message}`);
     throw new Error(message);
   }
+
+  // Debug log (masked) to help identify issues without leaking keys
+  console.log(`[Supabase Admin] Initializing with URL: ${SUPABASE_URL} and key starting with: ${SUPABASE_SERVICE_ROLE_KEY.substring(0, 5)}...`);
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       storage: undefined,
       persistSession: false,
       autoRefreshToken: false,
+      detectSessionInUrl: false
+    },
+    global: {
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY
+      }
     }
   });
 }
