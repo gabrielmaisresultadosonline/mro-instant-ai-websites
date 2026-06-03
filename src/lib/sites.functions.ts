@@ -387,32 +387,28 @@ Direto, sem introduções.`;
       }
     } catch (e) { console.error("brief error", e); }
 
-    const codePrompt = `Gere um site HTML DE LUXO, ULTRA PROFISSIONAL e de ALTA CONVERSÃO em português, UMA página, baseado neste briefing:
+    const codePrompt = `Gere o código HTML de um site profissional e luxuoso seguindo ESTREITAMENTE o briefing e a descrição abaixo.
 
-${brief || data.prompt}
+DESCRIÇÃO ORIGINAL DO USUÁRIO:
+"${data.prompt}"
 
-REGRAS OBRIGATÓRIAS DE DESIGN PREMIUM:
-- Design "World-Class": O site deve parecer feito por uma agência de elite.
-- Responsividade Total: Layout impecável em mobile, tablet e desktop.
-- Efeitos e Animações: Use micro-interações, hover nos botões e animações de scroll.
+BRIEFING:
+${brief || "Siga a descrição original."}
 
-REGRAS CRÍTICAS DE IMAGEM (NÃO IGNORE):
-- Use EXCLUSIVAMENTE as URLs de imagens reais fornecidas abaixo.
-- Você DEVE incluir todas as imagens listadas no código HTML final usando a tag <img src="URL_REAL">.
-- Se uma imagem tem a etiqueta [logo], use-a como logotipo oficial no Header.
-- Se uma imagem tem a etiqueta [banner] ou [hero], use-a como fundo ou destaque principal da primeira seção.
-- NUNCA use URLs inventadas, placeholders cinzas ou imagens externas de bancos (como Unsplash).
-- Se não houver imagens para uma seção, use ícones SVG elegantes ou layouts baseados em cores e tipografia.
+IMAGENS DISPONÍVEIS (OBRIGATÓRIO USAR):
+${imagesList}
 
-LISTA DE IMAGENS REAIS PARA INCLUIR NO SITE AGORA:
-${(data.images ?? []).map((im) => `ETIQUETA: "${im.label}" -> URL: "${im.url}"`).join("\n") || "NENHUMA IMAGEM ENVIADA"}
+REGRAS CRÍTICAS:
+1. RESPEITO À DESCRIÇÃO: Não adicione seções ou informações que não foram solicitadas. Se o usuário pediu algo simples, faça algo simples e elegante.
+2. IMAGENS: Se houver uma imagem [logo], ela DEVE estar no <header>. Se houver [banner], deve estar na seção Hero. Use as URLs REAIS fornecidas.
+3. QUALIDADE: Use Tailwind CSS (via CDN) para um design moderno, Glassmorphism, e fontes do Google Fonts.
+4. ESTRUTURA: Retorne APENAS o código HTML completo em um único arquivo, sem comentários, pronto para uso.
+5. LINGUAGEM: Site em português.
 
-OUTRAS REGRAS:
-- WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX (use o número informado no pedido se houver).
-- NÃO use Markdown (sem \`\`\`html). Entregue APENAS o código HTML puro começando em <!DOCTYPE html>.
-- Pedido original: "${data.prompt}"
+URLs DE IMAGENS QUE VOCÊ DEVE USAR:
+${imagesList}
 
-Retorne APENAS o código HTML completo, pronto para publicar. Sem explicações.`;
+Não use placeholders. Se uma imagem foi enviada, use-a.`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
