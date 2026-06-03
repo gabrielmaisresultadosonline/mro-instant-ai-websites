@@ -398,7 +398,7 @@ function Pricing() {
         </div>
       </Reveal>
 
-      <div className="mt-12 grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
+      <div className="mt-12 max-w-lg mx-auto">
         <Reveal>
           <div className="relative w-full overflow-hidden rounded-3xl border-2 border-brand bg-card p-8 md:p-10 shadow-[var(--shadow-brand)] h-full">
             <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-brand/30 blur-3xl" />
@@ -443,47 +443,6 @@ function Pricing() {
               </a>
               <p className="mt-3 text-center text-xs text-muted-foreground">
                 Pagamento seguro via Kiwify · Pix, cartão ou boleto
-              </p>
-            </div>
-          </div>
-        </Reveal>
-
-        <Reveal>
-          <div className="relative w-full overflow-hidden rounded-3xl border-2 border-dashed border-muted-foreground/40 bg-card p-8 md:p-10 h-full">
-            <div className="relative">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="chip bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30">⚠️ Plano de Teste</span>
-                <span className="chip">Uso interno</span>
-              </div>
-
-              <div className="mt-6">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Pagamento simbólico</div>
-                <div className="font-display text-5xl md:text-6xl font-bold leading-none">
-                  R$ <span className="text-gradient-brand">1,00</span>
-                </div>
-              </div>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Plano para validar o fluxo de pagamento, webhook da Kiwify, ativação automática e envio de e-mails.
-              </p>
-
-              <ul className="mt-7 space-y-2.5 text-sm">
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Testar webhook de compra aprovada</li>
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Validar criação de conta + e-mail</li>
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Confirmar acesso ao painel</li>
-                <li className="flex gap-2"><span className="text-muted-foreground">•</span> <span className="text-muted-foreground">Não é o produto final — apenas teste</span></li>
-              </ul>
-
-              <a
-                href={KIWIFY_TEST_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-md border-2 border-foreground bg-background hover:bg-foreground hover:text-background px-6 py-4 text-base font-bold transition-colors"
-              >
-                Pagar plano de teste
-                <span>→</span>
-              </a>
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                Use apenas para verificar a integração
               </p>
             </div>
           </div>
