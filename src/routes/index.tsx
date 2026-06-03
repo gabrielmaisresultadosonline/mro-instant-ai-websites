@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
-import sitesShowcase from "@/assets/sites-showcase.png.asset.json";
+const sitesShowcase = { url: "/images/sites-showcase.png" };
 
 const KIWIFY_URL = "https://pay.kiwify.com.br/1mMYvVU";
 
