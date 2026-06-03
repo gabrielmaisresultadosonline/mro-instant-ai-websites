@@ -196,44 +196,19 @@ function SiteEditor() {
       toast.error("Defina uma etiqueta para cada imagem antes de salvar.");
       return;
     }
-    const { data: { session } } = await supabase.auth.getSession();
-    const uid = session?.user?.id;
-    if (!uid) {
-      toast.error("Sessão expirada. Faça login novamente.");
-      return;
-    }
-    
+
     let successCount = 0;
     for (const item of uploadQueue) {
-      const ext = item.file.name.split(".").pop() || "jpg";
-      const filename = `${crypto.randomUUID()}.${ext}`;
-      const path = `${uid}/${filename}`;
-      
-      // Use supabaseAdmin logic for upload to bypass Legacy API Key error
-      // Note: We'll use the server function for registration
-      
       try {
-        // Enviar imagem via server function que usa supabaseAdmin
-        // Para isso, precisamos converter o arquivo para base64 ou usar FormData
-        // Mas como já temos o registerImageFn, vamos garantir que ele use supabaseAdmin internamente se necessário
-        // No momento ele usa supabase (context), vamos ajustar imagens.functions.ts também
-        
-        // Mocking a direct upload here won't work easily without a multipart/form-data handler
-        // Let's use registerImage with base64 for simplicity since small images are expected
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(item.file);
-        });
-        const base64 = await base64Promise;
-
-        await registerImageFn({ 
-          data: { 
-            path, 
-            label: item.label.trim().slice(0, 80),
-            base64,
-            filename
-          } 
+        const form = new FormData();
+        form.append("siteId", id);
+        form.append("ownerId", user.id);
+        form.append("label", item.label.trim().slice(0, 80));
+        form.append("file", item.file);
+        const res = await fetch("/api/public/local-images", { method: "POST", body: form });
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error || "Erro ao salvar imagem no servidor.");
         });
         successCount++;
       } catch (e) {
@@ -243,7 +218,7 @@ function SiteEditor() {
     
     uploadQueue.forEach((i) => URL.revokeObjectURL(i.previewUrl));
     setUploadQueue(null);
-    qc.invalidateQueries({ queryKey: ["my-images"] });
+    qc.invalidateQueries({ queryKey: ["my-images", id, user.id] });
     
     if (successCount > 0) {
       toast.success(successCount === uploadQueue.length 
