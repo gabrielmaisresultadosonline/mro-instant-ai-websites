@@ -144,7 +144,15 @@ function SiteEditor() {
       qc.invalidateQueries({ queryKey: ["generations", id] });
       toast.success(`Gerado com ${PROVIDER_LABEL[res.provider]} — ${res.gensUsed}/${res.monthlyLimit} no mês`);
     } catch (e) {
-      toast.error((e as Error).message);
+      const msg = (e as Error).message;
+      toast.error(msg);
+      if (msg.includes("Sessão inválida") || msg.includes("Unauthorized")) {
+        // Se a sessão expirou ou as chaves mudaram, oferecemos logout
+        if (confirm("Sua sessão parece ter expirado ou as chaves do servidor foram alteradas. Deseja sair e entrar novamente para sincronizar?")) {
+          await Route.useRouteContext().supabase.auth.signOut();
+          window.location.href = "/login";
+        }
+      }
     } finally {
       setGenerating(false);
     }
