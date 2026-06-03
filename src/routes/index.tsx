@@ -151,6 +151,29 @@ function HeroShowcase() {
 }
 
 
+function VideoPresentation() {
+  return (
+    <section className="mx-auto max-w-5xl px-5 py-8 md:py-12">
+      <Reveal>
+        <div className="text-center mb-8">
+          <h2 className="font-display text-3xl font-bold md:text-4xl">
+            Conheça o sistema <span className="text-brand">MRO.BIO</span>
+          </h2>
+        </div>
+        <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-border bg-card shadow-2xl transition-all hover:shadow-[0_0_30px_rgba(255,107,0,0.15)]">
+          <iframe
+            src="https://www.youtube.com/embed/NQ9iA_RO2Ls"
+            title="CONHECÇA o sistema MRO.BIO"
+            className="absolute inset-0 h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
 function Marquee() {
   const items = [
     "criadores", "lojinhas", "infoprodutores", "salões", "personal trainers",
