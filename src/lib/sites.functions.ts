@@ -374,14 +374,19 @@ Responda em português um briefing curto e prático: nome/título, paleta (3 hex
       }
     } catch (e) { console.error("brief error", e); }
 
-    const codePrompt = `Gere um site HTML COMPLETO em português, UMA página, baseado neste briefing:
+    const codePrompt = `Gere um site HTML PROFISSIONAL de altíssima qualidade em português, UMA página, baseado neste briefing:
 
 ${brief || data.prompt}
 
-REGRAS OBRIGATÓRIAS:
+REGRAS OBRIGATÓRIAS DE QUALIDADE:
+- O site deve ser COMPLETO, RESPONSIVO (mobile-first), LINDO e PROFISSIONAL.
+- Design Moderno: Use seções bem espaçadas, tipografia elegante e sombras suaves.
+- Efeitos Visuais: Inclua efeitos de hover em botões e cards, transições suaves (transition-all duration-300) e animações discretas ao rolar (pode usar AOS via CDN se desejar ou apenas classes CSS).
+- Layout Criativo: Não faça apenas blocos simples; use grids assimétricos, fundos com gradientes leves e elementos que se sobrepõem elegantemente.
+
+REGRAS TÉCNICAS:
 - HTML completo começando com <!DOCTYPE html>
 - Tailwind via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Responsivo mobile-first
 - Estrutura semântica (header, main, sections, footer)
 - Use TODAS as imagens fornecidas abaixo com as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders, NÃO use imagens externas não fornecidas.
 - Se a etiqueta for "logo", use obrigatoriamente no Header/Navbar.
