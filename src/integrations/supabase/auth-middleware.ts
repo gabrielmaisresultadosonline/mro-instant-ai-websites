@@ -38,11 +38,11 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     // Usamos o supabaseAdmin no servidor para validar o token diretamente.
     const { supabaseAdmin } = await import('./client.server');
     
-    // In VPS environment, the user client might have issues with session validation.
-    // We use the admin client to validate the token directly against Supabase.
     let user;
     let authError;
     try {
+      // Validating token via getUser is the standard way.
+      // If this fails with "Unregistered API key", the SERVICE_ROLE_KEY in app.env is WRONG.
       const res = await supabaseAdmin.auth.getUser(token);
       user = res.data.user;
       authError = res.error;
@@ -55,9 +55,12 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       const errorMsg = authError?.message || "Usuário não encontrado";
       console.error("[AuthMiddleware] Erro ao validar token:", errorMsg);
       
-      // If we are in production/VPS, there might be a key mismatch.
-      // Instruct the user to logout and login again to sync the session.
-      throw new Error(`Sessão inválida ou expirada. Por favor, SAIA (logout) e ENTRE novamente no painel para atualizar suas chaves. Detalhes: ${errorMsg}`);
+      // Se for "Unregistered API key", o erro é 100% no app.env da VPS.
+      if (errorMsg.includes("Unregistered API key")) {
+        throw new Error(`ERRO DE CONFIGURAÇÃO NA VPS: Sua chave SERVICE_ROLE_KEY no arquivo app.env está incorreta ou não pertence a este projeto Supabase. Por favor, rode o comando de correção no terminal da Hostinger.`);
+      }
+
+      throw new Error(`Sessão inválida ou expirada. Por favor, SAIA (logout) e ENTRE novamente no painel. Detalhes: ${errorMsg}`);
     }
 
     return next({
