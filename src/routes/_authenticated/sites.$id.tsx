@@ -237,11 +237,28 @@ function SiteEditor() {
     const v = renameTarget.label.trim();
     if (!v) { toast.error("Etiqueta não pode ficar vazia."); return; }
     try {
-      await updateImageLabelFn({ data: { id: renameTarget.id, label: v.slice(0, 80) } });
-      qc.invalidateQueries({ queryKey: ["my-images"] });
+      const res = await fetch("/api/public/local-images", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteId: id, ownerId: user.id, id: renameTarget.id, label: v.slice(0, 80) }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro ao atualizar etiqueta.");
+      qc.invalidateQueries({ queryKey: ["my-images", id, user.id] });
       setRenameTarget(null);
       toast.success("Etiqueta atualizada");
     } catch (e) { toast.error((e as Error).message); }
+  }
+
+  async function removeLocalImage(imageId: string) {
+    const res = await fetch("/api/public/local-images", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ siteId: id, ownerId: user.id, id: imageId }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || "Erro ao excluir imagem.");
+    qc.invalidateQueries({ queryKey: ["my-images", id, user.id] });
   }
 
   function toggleSelected(url: string) {
@@ -347,7 +364,7 @@ function SiteEditor() {
                           className={`absolute left-1 top-1 grid h-5 w-5 place-items-center rounded-full border text-[10px] font-bold shadow ${isSel ? "border-brand bg-brand text-brand-foreground" : "border-white/70 bg-black/40 text-white"}`}>
                           {isSel ? "✓" : ""}
                         </button>
-                        <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { await deleteImageFn({ data: { id: im.id } }); qc.invalidateQueries({ queryKey: ["my-images"] }); } }}
+                        <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { try { await removeLocalImage(im.id); } catch (e) { toast.error((e as Error).message); } } }}
                           aria-label="Excluir"
                           className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/50 text-[11px] leading-none text-white hover:bg-destructive">×</button>
                         <button type="button" onClick={() => setRenameTarget({ id: im.id, label: im.label ?? "" })}
