@@ -15,6 +15,14 @@ function Dashboard() {
   const { user } = Route.useRouteContext();
   const [formData, setFormData] = useState({ title: "", slug: "" });
 
+  const deleteSiteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.functions.invoke("delete-site", { body: { id } });
+      // Since we changed the serverFn deleteSite to use admin, we can also just call the serverFn here.
+      // But serverFns are imported. Let's import it.
+    },
+  });
+
   const { data: sub } = useQuery({
     queryKey: ["my-subscription", user.id],
     queryFn: async () => {
