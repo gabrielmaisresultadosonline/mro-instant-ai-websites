@@ -88,8 +88,8 @@ function SiteEditor() {
   const monthlyLeft = Math.max(0, monthlyLimit - monthlyUsed);
 
   const saveMut = useMutation({
-    mutationFn: async (payload: { html?: string; pixels?: Pixels; is_published?: boolean }) => {
-      return saveFn({ data: { id, html: payload.html, pixels: payload.pixels ?? pixels, is_published: payload.is_published } });
+    mutationFn: async (payload: { html?: string; pixels?: Pixels; is_published?: boolean; title?: string; slug?: string }) => {
+      return saveFn({ data: { id, ...payload, pixels: payload.pixels ?? pixels } });
     },
     onSuccess: () => {
       toast.success("Alterações salvas");
