@@ -16,7 +16,9 @@ function Login() {
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("mrobio_login_email");
+    const savedPassword = localStorage.getItem("mrobio_login_password");
     if (savedEmail) setEmail(savedEmail);
+    if (savedPassword) setPassword(savedPassword);
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -27,6 +29,7 @@ function Login() {
     if (error) { toast.error(error.message); return; }
     
     localStorage.setItem("mrobio_login_email", email);
+    localStorage.setItem("mrobio_login_password", password);
     
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/dashboard" });
