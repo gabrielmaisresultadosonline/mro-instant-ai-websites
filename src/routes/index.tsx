@@ -79,7 +79,7 @@ function Hero() {
       <div className="blob -z-10 left-[-10%] top-[-10%] h-[420px] w-[420px] bg-[oklch(0.92_0.18_95)]" />
       <div className="blob -z-10 right-[-10%] top-[20%] h-[360px] w-[360px] bg-[oklch(0.85_0.15_85)] opacity-40" />
 
-      <div className="mx-auto max-w-6xl px-5 py-16 md:py-24">
+      <div className="mx-auto max-w-6xl px-5 py-6 md:py-10">
         <div className="grid items-center gap-12 md:grid-cols-[1.1fr_1fr]">
           <div>
             <span className="chip animate-fade-in">
