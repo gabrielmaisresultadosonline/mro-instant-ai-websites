@@ -11,11 +11,12 @@ const getMySubscription = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("subscription_status, subscription_expires_at, grace_period_ends_at")
       .eq("id", userId)
       .maybeSingle();
+    if (error) throw new Error("Não foi possível confirmar sua assinatura agora.");
     return data ?? { subscription_status: "none", subscription_expires_at: null, grace_period_ends_at: null };
   });
 
