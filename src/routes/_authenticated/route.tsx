@@ -34,7 +34,7 @@ function AuthLayout() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const fn = useServerFn(getMySubscription);
-  const { data: sub, isLoading } = useQuery({ queryKey: ["my-subscription"], queryFn: () => fn() });
+  const { data: sub, isLoading, isError } = useQuery({ queryKey: ["my-subscription"], queryFn: () => fn(), retry: 2 });
 
   async function logout() {
     await supabase.auth.signOut();
@@ -42,7 +42,7 @@ function AuthLayout() {
   }
 
   const status = sub?.subscription_status ?? "none";
-  const blocked = !isLoading && (status === "grace" || status === "expired" || status === "canceled" || status === "refunded" || status === "none");
+  const blocked = !isLoading && !isError && (status === "grace" || status === "expired" || status === "canceled" || status === "refunded" || status === "none");
 
   return (
     <div className="min-h-screen bg-surface/60">
@@ -58,8 +58,24 @@ function AuthLayout() {
           </div>
         </div>
       </header>
-      {blocked ? <BlockedScreen status={status} sub={sub} /> : <Outlet />}
+      {isError ? <SubscriptionCheckError /> : blocked ? <BlockedScreen status={status} sub={sub} /> : <Outlet />}
     </div>
+  );
+}
+
+function SubscriptionCheckError() {
+  return (
+    <main className="mx-auto max-w-2xl px-5 py-16">
+      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-[var(--shadow-elevate)]">
+        <h1 className="font-display text-2xl font-bold">Não conseguimos confirmar seu acesso agora</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Atualize a página em alguns segundos. Se o pagamento já foi aprovado, seu acesso será liberado automaticamente.
+        </p>
+        <button onClick={() => window.location.reload()} className="mt-6 rounded-md btn-brand px-6 py-3 text-sm font-semibold">
+          Tentar novamente
+        </button>
+      </div>
+    </main>
   );
 }
 
