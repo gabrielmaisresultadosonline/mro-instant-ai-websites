@@ -22,6 +22,7 @@ ${BRAND} · <a href="${BASE}" style="color:#666">mro.bio</a> · suporte@mro.bio
 
 export type Template =
   | { name: "activation"; data: { name: string; activationUrl: string } }
+  | { name: "credentials"; data: { name: string; email: string; password: string } }
   | { name: "renewal_thanks"; data: { name: string; expiresAt: string } }
   | { name: "reminder_2d"; data: { name: string; expiresAt: string; renewUrl: string } }
   | { name: "reminder_1d"; data: { name: string; expiresAt: string; renewUrl: string } }
@@ -46,6 +47,23 @@ export function renderTemplate(t: Template): { subject: string; html: string; te
         <p>Seu acesso é válido por <strong>1 ano</strong>. Renove quando quiser direto pela Kiwify.</p>
       `);
       return { subject, html, text: `Olá ${name}, sua compra foi confirmada. Ative sua conta: ${activationUrl}` };
+    }
+    case "credentials": {
+      const { name, email, password } = t.data;
+      const subject = `Seus dados de acesso — ${BRAND}`;
+      const html = shell(subject, `
+        <p>Olá <strong>${escapeHtml(name)}</strong>,</p>
+        <p>Sua senha foi criada com sucesso. Guarde estes dados para acessar seu painel:</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;background:#f7f7f7;border-radius:10px;border:1px solid #e5e5e5">
+          <tr><td style="padding:14px 16px;font-size:14px;color:#555">Email</td><td style="padding:14px 16px;font-size:14px;font-weight:700;color:#0a0a0a">${escapeHtml(email)}</td></tr>
+          <tr><td style="padding:14px 16px;font-size:14px;color:#555;border-top:1px solid #e5e5e5">Senha</td><td style="padding:14px 16px;font-size:14px;font-weight:700;color:#0a0a0a;border-top:1px solid #e5e5e5">${escapeHtml(password)}</td></tr>
+        </table>
+        <p style="text-align:center;margin:24px 0">
+          <a href="${BASE}/login" style="background:#FFD600;color:#0a0a0a;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Entrar no painel</a>
+        </p>
+        <p style="font-size:13px;color:#666">Se você não reconhece esta ativação, entre em contato com suporte@mro.bio.</p>
+      `);
+      return { subject, html, text: `Olá ${name}, sua senha foi criada. Email: ${email} | Senha: ${password} | Entrar: ${BASE}/login` };
     }
     case "renewal_thanks": {
       const { name, expiresAt } = t.data;
