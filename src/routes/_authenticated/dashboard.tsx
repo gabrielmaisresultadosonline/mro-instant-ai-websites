@@ -16,6 +16,10 @@ function Dashboard() {
   const qc = useQueryClient();
   const { user } = Route.useRouteContext();
   const [formData, setFormData] = useState({ title: "", slug: "" });
+  const [isSlugManual, setIsSlugManual] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({ title: "", slug: "" });
+  const [isEditSlugManual, setIsEditSlugManual] = useState(false);
   const deleteSiteFn = useServerFn(deleteSite);
 
   const deleteMut = useMutation({
@@ -45,7 +49,7 @@ function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sites")
-        .select("id, slug, title, is_published, gens_this_month, month_started_at, next_provider_idx, edits_this_week, week_started_at, updated_at, created_at")
+        .select("id, slug, title, is_published, gens_this_month, month_started_at, next_provider_idx, edits_this_week, week_started_at, updated_at, created_at, slug_changes_count, last_slug_change_at")
         .eq("owner_id", user.id)
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
@@ -86,6 +90,41 @@ function Dashboard() {
       toast.success("Site criado com sucesso!");
       qc.invalidateQueries({ queryKey: ["my-sites", user.id] });
       nav({ to: "/sites/$id", params: { id: created.id }, replace: true });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateSiteMut = useMutation({
+    mutationFn: async (vars: { title: string; slug: string }) => {
+      if (!site) return;
+      const newSlug = toSiteSlug(vars.slug || vars.title);
+      if (newSlug.length < 3) throw new Error("O link deve ter pelo menos 3 caracteres.");
+
+      const isChangingSlug = newSlug !== site.slug;
+      if (isChangingSlug && (site.slug_changes_count || 0) >= 1) {
+        throw new Error("Você já alterou seu link uma vez. Novas alterações só serão permitidas após 1 ano.");
+      }
+
+      const { error } = await supabase
+        .from("sites")
+        .update({
+          title: vars.title.trim().slice(0, 80),
+          slug: newSlug,
+          slug_changes_count: isChangingSlug ? (site.slug_changes_count || 0) + 1 : (site.slug_changes_count || 0),
+          last_slug_change_at: isChangingSlug ? new Date().toISOString() : site.last_slug_change_at
+        })
+        .eq("id", site.id)
+        .eq("owner_id", user.id);
+
+      if (error) {
+        if (isDuplicateSlugError(error)) throw new Error("Este link já está em uso.");
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Informações atualizadas!");
+      setIsEditing(false);
+      qc.invalidateQueries({ queryKey: ["my-sites", user.id] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -197,7 +236,14 @@ function Dashboard() {
                 placeholder="Ex: Minha Empresa"
                 className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    title: val,
+                    slug: isSlugManual ? prev.slug : toSiteSlug(val)
+                  }));
+                }}
               />
             </div>
 
@@ -209,13 +255,16 @@ function Dashboard() {
                   required
                   placeholder="ex-empresa"
                   className="w-full rounded-lg border border-border bg-background pl-4 pr-20 py-2.5 text-sm outline-none focus:border-brand font-mono"
-                  value={formData.slug || toSiteSlug(formData.title)}
-                  onChange={(e) => setFormData({ ...formData, slug: toSiteSlug(e.target.value) })}
+                  value={formData.slug}
+                  onChange={(e) => {
+                    setIsSlugManual(true);
+                    setFormData({ ...formData, slug: toSiteSlug(e.target.value) });
+                  }}
                 />
                 <span className="absolute right-4 text-xs font-mono text-muted-foreground">.mro.bio</span>
               </div>
               <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Seu link será: <span className="font-mono">{(formData.slug || toSiteSlug(formData.title)) || "..."}.mro.bio</span>
+                Seu link será: <span className="font-mono">{formData.slug || "..."}.mro.bio</span>
               </p>
             </div>
 
@@ -247,15 +296,83 @@ function Dashboard() {
   return (
     <main className="mx-auto max-w-6xl px-5 py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold uppercase">{site.title || site.slug}</h1>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-mono">{site.slug}.mro.bio</span>
-            {" · "}
-            <span className={site.is_published ? "text-emerald-500 font-medium" : "text-amber-500 font-medium"}>
-              {site.is_published ? "🟢 Publicado" : "🟡 Rascunho"}
-            </span>
-          </p>
+        <div className="flex-1">
+          {isEditing ? (
+            <div className="space-y-3 max-w-md">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Nome da empresa</label>
+                <input
+                  type="text"
+                  className="w-full bg-background border border-border rounded px-3 py-1.5 text-sm"
+                  value={editData.title}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditData(prev => ({
+                      ...prev,
+                      title: val,
+                      slug: isEditSlugManual ? prev.slug : toSiteSlug(val)
+                    }));
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Link do site (slug)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 bg-background border border-border rounded px-3 py-1.5 text-sm font-mono"
+                    value={editData.slug}
+                    onChange={(e) => {
+                      setIsEditSlugManual(true);
+                      setEditData(prev => ({ ...prev, slug: toSiteSlug(e.target.value) }));
+                    }}
+                  />
+                  <span className="text-xs text-muted-foreground">.mro.bio</span>
+                </div>
+                {(site.slug_changes_count || 0) >= 1 && editData.slug !== site.slug && (
+                  <p className="text-[10px] text-amber-500 mt-1">⚠️ Você já alterou seu link uma vez e não poderá mudar novamente por 1 ano.</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateSiteMut.mutate(editData)}
+                  disabled={updateSiteMut.isPending}
+                  className="rounded bg-brand px-3 py-1.5 text-xs font-bold text-brand-foreground"
+                >
+                  {updateSiteMut.isPending ? "Salvando..." : "Salvar alterações"}
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="rounded border border-border px-3 py-1.5 text-xs font-medium"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <h1 className="font-display text-3xl font-bold uppercase">{site.title || site.slug}</h1>
+                <button 
+                  onClick={() => {
+                    setEditData({ title: site.title || "", slug: site.slug });
+                    setIsEditSlugManual(false);
+                    setIsEditing(true);
+                  }}
+                  className="text-xs text-muted-foreground hover:text-brand underline"
+                >
+                  Editar nome/link
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-mono">{site.slug}.mro.bio</span>
+                {" · "}
+                <span className={site.is_published ? "text-emerald-500 font-medium" : "text-amber-500 font-medium"}>
+                  {site.is_published ? "🟢 Publicado" : "🟡 Rascunho"}
+                </span>
+              </p>
+            </>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link to="/sites/$id" params={{ id: site.id }}
