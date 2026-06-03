@@ -101,9 +101,12 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const grantFn = useServerFn(adminGrantSubscription);
   const revokeFn = useServerFn(adminRevokeSubscription);
   const retryFn = useServerFn(adminRetryEmail);
+  const statsFn = useServerFn(adminDashboardStats);
+  const kiwifyUrlFn = useServerFn(adminGetKiwifyWebhookUrl);
+  const sendTestFn = useServerFn(adminSendTestEmail);
 
-  type Tab = "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "settings";
-  const [tab, setTab] = useState<Tab>("users");
+  type Tab = "dashboard" | "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "settings";
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number }>>([]);
   const [sites, setSites] = useState<Array<{ id: string; slug: string; title: string; owner_id: string; is_published: boolean; updated_at: string; visits: number }>>([]);
   const [subs, setSubs] = useState<Array<{ id: string; name: string; email: string; subscription_status: string; subscription_expires_at: string | null; grace_period_ends_at: string | null; kiwify_order_id: string | null; last_payment_at: string | null }>>([]);
@@ -113,15 +116,24 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const [openaiInput, setOpenaiInput] = useState("");
   const [deepseekInput, setDeepseekInput] = useState("");
   const [claudeInput, setClaudeInput] = useState("");
+  const [stats, setStats] = useState<{ totals: { users: number; active: number; grace: number; canceled: number; expiringSoon: number; expiringIn2d: number; paymentsLast30: number; cancelsLast30: number }; nextExpirations: Array<{ id: string; name: string; email: string; subscription_expires_at: string }> } | null>(null);
+  const [kiwifyUrl, setKiwifyUrl] = useState<{ url: string; configured: boolean } | null>(null);
+  const [testEmailTo, setTestEmailTo] = useState("");
+  const [testTemplate, setTestTemplate] = useState("activation");
+  const [sendingTest, setSendingTest] = useState(false);
 
   async function reload() {
     try {
-      if (tab === "users") { const r = await usersFn({ data: { token } }); setUsers(r.users); }
+      if (tab === "dashboard") { const r = await statsFn({ data: { token } }); setStats(r); }
+      else if (tab === "users") { const r = await usersFn({ data: { token } }); setUsers(r.users); }
       else if (tab === "sites") { const r = await sitesFn({ data: { token } }); setSites(r.sites); }
       else if (tab === "subscriptions") { const r = await subsFn({ data: { token } }); setSubs(r.rows); }
       else if (tab === "outbox") { const r = await outboxFn({ data: { token, status: "all" } }); setOutbox(r.rows); }
       else if (tab === "kiwify") { const r = await kiwifyFn({ data: { token } }); setKiwify(r.rows); }
-      else { const r = await getSettingsFn({ data: { token } }); setSettings(r); }
+      else {
+        const r = await getSettingsFn({ data: { token } }); setSettings(r);
+        const k = await kiwifyUrlFn({ data: { token } }); setKiwifyUrl(k);
+      }
     } catch (e) {
       const msg = (e as Error).message;
       if (msg.includes("autorizado")) { toast.error("Sessão expirada"); onLogout(); }
@@ -130,6 +142,18 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   }
 
   useEffect(() => { void reload(); /* eslint-disable-next-line */ }, [tab]);
+
+  async function handleSendTest() {
+    if (!testEmailTo.trim()) { toast.error("Informe o e-mail destino"); return; }
+    setSendingTest(true);
+    try {
+      await sendTestFn({ data: { token, to: testEmailTo.trim(), template: testTemplate } });
+      toast.success("E-mail de teste enfileirado");
+      if (tab === "outbox") void reload();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setSendingTest(false); }
+  }
+
 
   async function handleDeleteUser(uid: string, email: string) {
     if (!confirm(`Excluir o usuário ${email}? Essa ação não pode ser desfeita.`)) return;
