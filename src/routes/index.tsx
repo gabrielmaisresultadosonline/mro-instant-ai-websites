@@ -64,7 +64,11 @@ function Header() {
         </nav>
         <div className="flex items-center gap-2">
           <Link to="/login" className="hidden rounded-md px-3 py-2 text-sm font-medium hover:bg-accent/30 md:inline-flex">Entrar</Link>
-          <a href="#planos" className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
+          <a 
+            href="#planos" 
+            className="rounded-md btn-brand px-4 py-2 text-sm font-semibold"
+            onClick={() => fbEvent("InitiateCheckout", { content_name: "Header CTA" })}
+          >
             Site por R$6,97
           </a>
         </div>
