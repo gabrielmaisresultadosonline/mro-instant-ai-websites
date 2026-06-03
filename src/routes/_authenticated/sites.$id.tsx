@@ -198,19 +198,33 @@ function SiteEditor() {
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
     if (!uid) return;
+    
+    let successCount = 0;
     for (const item of uploadQueue) {
       const ext = item.file.name.split(".").pop() || "jpg";
       const path = `${uid}/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("site-images").upload(path, item.file, { upsert: false, contentType: item.file.type });
-      if (error) { toast.error(`${item.file.name}: ${error.message}`); continue; }
+      if (error) {
+        toast.error(`${item.file.name}: ${error.message}`);
+        continue;
+      }
       try {
         await registerImageFn({ data: { path, label: item.label.trim().slice(0, 80) } });
-      } catch (e) { toast.error((e as Error).message); }
+        successCount++;
+      } catch (e) {
+        toast.error((e as Error).message);
+      }
     }
+    
     uploadQueue.forEach((i) => URL.revokeObjectURL(i.previewUrl));
     setUploadQueue(null);
     qc.invalidateQueries({ queryKey: ["my-images"] });
-    toast.success("Imagens salvas na nuvem com suas etiquetas.");
+    
+    if (successCount > 0) {
+      toast.success(successCount === uploadQueue.length 
+        ? "Imagens salvas na nuvem com suas etiquetas." 
+        : `${successCount} de ${uploadQueue.length} imagens salvas com sucesso.`);
+    }
   }
 
   function cancelUploadQueue() {
