@@ -351,21 +351,21 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
 O cliente enviou este pedido:
 "${data.prompt}"
 
-IMAGENS DO CLIENTE (OBRIGATÓRIO USAR ESTES LINKS REAIS):
+IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS):
 ${imagesList}
 
 REGRAS RÍGIDAS DE CONTEÚDO:
-1. NÃO INVENTE INFORMAÇÕES: Se o cliente não pediu "serviços extras", não crie. Se ele disse "Essência dos Cachos", foque apenas nisso.
-2. CORES: Respeite as cores solicitadas no prompt. Se não houver, use tons luxuosos.
-3. LOGO: Se houver uma imagem com etiqueta "logo", ela DEVE ser usada no topo.
-4. NADA DE PLACEHOLDERS: É terminantemente proibido usar imagens do Unsplash, Pixabay ou placeholders cinzas. Use APENAS os links fornecidos.
+1. FIDELIDADE TOTAL: Se o cliente pediu "Essência dos Cachos", o site deve ser focado EXCLUSIVAMENTE nisso. Não invente outros ramos de negócio.
+2. SEM IMAGENS DA INTERNET: É proibido usar Unsplash, Google Images, Placeholders ou qualquer URL externa. Se não houver imagem do cliente, use fundos coloridos, gradientes ou ícones.
+3. LOGO: Se houver imagem com etiqueta "logo", ela é a prioridade máxima do cabeçalho.
+4. CORES: Respeite as cores do pedido. Se não houver, use uma paleta Premium/Luxo.
 
 Responda em português um briefing técnico com:
 - Paleta de cores (HEX)
-- Estrutura de Seções detalhada (Mínimo 6 seções)
-- Onde cada imagem (usando seu LINK real) será posicionada.
+- Estrutura de Seções detalhada (Mínimo 6 seções: Header, Hero, Sobre, Serviços, Galeria/Destaque, Contato/Footer)
+- Mapeamento exato de quais LINKS de imagem serão usados em cada seção.
 
-Seja direto e autoritário.`;
+Seja direto e profissional.`;
 
     let brief = "";
     try {
@@ -373,7 +373,7 @@ Seja direto e autoritário.`;
         const r = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: briefPrompt }], temperature: 0.3 }),
+          body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: briefPrompt }], temperature: 0.2 }),
         });
         if (r.ok) {
           const j = await r.json() as { choices: { message: { content: string } }[] };
@@ -382,26 +382,26 @@ Seja direto e autoritário.`;
       }
     } catch (e) { console.error("brief error", e); }
 
-    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END DO MUNDO. Sua missão é criar um site HTML/Tailwind DESLUMBRANTE, PROFISSIONAL e FIEL ao pedido.
+    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END DO MUNDO. Crie um site HTML/Tailwind COMPLETO, LUXUOSO e RESPONSIVO.
 
-BRIEFING DE ARTE:
+BRIEFING:
 ${brief}
 
-PEDIDO ORIGINAL DO CLIENTE:
+PEDIDO DO CLIENTE:
 "${data.prompt}"
 
-IMAGENS REAIS DO CLIENTE (VOCÊ DEVE USAR ESTES LINKS):
+IMAGENS DO CLIENTE (USE ESTES LINKS):
 ${imagesList}
 
 REGRAS TÉCNICAS INVIOLÁVEIS:
-1. LOGOTIPO: Se houver uma imagem com etiqueta "logo", use-a obrigatoriamente no <header> com <img src="O_LINK_DA_IMAGEM_AQUI" class="h-12 w-auto object-contain">. NÃO use texto se tiver logo.
-2. ZERO IMAGENS EXTERNAS: Nunca, sob hipótese alguma, use links de unsplash.com, images.google.com, via.placeholder.com ou qualquer site externo. Se não tiver imagem para uma seção, use um fundo colorido elegante ou ícones SVG do Lucide/HeroIcons.
-3. FIDELIDADE AO CONTEÚDO: Respeite o tema "${data.prompt}". Não invente serviços, membros de equipe ou endereços que não foram solicitados.
-4. LAYOUT: Crie um site completo com Header, Hero, Sobre, Seções de Conteúdo, Contato e Footer.
-5. WHATSAPP: Gere links reais: https://wa.me/55...
-6. CÓDIGO: Retorne APENAS o código HTML puro. Sem blocos de markdown, sem explicações.
+1. LOGOTIPO: Se houver imagem com etiqueta "logo", insira-a no <header> usando <img src="LINK_DA_IMAGEM" class="h-16 w-auto object-contain" alt="Logo">. Remova qualquer título em texto do cabeçalho se a logo estiver presente.
+2. PROIBIDO IMAGENS EXTERNAS: NUNCA use unsplash.com, placeholder.com ou links externos. Use APENAS os links da lista acima. Se faltar imagem para uma seção, use ícones SVG ou decorações em CSS/Tailwind.
+3. CONTEÚDO: Atenção total ao tema "${data.prompt}". Use textos persuasivos e profissionais em português.
+4. DESIGN: Use Tailwind CSS, Google Fonts (escolha fontes elegantes), gradientes modernos, sombras suaves e animações. O site deve ter no mínimo 6 seções bem definidas.
+5. WHATSAPP: Links no formato https://wa.me/55...
+6. SAÍDA: Retorne APENAS o código HTML completo. Sem markdown, sem explicações.
 
-NÃO USE PLACEHOLDERS. USE APENAS OS LINKS DE IMAGEM FORNECIDOS ACIMA.`;
+NÃO USE PLACEHOLDERS. USE OS LINKS REAIS FORNECIDOS.`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
