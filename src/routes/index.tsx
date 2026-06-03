@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
+import { fbEvent } from "@/lib/facebook-pixel";
 const sitesShowcase = { url: "/images/sites-showcase.png" };
 
 const KIWIFY_URL = "https://pay.kiwify.com.br/1mMYvVU";
@@ -63,7 +64,11 @@ function Header() {
         </nav>
         <div className="flex items-center gap-2">
           <Link to="/login" className="hidden rounded-md px-3 py-2 text-sm font-medium hover:bg-accent/30 md:inline-flex">Entrar</Link>
-          <a href="#planos" className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
+          <a 
+            href="#planos" 
+            className="rounded-md btn-brand px-4 py-2 text-sm font-semibold"
+            onClick={() => fbEvent("InitiateCheckout", { content_name: "Header CTA" })}
+          >
             Site por R$6,97
           </a>
         </div>
@@ -99,7 +104,11 @@ function Hero() {
               <span className="font-semibold text-foreground"> seunome.mro.bio</span> com um único comando.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#planos" className="group inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
+              <a 
+                href="#planos" 
+                className="group inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold"
+                onClick={() => fbEvent("InitiateCheckout", { content_name: "Hero CTA" })}
+              >
                 Quero meu site por R$6,97
                 <span className="transition-transform group-hover:translate-x-1">→</span>
               </a>
@@ -281,7 +290,11 @@ function HowItWorks() {
           ))}
         </div>
         <div className="mt-12">
-          <a href="#planos" className="inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
+          <a 
+            href="#planos" 
+            className="inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold"
+            onClick={() => fbEvent("InitiateCheckout", { content_name: "How It Works CTA" })}
+          >
             Quero meu site por R$6,97 <span>→</span>
           </a>
         </div>
@@ -422,6 +435,7 @@ function Pricing() {
                 href={KIWIFY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => fbEvent("AddToCart", { content_name: "Plano Anual", value: 67.00, currency: "BRL" })}
                 className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-md bg-green-600 hover:bg-green-700 px-6 py-4 text-base md:text-lg font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
               >
                 Comprar agora — R$ 6,97/mês
@@ -501,6 +515,7 @@ function FaqCta() {
                 href={KIWIFY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => fbEvent("AddToCart", { content_name: "Plano Anual CTA Final", value: 67.00, currency: "BRL" })}
                 className="rounded-md bg-green-600 hover:bg-green-700 px-6 py-3.5 text-base font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
               >
                 Comprar agora — R$ 6,97
@@ -552,6 +567,7 @@ function StickyBuyCta() {
       <div className="m-3 rounded-2xl border border-border bg-background/95 p-3 shadow-2xl backdrop-blur">
         <a
           href="#planos"
+          onClick={() => fbEvent("InitiateCheckout", { content_name: "Sticky CTA" })}
           className="flex items-center justify-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 px-5 py-3.5 text-base font-bold text-white"
         >
           Site por R$ 6,97 → comprar
