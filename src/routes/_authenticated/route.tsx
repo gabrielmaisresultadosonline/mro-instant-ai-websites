@@ -17,8 +17,19 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthLayout() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
-  const fn = useServerFn(getMySubscription);
-  const { data: sub, isLoading, isError } = useQuery({ queryKey: ["my-subscription"], queryFn: () => fn(), retry: 2 });
+  const { data: sub, isLoading, isError } = useQuery({
+    queryKey: ["my-subscription", user.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("subscription_status, subscription_expires_at, grace_period_ends_at")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) throw new Error("Não foi possível confirmar sua assinatura agora.");
+      return data ?? { subscription_status: "none", subscription_expires_at: null, grace_period_ends_at: null };
+    },
+    retry: 2,
+  });
 
   async function logout() {
     await supabase.auth.signOut();
