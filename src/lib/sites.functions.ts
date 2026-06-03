@@ -347,29 +347,29 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     // Step 1 — briefing
     const imagesList = (data.images ?? []).map((im, i) => `- ETIQUETA: "${im.label}" | LINK: ${im.url}`).join("\n") || "(Nenhuma imagem enviada)";
     
-    console.log(`[GenerateSite] User: ${userId} | Site: ${data.id} | Images count: ${data.images?.length ?? 0}`);
-    if (data.images && data.images.length > 0) {
-      console.log(`[GenerateSite] Images list:\n${imagesList}`);
-    }
+    // LOGS INTERNOS PARA DEPURAÇÃO (Visíveis apenas para desenvolvedores)
+    console.log(`[DEBUG_GENERATION] User: ${userId} | SiteId: ${data.id}`);
+    console.log(`[DEBUG_GENERATION] Imagens recebidas no input (${data.images?.length ?? 0}):`, JSON.stringify(data.images, null, 2));
+    console.log(`[DEBUG_GENERATION] ImagesList formatado:\n${imagesList}`);
 
     const briefPrompt = `Você é um Diretor de Arte Sênior de uma agência de Branding de Luxo.
 O cliente enviou este pedido:
 "${data.prompt}"
 
-IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS):
+IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS REAIS):
 ${imagesList}
 
 REGRAS RÍGIDAS DE ESTILO E CONTEÚDO:
 1. DESIGN PREMIUM: O site não pode ser "seco". Use seções com fundos alternados (claro/escuro), tipografia elegante, espaçamentos generosos (padding substancial), bordas arredondadas modernas e efeitos de hover.
 2. FIDELIDADE TOTAL: Se o cliente pediu "Essência dos Cachos", o site deve ser focado EXCLUSIVAMENTE nisso. Use linguagem persuasiva e específica para o nicho.
 3. SEM IMAGENS DA INTERNET: É proibido usar Unsplash, Google Images, Placeholders ou qualquer URL externa. Se não houver imagem do cliente para uma seção, use fundos coloridos, gradientes luxuosos ou ícones SVG modernos.
-4. LOGO: Se houver imagem com etiqueta "logo" (ou similar), ela deve estar no topo, em destaque.
+4. LOGO: Se houver imagem com etiqueta "logo" (ou similar), ela DEVE ser usada no <header> de forma obrigatória.
 5. CORES: Respeite as cores do pedido. BOTÕES DE CTA DEVEM SER VERDES (#22c55e ou #16a34a) para transmitir ação.
 
 Responda em português um briefing técnico com:
 - Paleta de cores completa (HEX)
 - Estrutura de Seções (Mínimo 6 seções: Header, Hero Impactante, Sobre Nós Detalhado, Nossos Serviços/Diferenciais, Galeria ou Prova Social, Contato/Footer)
-- Mapeamento exato de quais LINKS de imagem reais serão usados em cada local.
+- Mapeamento exato de quais LINKS de imagem reais serão usados em cada local, identificando cada uma pela sua ETIQUETA.
 
 Seja direto, autoritário e focado em alta conversão.`;
 
