@@ -202,14 +202,24 @@ function SiteEditor() {
     let successCount = 0;
     for (const item of uploadQueue) {
       const ext = item.file.name.split(".").pop() || "jpg";
-      const path = `${uid}/${crypto.randomUUID()}.${ext}`;
+      const filename = `${crypto.randomUUID()}.${ext}`;
+      const path = `${uid}/${filename}`;
+      
+      // Envia para o storage do Supabase para manter o funcionamento do DB
       const { error } = await supabase.storage.from("site-images").upload(path, item.file, { upsert: false, contentType: item.file.type });
+      
       if (error) {
         toast.error(`${item.file.name}: ${error.message}`);
         continue;
       }
+      
       try {
-        await registerImageFn({ data: { path, label: item.label.trim().slice(0, 80) } });
+        await registerImageFn({ 
+          data: { 
+            path, 
+            label: item.label.trim().slice(0, 80)
+          } 
+        });
         successCount++;
       } catch (e) {
         toast.error((e as Error).message);
