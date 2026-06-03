@@ -345,7 +345,12 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     }
 
     // Step 1 — briefing
-    const imagesList = (data.images ?? []).map((im, i) => `- ETIQUETA: "${im.label}" | LINK: ${im.url}`).join("\n") || "(Nenhuma imagem enviada)";
+    // Importante: Pegamos o hostname real para garantir que o link seja público e acessível pela I.A.
+    const baseUrl = process.env.VITE_SITE_URL || "https://mro.bio";
+    const imagesList = (data.images ?? []).map((im, i) => {
+      const fullUrl = im.url.startsWith("http") ? im.url : `${baseUrl}${im.url}`;
+      return `- ETIQUETA: "${im.label}" | LINK: ${fullUrl}`;
+    }).join("\n") || "(Nenhuma imagem enviada)";
     
     // LOGS INTERNOS PARA DEPURAÇÃO (Visíveis apenas para desenvolvedores)
     console.log(`[DEBUG_GENERATION] User: ${userId} | SiteId: ${data.id}`);
@@ -356,7 +361,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
 O cliente enviou este pedido:
 "${data.prompt}"
 
-IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS REAIS):
+IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS REAIS PARA GERAR O SITE):
 ${imagesList}
 
 REGRAS RÍGIDAS DE ESTILO E CONTEÚDO:
