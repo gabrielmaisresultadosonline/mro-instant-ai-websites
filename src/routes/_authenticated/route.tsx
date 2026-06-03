@@ -1,24 +1,8 @@
 import { createFileRoute, Outlet, redirect, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabase } from "@/integrations/supabase/client";
 
 const RENEW_URL = "https://pay.kiwify.com.br/1mMYvVU";
-
-const getMySubscription = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("subscription_status, subscription_expires_at, grace_period_ends_at")
-      .eq("id", userId)
-      .maybeSingle();
-    if (error) throw new Error("Não foi possível confirmar sua assinatura agora.");
-    return data ?? { subscription_status: "none", subscription_expires_at: null, grace_period_ends_at: null };
-  });
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
