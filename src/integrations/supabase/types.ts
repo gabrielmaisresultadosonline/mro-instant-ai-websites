@@ -358,11 +358,13 @@ export type Database = {
           id: string
           is_published: boolean
           last_prompt: string
+          last_slug_change_at: string | null
           month_started_at: string
           next_provider_idx: number
           owner_id: string
           pixels: Json
           slug: string
+          slug_changes_count: number | null
           title: string
           updated_at: string
           week_started_at: string
@@ -375,11 +377,13 @@ export type Database = {
           id?: string
           is_published?: boolean
           last_prompt?: string
+          last_slug_change_at?: string | null
           month_started_at?: string
           next_provider_idx?: number
           owner_id: string
           pixels?: Json
           slug: string
+          slug_changes_count?: number | null
           title?: string
           updated_at?: string
           week_started_at?: string
@@ -392,11 +396,13 @@ export type Database = {
           id?: string
           is_published?: boolean
           last_prompt?: string
+          last_slug_change_at?: string | null
           month_started_at?: string
           next_provider_idx?: number
           owner_id?: string
           pixels?: Json
           slug?: string
+          slug_changes_count?: number | null
           title?: string
           updated_at?: string
           week_started_at?: string
