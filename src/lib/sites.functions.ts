@@ -130,6 +130,12 @@ export const deleteSite = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
+    const userDir = path.join(process.cwd(), "public", "uploads", userId);
+    const metaFile = path.join(process.cwd(), "public", "uploads", "_meta", `${userId}.json`);
+
+    // Deleta as imagens físicas salvas diretamente no HD da VPS, mesmo que não exista registro no banco.
+    await fs.rm(userDir, { recursive: true, force: true }).catch(() => undefined);
+    await fs.rm(metaFile, { force: true }).catch(() => undefined);
     
     // Buscar imagens do usuário para deletar do HD da VPS
     const { data: images } = await supabaseAdmin
@@ -147,12 +153,6 @@ export const deleteSite = createServerFn({ method: "POST" })
         }
       }
       
-      // Deleta as pastas vazias do usuário
-      const userDir = path.join(process.cwd(), "public", "uploads", userId);
-      try {
-        await fs.rm(userDir, { recursive: true, force: true });
-      } catch (e) {}
-
       await supabaseAdmin.from("site_images").delete().eq("owner_id", userId);
     }
 
