@@ -8,8 +8,6 @@ import {
   getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights,
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
 } from "@/lib/sites.functions";
-import { listMyImages, registerImage, deleteImage, updateImageLabel } from "@/lib/images.functions";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
   head: () => ({ meta: [{ title: "Editor — MRO.BIO" }] }),
@@ -17,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/sites/$id")({
 });
 
 type Pixels = { ga4?: string; gtm?: string; meta?: string; tiktok?: string };
+type LocalImage = { id: string; public_url: string; label: string | null; created_at?: string };
 
 const PROVIDER_LABEL: Record<string, string> = {
   deepseek: "MRO v1",
@@ -26,6 +25,7 @@ const PROVIDER_LABEL: Record<string, string> = {
 
 function SiteEditor() {
   const { id } = Route.useParams();
+  const { user } = Route.useRouteContext();
   const qc = useQueryClient();
 
   const getSiteFn = useServerFn(getSite);
@@ -33,10 +33,6 @@ function SiteEditor() {
   const deleteFn = useServerFn(deleteSite);
   const genFn = useServerFn(generateSiteHtml);
   const insightsFn = useServerFn(getSiteInsights);
-  const listImagesFn = useServerFn(listMyImages);
-  const registerImageFn = useServerFn(registerImage);
-  const deleteImageFn = useServerFn(deleteImage);
-  const updateImageLabelFn = useServerFn(updateImageLabel);
   const listGensFn = useServerFn(listGenerations);
   const getGenHtmlFn = useServerFn(getGenerationHtml);
   const activateGenFn = useServerFn(activateGeneration);
@@ -46,9 +42,14 @@ function SiteEditor() {
     queryKey: ["site", id],
     queryFn: () => getSiteFn({ data: { id } }),
   });
-  const { data: imgs } = useQuery({
-    queryKey: ["my-images"],
-    queryFn: () => listImagesFn(),
+  const { data: imgs } = useQuery<{ images: LocalImage[] }>({
+    queryKey: ["my-images", id, user.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/local-images?siteId=${encodeURIComponent(id)}&ownerId=${encodeURIComponent(user.id)}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro ao carregar imagens.");
+      return json;
+    },
   });
   const { data: insights } = useQuery({
     queryKey: ["insights", id],
