@@ -53,8 +53,8 @@ Cole as chaves do Lovable Cloud → **Connectors → Supabase**:
 
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`
-- `ADMIN_EMAIL=mro@gmail.com`
-- `ADMIN_PASSWORD=Ga145523@`  *(troque para algo forte em produção!)*
+- `ADMIN_EMAIL=admin@mro.bio`
+- `ADMIN_PASSWORD=` (use uma senha forte e exclusiva)
 - `ADMIN_JWT_SECRET=` (gere com `openssl rand -hex 32`)
 
 E o Caddy:
