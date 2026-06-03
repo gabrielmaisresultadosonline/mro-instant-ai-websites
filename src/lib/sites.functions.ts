@@ -128,6 +128,23 @@ export const deleteSite = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     
+    // Buscar imagens do usuário antes de deletar o site (ou as gerações dele)
+    // Nota: site_images não é necessariamente ligada a um site_id, mas ao owner_id.
+    // O usuário quer que ao deletar o site, as imagens "acabam indo também".
+    // Como cada usuário só tem 1 site hoje (conforme regra na linha 41),
+    // deletar o site equivale a deletar tudo do usuário.
+    
+    const { data: images } = await supabaseAdmin
+      .from("site_images")
+      .select("path")
+      .eq("owner_id", userId);
+
+    if (images && images.length > 0) {
+      const paths = images.map(img => img.path);
+      await supabaseAdmin.storage.from("site-images").remove(paths);
+      await supabaseAdmin.from("site_images").delete().eq("owner_id", userId);
+    }
+
     // Using admin to bypass RLS and potential "Legacy API key" issues on the user client
     const { error } = await supabaseAdmin.from("sites")
       .delete()

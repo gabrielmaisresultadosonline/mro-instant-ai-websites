@@ -86,10 +86,15 @@ export const deleteImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { id: string }) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: img } = await supabase.from("site_images").select("path").eq("id", data.id).eq("owner_id", userId).maybeSingle();
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    const { data: img } = await supabaseAdmin.from("site_images").select("path").eq("id", data.id).eq("owner_id", userId).maybeSingle();
     if (!img) throw new Error("Imagem não encontrada");
-    await supabase.storage.from("site-images").remove([img.path]);
-    await supabase.from("site_images").delete().eq("id", data.id).eq("owner_id", userId);
+    
+    // Deleta do storage e do banco
+    await supabaseAdmin.storage.from("site-images").remove([img.path]);
+    await supabaseAdmin.from("site_images").delete().eq("id", data.id).eq("owner_id", userId);
+    
     return { ok: true };
   });
