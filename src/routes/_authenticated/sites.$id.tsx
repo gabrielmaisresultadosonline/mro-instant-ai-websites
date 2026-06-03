@@ -195,9 +195,12 @@ function SiteEditor() {
       toast.error("Defina uma etiqueta para cada imagem antes de salvar.");
       return;
     }
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id;
-    if (!uid) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
+    }
     
     let successCount = 0;
     for (const item of uploadQueue) {
