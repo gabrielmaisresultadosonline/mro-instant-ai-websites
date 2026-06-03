@@ -11,6 +11,12 @@
 # ---- Apex + www: serve the MRO.BIO app (landing, dashboard, admin) ----
 mro.bio, www.mro.bio {
 	encode zstd gzip
+
+	handle_path /uploads/* {
+		root * /srv/uploads
+		file_server
+	}
+
 	reverse_proxy app:3000
 }
 

@@ -8,8 +8,6 @@ import {
   getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights,
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
 } from "@/lib/sites.functions";
-import { listMyImages, registerImage, deleteImage, updateImageLabel } from "@/lib/images.functions";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
   head: () => ({ meta: [{ title: "Editor — MRO.BIO" }] }),
@@ -17,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/sites/$id")({
 });
 
 type Pixels = { ga4?: string; gtm?: string; meta?: string; tiktok?: string };
+type LocalImage = { id: string; public_url: string; label: string | null; created_at?: string };
 
 const PROVIDER_LABEL: Record<string, string> = {
   deepseek: "MRO v1",
@@ -26,6 +25,7 @@ const PROVIDER_LABEL: Record<string, string> = {
 
 function SiteEditor() {
   const { id } = Route.useParams();
+  const { user } = Route.useRouteContext();
   const qc = useQueryClient();
 
   const getSiteFn = useServerFn(getSite);
@@ -33,10 +33,6 @@ function SiteEditor() {
   const deleteFn = useServerFn(deleteSite);
   const genFn = useServerFn(generateSiteHtml);
   const insightsFn = useServerFn(getSiteInsights);
-  const listImagesFn = useServerFn(listMyImages);
-  const registerImageFn = useServerFn(registerImage);
-  const deleteImageFn = useServerFn(deleteImage);
-  const updateImageLabelFn = useServerFn(updateImageLabel);
   const listGensFn = useServerFn(listGenerations);
   const getGenHtmlFn = useServerFn(getGenerationHtml);
   const activateGenFn = useServerFn(activateGeneration);
@@ -46,9 +42,14 @@ function SiteEditor() {
     queryKey: ["site", id],
     queryFn: () => getSiteFn({ data: { id } }),
   });
-  const { data: imgs } = useQuery({
-    queryKey: ["my-images"],
-    queryFn: () => listImagesFn(),
+  const { data: imgs } = useQuery<{ images: LocalImage[] }>({
+    queryKey: ["my-images", id, user.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/local-images?siteId=${encodeURIComponent(id)}&ownerId=${encodeURIComponent(user.id)}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro ao carregar imagens.");
+      return json;
+    },
   });
   const { data: insights } = useQuery({
     queryKey: ["insights", id],
@@ -195,45 +196,20 @@ function SiteEditor() {
       toast.error("Defina uma etiqueta para cada imagem antes de salvar.");
       return;
     }
-    const { data: { session } } = await supabase.auth.getSession();
-    const uid = session?.user?.id;
-    if (!uid) {
-      toast.error("Sessão expirada. Faça login novamente.");
-      return;
-    }
-    
+
     let successCount = 0;
     for (const item of uploadQueue) {
-      const ext = item.file.name.split(".").pop() || "jpg";
-      const filename = `${crypto.randomUUID()}.${ext}`;
-      const path = `${uid}/${filename}`;
-      
-      // Use supabaseAdmin logic for upload to bypass Legacy API Key error
-      // Note: We'll use the server function for registration
-      
       try {
-        // Enviar imagem via server function que usa supabaseAdmin
-        // Para isso, precisamos converter o arquivo para base64 ou usar FormData
-        // Mas como já temos o registerImageFn, vamos garantir que ele use supabaseAdmin internamente se necessário
-        // No momento ele usa supabase (context), vamos ajustar imagens.functions.ts também
-        
-        // Mocking a direct upload here won't work easily without a multipart/form-data handler
-        // Let's use registerImage with base64 for simplicity since small images are expected
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(item.file);
-        });
-        const base64 = await base64Promise;
-
-        await registerImageFn({ 
-          data: { 
-            path, 
-            label: item.label.trim().slice(0, 80),
-            base64,
-            filename
-          } 
-        });
+        const form = new FormData();
+        form.append("siteId", id);
+        form.append("ownerId", user.id);
+        form.append("label", item.label.trim().slice(0, 80));
+        form.append("file", item.file);
+        const res = await fetch("/api/public/local-images", { method: "POST", body: form });
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error || "Erro ao salvar imagem no servidor.");
+        }
         successCount++;
       } catch (e) {
         toast.error(`${item.file.name}: ${(e as Error).message}`);
@@ -242,7 +218,7 @@ function SiteEditor() {
     
     uploadQueue.forEach((i) => URL.revokeObjectURL(i.previewUrl));
     setUploadQueue(null);
-    qc.invalidateQueries({ queryKey: ["my-images"] });
+    qc.invalidateQueries({ queryKey: ["my-images", id, user.id] });
     
     if (successCount > 0) {
       toast.success(successCount === uploadQueue.length 
@@ -261,11 +237,28 @@ function SiteEditor() {
     const v = renameTarget.label.trim();
     if (!v) { toast.error("Etiqueta não pode ficar vazia."); return; }
     try {
-      await updateImageLabelFn({ data: { id: renameTarget.id, label: v.slice(0, 80) } });
-      qc.invalidateQueries({ queryKey: ["my-images"] });
+      const res = await fetch("/api/public/local-images", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteId: id, ownerId: user.id, id: renameTarget.id, label: v.slice(0, 80) }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro ao atualizar etiqueta.");
+      qc.invalidateQueries({ queryKey: ["my-images", id, user.id] });
       setRenameTarget(null);
       toast.success("Etiqueta atualizada");
     } catch (e) { toast.error((e as Error).message); }
+  }
+
+  async function removeLocalImage(imageId: string) {
+    const res = await fetch("/api/public/local-images", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ siteId: id, ownerId: user.id, id: imageId }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || "Erro ao excluir imagem.");
+    qc.invalidateQueries({ queryKey: ["my-images", id, user.id] });
   }
 
   function toggleSelected(url: string) {
@@ -349,7 +342,7 @@ function SiteEditor() {
             </div>
             <div className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
               <strong className="text-foreground">Sempre salve uma etiqueta</strong> ao enviar (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>).
-              A etiqueta diz à I.A MRO <strong>o que cada imagem é</strong> — isso faz o site sair muito melhor. Tudo fica salvo na nuvem e você acessa de qualquer lugar.
+              A etiqueta diz à I.A MRO <strong>o que cada imagem é</strong> — isso faz o site sair muito melhor. Tudo fica salvo no seu servidor.
             </div>
             {imgs?.images.length === 0 ? (
               <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Clique em <strong>+ Enviar</strong> e dê uma etiqueta para cada uma.</p>
@@ -371,7 +364,7 @@ function SiteEditor() {
                           className={`absolute left-1 top-1 grid h-5 w-5 place-items-center rounded-full border text-[10px] font-bold shadow ${isSel ? "border-brand bg-brand text-brand-foreground" : "border-white/70 bg-black/40 text-white"}`}>
                           {isSel ? "✓" : ""}
                         </button>
-                        <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { await deleteImageFn({ data: { id: im.id } }); qc.invalidateQueries({ queryKey: ["my-images"] }); } }}
+                        <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { try { await removeLocalImage(im.id); } catch (e) { toast.error((e as Error).message); } } }}
                           aria-label="Excluir"
                           className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/50 text-[11px] leading-none text-white hover:bg-destructive">×</button>
                         <button type="button" onClick={() => setRenameTarget({ id: im.id, label: im.label ?? "" })}
@@ -659,7 +652,7 @@ function SiteEditor() {
           <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed">
             A <strong>etiqueta</strong> identifica o que é a imagem (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>, <em>fundo-hero</em>).
             Isso é <strong>essencial</strong>: é com ela que a nossa I.A MRO sabe onde colocar cada imagem ao gerar o seu site.
-            Tudo fica salvo na <strong>nuvem</strong> — você acessa de qualquer lugar.
+            Tudo fica salvo no <strong>seu servidor</strong>.
           </div>
           <div className="mt-4 max-h-[55vh] space-y-3 overflow-y-auto pr-1">
             {uploadQueue.map((it, idx) => (
@@ -684,7 +677,7 @@ function SiteEditor() {
           <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button onClick={cancelUploadQueue} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
             <button onClick={confirmUploadQueue} className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
-              Salvar {uploadQueue.length} imagem{uploadQueue.length === 1 ? "" : "s"} na nuvem
+              Salvar {uploadQueue.length} imagem{uploadQueue.length === 1 ? "" : "s"} no servidor
             </button>
           </div>
         </Modal>

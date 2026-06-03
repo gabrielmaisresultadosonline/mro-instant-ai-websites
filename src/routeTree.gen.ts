@@ -18,6 +18,7 @@ import { Route as RedefinirSenhaTokenRouteImport } from './routes/redefinir-senh
 import { Route as ObObrigadoRouteImport } from './routes/ob/obrigado'
 import { Route as AtivarTokenRouteImport } from './routes/ativar.$token'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as ApiPublicLocalImagesRouteImport } from './routes/api/public/local-images'
 import { Route as ApiPublicCertCheckRouteImport } from './routes/api/public/cert-check'
 import { Route as AuthenticatedSitesNovoRouteImport } from './routes/_authenticated/sites.novo'
 import { Route as AuthenticatedSitesIdRouteImport } from './routes/_authenticated/sites.$id'
@@ -70,6 +71,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicLocalImagesRoute = ApiPublicLocalImagesRouteImport.update({
+  id: '/api/public/local-images',
+  path: '/api/public/local-images',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicCertCheckRoute = ApiPublicCertCheckRouteImport.update({
   id: '/api/public/cert-check',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/local-images': typeof ApiPublicLocalImagesRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/local-images': typeof ApiPublicLocalImagesRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/_authenticated/sites/$id': typeof AuthenticatedSitesIdRoute
   '/_authenticated/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/local-images': typeof ApiPublicLocalImagesRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/local-images'
     | '/api/public/cron/email-outbox'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/local-images'
     | '/api/public/cron/email-outbox'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/_authenticated/sites/$id'
     | '/_authenticated/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/local-images'
     | '/api/public/cron/email-outbox'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   ObObrigadoRoute: typeof ObObrigadoRoute
   RedefinirSenhaTokenRoute: typeof RedefinirSenhaTokenRoute
   ApiPublicCertCheckRoute: typeof ApiPublicCertCheckRoute
+  ApiPublicLocalImagesRoute: typeof ApiPublicLocalImagesRoute
   ApiPublicCronEmailOutboxRoute: typeof ApiPublicCronEmailOutboxRoute
   ApiPublicCronSubscriptionsRoute: typeof ApiPublicCronSubscriptionsRoute
   ApiPublicImgSplatRoute: typeof ApiPublicImgSplatRoute
@@ -309,6 +322,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/local-images': {
+      id: '/api/public/local-images'
+      path: '/api/public/local-images'
+      fullPath: '/api/public/local-images'
+      preLoaderRoute: typeof ApiPublicLocalImagesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/cert-check': {
       id: '/api/public/cert-check'
@@ -394,6 +414,7 @@ const rootRouteChildren: RootRouteChildren = {
   ObObrigadoRoute: ObObrigadoRoute,
   RedefinirSenhaTokenRoute: RedefinirSenhaTokenRoute,
   ApiPublicCertCheckRoute: ApiPublicCertCheckRoute,
+  ApiPublicLocalImagesRoute: ApiPublicLocalImagesRoute,
   ApiPublicCronEmailOutboxRoute: ApiPublicCronEmailOutboxRoute,
   ApiPublicCronSubscriptionsRoute: ApiPublicCronSubscriptionsRoute,
   ApiPublicImgSplatRoute: ApiPublicImgSplatRoute,
