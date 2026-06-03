@@ -567,6 +567,7 @@ function StickyBuyCta() {
       <div className="m-3 rounded-2xl border border-border bg-background/95 p-3 shadow-2xl backdrop-blur">
         <a
           href="#planos"
+          onClick={() => fbEvent("InitiateCheckout", { content_name: "Sticky CTA" })}
           className="flex items-center justify-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 px-5 py-3.5 text-base font-bold text-white"
         >
           Site por R$ 6,97 → comprar
