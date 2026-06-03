@@ -479,6 +479,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
             ℹ Os e-mails ficam aqui até o worker SMTP no VPS Ubuntu lê-los e enviar via <code>suporte@mro.bio</code>.
           </p>
         </div>
+        </div>
       )}
 
       {tab === "kiwify" && (
