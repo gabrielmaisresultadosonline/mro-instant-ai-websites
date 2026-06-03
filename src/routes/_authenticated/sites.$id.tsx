@@ -209,7 +209,7 @@ function SiteEditor() {
         const json = await res.json();
         if (!res.ok) {
           throw new Error(json.error || "Erro ao salvar imagem no servidor.");
-        });
+        }
         successCount++;
       } catch (e) {
         toast.error(`${item.file.name}: ${(e as Error).message}`);
