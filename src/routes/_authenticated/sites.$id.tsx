@@ -128,8 +128,10 @@ function SiteEditor() {
     try {
       const chosen = (imgs?.images ?? []).filter((im) => selected.has(im.public_url));
       console.log("[DEBUG_EDITOR] Imagens selecionadas no front:", chosen);
+      
+      // No servidor, processamos o domínio real. Aqui enviamos o path relativo ou absoluto se já tiver.
       const images = chosen.map((im) => ({
-        url: im.public_url.startsWith("http") ? im.public_url : `${window.location.origin}${im.public_url}`,
+        url: im.public_url, // O servidor cuidará de completar com o domínio correto se necessário
         label: im.label!.trim(),
       }));
       console.log("[DEBUG_EDITOR] Payload de imagens formatado:", images);
