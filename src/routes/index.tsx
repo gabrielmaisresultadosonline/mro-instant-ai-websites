@@ -4,6 +4,7 @@ import { useReveal } from "@/hooks/use-reveal";
 const sitesShowcase = { url: "/images/sites-showcase.png" };
 
 const KIWIFY_URL = "https://pay.kiwify.com.br/1mMYvVU";
+const KIWIFY_TEST_URL = "https://pay.kiwify.com.br/o3pIOC8";
 
 export const Route = createFileRoute("/")({
   head: () => ({
