@@ -290,7 +290,11 @@ function HowItWorks() {
           ))}
         </div>
         <div className="mt-12">
-          <a href="#planos" className="inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
+          <a 
+            href="#planos" 
+            className="inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold"
+            onClick={() => fbEvent("InitiateCheckout", { content_name: "How It Works CTA" })}
+          >
             Quero meu site por R$6,97 <span>→</span>
           </a>
         </div>
