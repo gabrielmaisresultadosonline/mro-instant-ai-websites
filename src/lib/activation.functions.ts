@@ -49,10 +49,11 @@ export const completeActivation = createServerFn({ method: "POST" })
       prof?.subscription_status === "active" &&
       !!prof.subscription_expires_at &&
       new Date(prof.subscription_expires_at).getTime() > Date.now();
+    const canRepairActivation = !prof?.subscription_status || prof.subscription_status === "none";
 
     // If the payment webhook has already activated this profile, keep it active.
     // This also repairs older accounts where the profile exists but activation fields were not finalized.
-    if (row.purpose === "activate" && profileEmail === tokenEmail && !isAlreadyActive) {
+    if (row.purpose === "activate" && profileEmail === tokenEmail && !isAlreadyActive && canRepairActivation) {
       await supabaseAdmin
         .from("profiles")
         .update({
