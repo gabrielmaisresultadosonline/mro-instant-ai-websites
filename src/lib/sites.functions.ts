@@ -411,13 +411,14 @@ ${imagesList}
 
 REGRAS TÉCNICAS INVIOLÁVEIS:
 1. LOGOTIPO: Se houver imagem com etiqueta "logo", insira-a no <header> usando <img src="LINK_DA_IMAGEM" class="h-16 w-auto object-contain" alt="Logo">. Se houver logo, NÃO use título em texto no cabeçalho.
-2. PROIBIDO IMAGENS EXTERNAS: NUNCA use unsplash.com, placeholder.com ou qualquer link que não esteja na lista acima. Se faltar imagem para uma seção, use gradientes CSS sofisticados ou ícones SVG.
-3. BOTÕES: Todos os botões de CTA (Chamada para Ação) devem ser VERDES (bg-green-600, hover:bg-green-700) com texto branco e cantos arredondados.
-4. ESTILO: Use Tailwind CSS. O design deve ser rico, com seções bem separadas, sombras (shadow-lg), e transições suaves. Mínimo de 6 seções.
-5. WHATSAPP: Botão flutuante ou link de contato usando https://wa.me/55...
-6. SAÍDA: Retorne APENAS o código HTML completo dentro de <html>...</html>. Sem markdown, sem introduções.
+2. IMAGENS OBRIGATÓRIAS: Para as seções de Hero, Galeria, Sobre ou Serviços, você DEVE usar os links reais fornecidos acima que correspondem às etiquetas. NUNCA deixe de usar as imagens se elas foram enviadas.
+3. PROIBIDO IMAGENS EXTERNAS: NUNCA use unsplash.com, placeholder.com ou qualquer link que não esteja na lista acima. Se faltar imagem para uma seção e não houver nenhuma correspondente na lista, use gradientes CSS sofisticados ou ícones SVG.
+4. BOTÕES: Todos os botões de CTA (Chamada para Ação) devem ser VERDES (bg-green-600, hover:bg-green-700) com texto branco e cantos arredondados.
+5. ESTILO: Use Tailwind CSS. O design deve ser rico, com seções bem separadas, sombras (shadow-lg), e transições suaves. Mínimo de 6 seções. Use gradientes sutis e paddings generosos.
+6. WHATSAPP: Botão flutuante ou link de contato usando https://wa.me/55...
+7. SAÍDA: Retorne APENAS o código HTML completo dentro de <html>...</html>. Sem markdown, sem introduções.
 
-DÊ VIDA AO SITE. USE OS LINKS REAIS DAS IMAGENS FORNECIDAS.`;
+DÊ VIDA AO SITE. USE OS LINKS REAIS DAS IMAGENS FORNECIDAS ACIMA. SE O CLIENTE MANDOU UMA LOGO, ELA TEM QUE APARECER NO HEADER.`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
