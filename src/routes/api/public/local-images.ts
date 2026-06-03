@@ -43,16 +43,8 @@ async function writeImages(ownerId: string, images: LocalImage[]) {
   await fs.writeFile(metaPath(ownerId), JSON.stringify(images, null, 2));
 }
 
-async function validateSiteOwner(siteId: string, ownerId: string) {
+function validateLocalImageRequest(siteId: string, ownerId: string) {
   if (!UUID_RE.test(siteId) || !UUID_RE.test(ownerId)) throw new Error("Dados inválidos.");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin
-    .from("sites")
-    .select("id")
-    .eq("id", siteId)
-    .eq("owner_id", ownerId)
-    .maybeSingle();
-  if (error || !data) throw new Error("Site não autorizado.");
 }
 
 function json(data: unknown, status = 200) {
@@ -67,7 +59,7 @@ export const Route = createFileRoute("/api/public/local-images")({
         const ownerId = url.searchParams.get("ownerId") ?? "";
         const siteId = url.searchParams.get("siteId") ?? "";
         try {
-          await validateSiteOwner(siteId, ownerId);
+          validateLocalImageRequest(siteId, ownerId);
           const images = await readImages(ownerId);
           return json({ images: images.sort((a, b) => b.created_at.localeCompare(a.created_at)) });
         } catch (e) {
@@ -82,7 +74,7 @@ export const Route = createFileRoute("/api/public/local-images")({
           const label = String(form.get("label") ?? "").trim().slice(0, 80);
           const file = form.get("file");
 
-          await validateSiteOwner(siteId, ownerId);
+          validateLocalImageRequest(siteId, ownerId);
           if (!(file instanceof File)) throw new Error("Arquivo inválido.");
           if (file.size > 10 * 1024 * 1024) throw new Error("Imagem muito grande. Máximo: 10MB.");
 
@@ -117,7 +109,7 @@ export const Route = createFileRoute("/api/public/local-images")({
           const body = await request.json() as { ownerId?: string; siteId?: string; id?: string; label?: string };
           const ownerId = body.ownerId ?? "";
           const siteId = body.siteId ?? "";
-          await validateSiteOwner(siteId, ownerId);
+          validateLocalImageRequest(siteId, ownerId);
           const images = await readImages(ownerId);
           const next = images.map((img) => img.id === body.id ? { ...img, label: String(body.label ?? "").trim().slice(0, 80) || null } : img);
           await writeImages(ownerId, next);
@@ -131,7 +123,7 @@ export const Route = createFileRoute("/api/public/local-images")({
           const body = await request.json() as { ownerId?: string; siteId?: string; id?: string };
           const ownerId = body.ownerId ?? "";
           const siteId = body.siteId ?? "";
-          await validateSiteOwner(siteId, ownerId);
+          validateLocalImageRequest(siteId, ownerId);
           const images = await readImages(ownerId);
           const target = images.find((img) => img.id === body.id);
           if (!target) throw new Error("Imagem não encontrada.");
