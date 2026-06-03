@@ -52,7 +52,7 @@ export const completeActivation = createServerFn({ method: "POST" })
 
     // If the payment webhook has already activated this profile, keep it active.
     // This also repairs older accounts where the profile exists but activation fields were not finalized.
-    if (profileEmail === tokenEmail && !isAlreadyActive) {
+    if (row.purpose === "activate" && profileEmail === tokenEmail && !isAlreadyActive) {
       await supabaseAdmin
         .from("profiles")
         .update({
@@ -68,10 +68,12 @@ export const completeActivation = createServerFn({ method: "POST" })
     }
 
     await supabaseAdmin.from("activation_tokens").update({ used_at: nowIso }).eq("id", row.id);
-    await enqueueEmail(supabaseAdmin, { email: row.email, name: prof?.name ?? row.email }, {
-      name: "credentials",
-      data: { name: prof?.name ?? row.email, email: row.email, password: data.password },
-    });
+    if (row.purpose === "activate") {
+      await enqueueEmail(supabaseAdmin, { email: row.email, name: prof?.name ?? row.email }, {
+        name: "credentials",
+        data: { name: prof?.name ?? row.email, email: row.email, password: data.password },
+      });
+    }
     return { ok: true, email: row.email };
   });
 
