@@ -97,10 +97,10 @@ function Hero() {
               <span className="font-semibold text-foreground"> seunome.mro.bio</span> com um único comando.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/cadastro" className="group inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
-                Criar meu site grátis
+              <a href="#planos" className="group inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
+                Quero meu site por R$6,97
                 <span className="transition-transform group-hover:translate-x-1">→</span>
-              </Link>
+              </a>
               <a href="#como-funciona" className="rounded-md border border-border bg-background px-6 py-3.5 text-base font-medium hover:bg-accent/30 hover:border-foreground/30 transition">
                 Ver como funciona
               </a>
@@ -109,7 +109,7 @@ function Hero() {
               {[
                 "Subdomínio próprio incluso",
                 "Edita até 4× por semana",
-                "Insights de visitas em tempo real",
+                "1 ano de acesso a partir da compra",
                 "Pixels do Facebook, Google e TikTok",
               ].map((t) => (
                 <li key={t} className="flex items-center gap-2">
@@ -120,56 +120,34 @@ function Hero() {
             </ul>
           </div>
 
-          <HeroPreview />
+          <HeroShowcase />
         </div>
       </div>
     </section>
   );
 }
 
-function HeroPreview() {
+function HeroShowcase() {
   return (
     <div className="relative">
-      <div className="floaty rounded-2xl border border-border bg-card p-2 shadow-[var(--shadow-elevate)]">
-        <div className="flex items-center gap-1.5 px-3 py-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-          <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-          <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-          <span className="ml-3 truncate text-xs text-muted-foreground">delulu.mro.bio</span>
-          <span className="ml-auto text-[10px] text-muted-foreground">🔒 ssl</span>
-        </div>
-        <div className="overflow-hidden rounded-xl bg-surface">
-          <div className="relative bg-[oklch(0.12_0_0)] p-6 text-[oklch(1_0_0)] overflow-hidden">
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
-            <div className="font-display text-2xl font-bold">Delulu Café</div>
-            <p className="mt-1 text-sm text-white/60">O café mais delulu da cidade — 24h, açúcar opcional.</p>
-            <button className="mt-4 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:scale-[1.03] transition">
-              Pedir agora
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-3 p-4">
-            <div className="aspect-square rounded-md bg-brand animate-pulse" />
-            <div className="aspect-square rounded-md bg-foreground/90" />
-            <div className="aspect-square rounded-md bg-muted" />
-          </div>
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-muted-foreground">
-            <span>Pronto em 4 min</span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" style={{ animation: "pulseDot 1.4s ease-in-out infinite" }} />
-              312 visitas hoje
-            </span>
-          </div>
-        </div>
+      <div className="floaty relative">
+        <img
+          src={sitesShowcase.url}
+          alt="Exemplos de sites criados com a I.A da MRO em notebook, monitor e celular"
+          className="w-full h-auto drop-shadow-[0_30px_60px_rgba(0,0,0,0.18)]"
+          loading="eager"
+        />
       </div>
-      <div className="absolute -right-4 -top-4 rotate-3 rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background shadow-lg">
+      <div className="absolute right-0 -top-3 md:-right-2 md:-top-4 rotate-3 rounded-full bg-foreground px-3 py-1.5 text-xs md:text-sm font-semibold text-background shadow-lg">
         gerado por I.A ✦
       </div>
-      <div className="absolute -bottom-4 -left-4 -rotate-3 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-brand-foreground shadow-lg">
+      <div className="absolute left-0 -bottom-3 md:-left-2 md:-bottom-4 -rotate-3 rounded-full bg-brand px-3 py-1.5 text-xs md:text-sm font-semibold text-brand-foreground shadow-lg">
         ⚡ em 5 minutos
       </div>
     </div>
   );
 }
+
 
 function Marquee() {
   const items = [
