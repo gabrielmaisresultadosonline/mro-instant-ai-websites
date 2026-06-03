@@ -296,15 +296,83 @@ function Dashboard() {
   return (
     <main className="mx-auto max-w-6xl px-5 py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold uppercase">{site.title || site.slug}</h1>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-mono">{site.slug}.mro.bio</span>
-            {" · "}
-            <span className={site.is_published ? "text-emerald-500 font-medium" : "text-amber-500 font-medium"}>
-              {site.is_published ? "🟢 Publicado" : "🟡 Rascunho"}
-            </span>
-          </p>
+        <div className="flex-1">
+          {isEditing ? (
+            <div className="space-y-3 max-w-md">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Nome da empresa</label>
+                <input
+                  type="text"
+                  className="w-full bg-background border border-border rounded px-3 py-1.5 text-sm"
+                  value={editData.title}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditData(prev => ({
+                      ...prev,
+                      title: val,
+                      slug: isEditSlugManual ? prev.slug : toSiteSlug(val)
+                    }));
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground">Link do site (slug)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 bg-background border border-border rounded px-3 py-1.5 text-sm font-mono"
+                    value={editData.slug}
+                    onChange={(e) => {
+                      setIsEditSlugManual(true);
+                      setEditData(prev => ({ ...prev, slug: toSiteSlug(e.target.value) }));
+                    }}
+                  />
+                  <span className="text-xs text-muted-foreground">.mro.bio</span>
+                </div>
+                {(site.slug_changes_count || 0) >= 1 && editData.slug !== site.slug && (
+                  <p className="text-[10px] text-amber-500 mt-1">⚠️ Você já alterou seu link uma vez e não poderá mudar novamente por 1 ano.</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateSiteMut.mutate(editData)}
+                  disabled={updateSiteMut.isPending}
+                  className="rounded bg-brand px-3 py-1.5 text-xs font-bold text-brand-foreground"
+                >
+                  {updateSiteMut.isPending ? "Salvando..." : "Salvar alterações"}
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="rounded border border-border px-3 py-1.5 text-xs font-medium"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <h1 className="font-display text-3xl font-bold uppercase">{site.title || site.slug}</h1>
+                <button 
+                  onClick={() => {
+                    setEditData({ title: site.title || "", slug: site.slug });
+                    setIsEditSlugManual(false);
+                    setIsEditing(true);
+                  }}
+                  className="text-xs text-muted-foreground hover:text-brand underline"
+                >
+                  Editar nome/link
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-mono">{site.slug}.mro.bio</span>
+                {" · "}
+                <span className={site.is_published ? "text-emerald-500 font-medium" : "text-amber-500 font-medium"}>
+                  {site.is_published ? "🟢 Publicado" : "🟡 Rascunho"}
+                </span>
+              </p>
+            </>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link to="/sites/$id" params={{ id: site.id }}
