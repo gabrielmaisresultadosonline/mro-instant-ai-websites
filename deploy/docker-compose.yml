@@ -24,6 +24,14 @@ services:
     depends_on: [app]
     networks: [web]
 
+  email-worker:
+    build:
+      context: ./email-worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ./app.env
+    networks: [web]
+
 volumes:
   caddy_data:
   caddy_config:
