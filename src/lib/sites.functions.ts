@@ -383,16 +383,18 @@ REGRAS OBRIGATÓRIAS:
 - Tailwind via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Responsivo mobile-first
 - Estrutura semântica (header, main, sections, footer)
-- Use TODAS as imagens fornecidas com as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders. Tag "logo" no header, "banner"/"hero" no topo.
+- Use TODAS as imagens fornecidas abaixo com as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders, NÃO use imagens externas não fornecidas.
+- Se a etiqueta for "logo", use obrigatoriamente no Header/Navbar.
+- Se a etiqueta for "banner" ou "hero", use obrigatoriamente no topo/primeira seção.
 - Google Fonts (Inter ou Space Grotesk)
-- WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX, target="_blank" rel="noopener"
+- WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX (use o número informado no pedido se houver), target="_blank" rel="noopener"
 - Inclua <title>, meta description, og tags
-- NÃO escreva nada fora do HTML, sem markdown
+- NÃO escreva nada fora do HTML, sem markdown. Entregue APENAS o código.
 
-Imagens fornecidas (USE LITERALMENTE):
-${(data.images ?? []).map((im) => `- tag="${im.label}" → ${im.url}`).join("\n") || "(nenhuma)"}
+Imagens fornecidas para uso (USE APENAS ESTAS):
+${(data.images ?? []).map((im) => `- etiqueta="${im.label}" → URL="${im.url}"`).join("\n") || "(nenhuma)"}
 
-Pedido do usuário: "${data.prompt}"`;
+Pedido original do usuário: "${data.prompt}"`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
