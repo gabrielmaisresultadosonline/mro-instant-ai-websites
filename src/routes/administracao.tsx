@@ -373,8 +373,24 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           </div>
 
           <button onClick={handleSaveTokens} className="rounded-md btn-brand px-5 py-2.5 text-sm font-semibold">Salvar chaves</button>
+
+          <div className="mt-6 rounded-lg border border-white/10 p-4">
+            <div className="text-xs uppercase tracking-wide text-white/60">URL do Webhook da Kiwify</div>
+            <p className="mt-1 text-xs text-white/50">Cole esta URL no painel da Kiwify (Configurações → Webhooks). Ela já inclui o token de segurança.</p>
+            <div className="mt-3 flex gap-2">
+              <input readOnly value={kiwifyUrl?.url ?? "Carregando…"}
+                className="flex-1 rounded-md border border-white/20 bg-white/10 p-2.5 font-mono text-xs" />
+              <button
+                onClick={() => { if (kiwifyUrl?.url) { navigator.clipboard.writeText(kiwifyUrl.url); toast.success("URL copiada"); } }}
+                className="rounded-md btn-brand px-4 py-2 text-xs font-semibold">Copiar</button>
+            </div>
+            {kiwifyUrl && !kiwifyUrl.configured && (
+              <p className="mt-2 text-xs text-red-300">⚠ KIWIFY_WEBHOOK_TOKEN não configurado no servidor.</p>
+            )}
+          </div>
         </div>
       )}
+
 
       {tab === "subscriptions" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">
