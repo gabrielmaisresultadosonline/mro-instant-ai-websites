@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
+import sitesShowcase from "@/assets/sites-showcase.png.asset.json";
+
+const KIWIFY_URL = "https://pay.kiwify.com.br/1mMYvVU";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MRO.BIO — Site completo com I.A em menos de 5 minutos" },
-      { name: "description", content: "Crie um site profissional com I.A generativa. Sem hospedagem, sem domínio. Apenas um comando." },
+      { title: "MRO.BIO — Site completo com I.A em menos de 5 minutos · R$67/ano" },
+      { name: "description", content: "Crie um site profissional com I.A generativa. R$67 no ano à vista, ou 12x de R$6,97. Sem hospedagem, sem domínio." },
     ],
   }),
   component: Landing,
@@ -24,9 +27,11 @@ function Landing() {
       <Pricing />
       <FaqCta />
       <Footer />
+      <StickyBuyCta />
     </div>
   );
 }
+
 
 function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -56,7 +61,9 @@ function Header() {
         </nav>
         <div className="flex items-center gap-2">
           <Link to="/login" className="hidden rounded-md px-3 py-2 text-sm font-medium hover:bg-accent/30 md:inline-flex">Entrar</Link>
-          <Link to="/cadastro" className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">Criar grátis</Link>
+          <a href="#planos" className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
+            Site por R$6,97
+          </a>
         </div>
       </div>
     </header>
