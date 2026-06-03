@@ -330,7 +330,6 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     // Choose provider via round-robin
     const provider: Provider = PROVIDERS[providerIdx % PROVIDERS.length];
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: settings } = await supabaseAdmin
       .from("admin_settings")
       .select("openai_token, deepseek_token, claude_token")
