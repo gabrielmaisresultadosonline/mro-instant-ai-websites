@@ -342,7 +342,7 @@ function SiteEditor() {
             </div>
             <div className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
               <strong className="text-foreground">Sempre salve uma etiqueta</strong> ao enviar (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>).
-              A etiqueta diz à I.A MRO <strong>o que cada imagem é</strong> — isso faz o site sair muito melhor. Tudo fica salvo na nuvem e você acessa de qualquer lugar.
+              A etiqueta diz à I.A MRO <strong>o que cada imagem é</strong> — isso faz o site sair muito melhor. Tudo fica salvo no seu servidor.
             </div>
             {imgs?.images.length === 0 ? (
               <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Clique em <strong>+ Enviar</strong> e dê uma etiqueta para cada uma.</p>
@@ -652,7 +652,7 @@ function SiteEditor() {
           <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed">
             A <strong>etiqueta</strong> identifica o que é a imagem (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>, <em>fundo-hero</em>).
             Isso é <strong>essencial</strong>: é com ela que a nossa I.A MRO sabe onde colocar cada imagem ao gerar o seu site.
-            Tudo fica salvo na <strong>nuvem</strong> — você acessa de qualquer lugar.
+            Tudo fica salvo no <strong>seu servidor</strong>.
           </div>
           <div className="mt-4 max-h-[55vh] space-y-3 overflow-y-auto pr-1">
             {uploadQueue.map((it, idx) => (
@@ -677,7 +677,7 @@ function SiteEditor() {
           <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button onClick={cancelUploadQueue} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
             <button onClick={confirmUploadQueue} className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
-              Salvar {uploadQueue.length} imagem{uploadQueue.length === 1 ? "" : "s"} na nuvem
+              Salvar {uploadQueue.length} imagem{uploadQueue.length === 1 ? "" : "s"} no servidor
             </button>
           </div>
         </Modal>
