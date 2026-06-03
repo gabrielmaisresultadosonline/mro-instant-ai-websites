@@ -345,27 +345,32 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     }
 
     // Step 1 — briefing (uses whichever chat model is available, prefers openai > deepseek > claude)
-    const briefPrompt = `Você é um diretor criativo de ELITE especializado em sites de altíssima conversão, design premium e interfaces modernas. O usuário solicitou este site:
+    const imagesList = (data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)";
+    
+    const briefPrompt = `Você é um diretor criativo de ELITE especializado em sites de altíssima conversão e design premium.
+O usuário enviou esta descrição exata:
 "${data.prompt}"
 
-Imagens disponíveis (use as URLs LITERALMENTE):
-${(data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
+REGRAS RÍGIDAS DE CONTEÚDO:
+1. Respeite INTEGRALMENTE as informações fornecidas. NÃO invente serviços, endereços ou contatos que não foram pedidos.
+2. Expanda o conteúdo apenas para torná-lo profissional, mantendo a ESSÊNCIA do que foi solicitado.
+3. Se o usuário forneceu pouco texto, foque em um design "Clean" e minimalista, sem encher linguiça.
 
-REGRAS DE IMAGENS E CONTEÚDO (CRÍTICAS):
-1. Use TODAS as imagens fornecidas acima. Se houver uma etiqueta [logo], ela DEVE ser o logotipo principal no header.
-2. Se houver etiquetas [banner] ou [hero], use-as em seções de destaque com texto sobreposto ou layouts de impacto.
-3. NÃO use placeholders ou imagens genéricas. Se não houver imagens suficientes, foque em tipografia incrível, cores vibrantes e layouts baseados em formas/gradientes CSS.
-4. O conteúdo deve ser rico, persuasivo e profissional. Não crie sites vazios.
-5. Melhore o texto para ser magnético e profissional, expandindo os serviços mencionados de forma realista.
+IMAGENS DISPONÍVEIS (URLs REAIS):
+${imagesList}
 
-Responda em português um briefing detalhado e luxuoso:
+REGRAS DE IMAGENS:
+1. Se houver uma imagem com etiqueta [logo], ela DEVE ser o logotipo principal.
+2. Se houver [banner] ou [hero], use-as em seções de destaque.
+3. Use as URLs exatamente como fornecidas.
+
+Responda em português um briefing estruturado:
 - Nome/Título do site
-- Paleta de cores premium (4-5 hex que combinem com as imagens/segmento)
-- Tipografia sugerida (Serif para títulos, Sans para corpo se for luxo; Sans arrojada se for tech)
-- Estrutura de Seções (7-9 seções): Hero Impactante, Sobre nós detalhado, Serviços com cards, Galeria (se houver fotos), Prova Social, CTA Principal, Rodapé completo.
-- Instrução específica de onde cada imagem [tag] será posicionada para maximizar o design.
+- Paleta de cores (4-5 hex)
+- Estrutura de Seções (Hero, Sobre, Serviços, Galeria, Contato, Rodapé)
+- Instrução de onde cada imagem [etiqueta] será posicionada.
 
-Direto, estruturado, sem conversa fiada.`;
+Direto, sem introduções.`;
 
     let brief = "";
     try {
@@ -373,7 +378,7 @@ Direto, estruturado, sem conversa fiada.`;
         const r = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: briefPrompt }], temperature: 0.8 }),
+          body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: briefPrompt }], temperature: 0.5 }),
         });
         if (r.ok) {
           const j = await r.json() as { choices: { message: { content: string } }[] };
