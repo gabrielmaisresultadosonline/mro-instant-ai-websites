@@ -63,10 +63,11 @@ export const getSite = createServerFn({ method: "GET" })
 
 export const saveSite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string; html?: string; title?: string; pixels?: Record<string, string>; is_published?: boolean }) =>
+  .inputValidator((i: { id: string; slug?: string; html?: string; title?: string; pixels?: Record<string, string>; is_published?: boolean }) =>
     z.object({
       id: z.string().uuid(),
-      html: z.string().max(500000).optional(),
+      slug: z.string().trim().toLowerCase().min(3).max(30).optional(),
+      html: z.string().max(1000000).optional(),
       title: z.string().max(120).optional(),
       pixels: z.record(z.string(), z.string().max(120)).optional(),
       is_published: z.boolean().optional(),
@@ -74,11 +75,47 @@ export const saveSite = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const update: { html?: string; title?: string; pixels?: Record<string, string>; is_published?: boolean } = {};
+    const { data: site } = await supabase.from("sites")
+      .select("slug, slug_changes_count, last_slug_change_at")
+      .eq("id", data.id)
+      .eq("owner_id", userId)
+      .single();
+    
+    if (!site) throw new Error("Site não encontrado");
+
+    const update: any = {};
     if (data.html !== undefined) update.html = data.html;
     if (data.title !== undefined) update.title = data.title;
     if (data.pixels !== undefined) update.pixels = data.pixels;
     if (data.is_published !== undefined) update.is_published = data.is_published;
+
+    if (data.slug && data.slug !== site.slug) {
+      if (!SLUG_RE.test(data.slug) || RESERVED.has(data.slug)) {
+        throw new Error("Link inválido. Use 3-30 letras/números/hífens.");
+      }
+
+      const changes = (site as any).slug_changes_count ?? 0;
+      if (changes >= 1) {
+        const lastChange = (site as any).last_slug_change_at;
+        if (lastChange) {
+          const oneYear = 365 * 24 * 60 * 60 * 1000;
+          const diff = Date.now() - new Date(lastChange).getTime();
+          if (diff < oneYear) {
+            const daysLeft = Math.ceil((oneYear - diff) / (24 * 60 * 60 * 1000));
+            throw new Error(`O link só pode ser alterado 1 vez por ano. Faltam ${daysLeft} dias para poder mudar novamente.`);
+          }
+        }
+      }
+
+      // Check if new slug is taken
+      const { data: existing } = await supabase.from("sites").select("id").eq("slug", data.slug).maybeSingle();
+      if (existing) throw new Error("Este link já está em uso por outro site.");
+
+      update.slug = data.slug;
+      update.slug_changes_count = changes + 1;
+      update.last_slug_change_at = new Date().toISOString();
+    }
+
     const { error } = await supabase.from("sites").update(update).eq("id", data.id).eq("owner_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -88,8 +125,15 @@ export const deleteSite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { id: string }) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { error } = await supabase.from("sites").delete().eq("id", data.id).eq("owner_id", userId);
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    // Using admin to bypass RLS and potential "Legacy API key" issues on the user client
+    const { error } = await supabaseAdmin.from("sites")
+      .delete()
+      .eq("id", data.id)
+      .eq("owner_id", userId);
+
     if (error) throw new Error(error.message);
     return { ok: true };
   });

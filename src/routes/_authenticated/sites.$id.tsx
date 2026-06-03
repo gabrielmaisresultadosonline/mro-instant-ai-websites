@@ -64,7 +64,7 @@ function SiteEditor() {
   const [pixels, setPixels] = useState<Pixels>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"preview" | "history" | "pixels" | "insights">("preview");
+  const [tab, setTab] = useState<"preview" | "history" | "settings" | "insights">("preview");
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
   const [confirmInfo, setConfirmInfo] = useState(false);   // popup pre-generate (info check)
   const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
@@ -88,8 +88,8 @@ function SiteEditor() {
   const monthlyLeft = Math.max(0, monthlyLimit - monthlyUsed);
 
   const saveMut = useMutation({
-    mutationFn: async (payload: { html?: string; pixels?: Pixels; is_published?: boolean }) => {
-      return saveFn({ data: { id, html: payload.html, pixels: payload.pixels ?? pixels, is_published: payload.is_published } });
+    mutationFn: async (payload: { html?: string; pixels?: Pixels; is_published?: boolean; title?: string; slug?: string }) => {
+      return saveFn({ data: { id, ...payload, pixels: payload.pixels ?? pixels } });
     },
     onSuccess: () => {
       toast.success("Alterações salvas");
@@ -352,10 +352,10 @@ function SiteEditor() {
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
           <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
-            {(["preview", "history", "pixels", "insights"] as const).map((t) => (
+            {(["preview", "history", "settings", "insights"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
-                {t === "preview" ? "Pré-visualização" : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)` : t === "pixels" ? "Pixels" : "Insights"}
+                {t === "preview" ? "Pré-visualização" : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)` : t === "settings" ? "Configurações" : "Insights"}
               </button>
             ))}
           </div>
@@ -436,23 +436,59 @@ function SiteEditor() {
             </div>
           )}
 
-          {tab === "pixels" && (
-            <div className="space-y-3 p-5">
-              <p className="text-xs text-muted-foreground">Cole os IDs dos pixels — eles serão injetados automaticamente no <code>&lt;head&gt;</code> do site.</p>
-              {([
-                ["meta", "Meta Pixel (Facebook/Instagram)", "ex.: 1234567890"],
-                ["ga4", "Google Analytics 4", "ex.: G-XXXXXXX"],
-                ["gtm", "Google Tag Manager", "ex.: GTM-XXXXXX"],
-                ["tiktok", "TikTok Pixel", "ex.: C4XXXXXX"],
-              ] as const).map(([k, label, ph]) => (
-                <label key={k} className="block">
-                  <span className="mb-1 block text-xs font-semibold">{label}</span>
-                  <input value={pixels[k] ?? ""} onChange={(e) => setPixels((p) => ({ ...p, [k]: e.target.value }))} placeholder={ph}
-                    className="w-full rounded-md border border-border bg-background p-2.5 text-sm focus:border-brand focus:outline-none" />
-                </label>
-              ))}
-              <button onClick={() => saveMut.mutate({ pixels })}
-                className="mt-2 rounded-md btn-brand px-4 py-2 text-sm font-semibold">Salvar pixels</button>
+          {tab === "settings" && (
+            <div className="space-y-6 p-5">
+              <section>
+                <h3 className="mb-3 font-display text-base font-bold">Identidade do site</h3>
+                <div className="space-y-4">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold">Nome do site</span>
+                    <input 
+                      value={site.title ?? ""} 
+                      onChange={(e) => saveMut.mutate({ title: e.target.value })} 
+                      placeholder="Ex: Minha Empresa"
+                      className="w-full rounded-md border border-border bg-background p-2.5 text-sm focus:border-brand focus:outline-none" 
+                    />
+                  </label>
+
+                  <div>
+                    <span className="mb-1.5 block text-xs font-semibold">Link do site (slug)</span>
+                    <div className="relative flex items-center">
+                      <input 
+                        value={site.slug} 
+                        readOnly
+                        disabled
+                        className="w-full rounded-md border border-border bg-accent/20 p-2.5 text-sm font-mono opacity-70 outline-none" 
+                      />
+                      <span className="absolute right-3 text-xs font-mono text-muted-foreground">.mro.bio</span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-amber-500">
+                      O link é gerado automaticamente na criação. Para alterar o link, entre em contato com o suporte (limite de 1 alteração por ano).
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="border-t border-border pt-6">
+                <h3 className="mb-1 font-display text-base font-bold">Pixels de rastreio</h3>
+                <p className="mb-4 text-xs text-muted-foreground">Cole os IDs dos pixels — eles serão injetados automaticamente no <code>&lt;head&gt;</code> do site.</p>
+                <div className="space-y-4">
+                  {([
+                    ["meta", "Meta Pixel (Facebook/Instagram)", "ex.: 1234567890"],
+                    ["ga4", "Google Analytics 4", "ex.: G-XXXXXXX"],
+                    ["gtm", "Google Tag Manager", "ex.: GTM-XXXXXX"],
+                    ["tiktok", "TikTok Pixel", "ex.: C4XXXXXX"],
+                  ] as const).map(([k, label, ph]) => (
+                    <label key={k} className="block">
+                      <span className="mb-1 block text-xs font-semibold">{label}</span>
+                      <input value={pixels[k] ?? ""} onChange={(e) => setPixels((p) => ({ ...p, [k]: e.target.value }))} placeholder={ph}
+                        className="w-full rounded-md border border-border bg-background p-2.5 text-sm focus:border-brand focus:outline-none" />
+                    </label>
+                  ))}
+                  <button onClick={() => saveMut.mutate({ pixels })}
+                    className="mt-2 rounded-md btn-brand px-4 py-2 text-sm font-semibold">Salvar pixels</button>
+                </div>
+              </section>
             </div>
           )}
 

@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteSite } from "@/lib/sites.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Meu site — MRO.BIO" }] }),
@@ -14,6 +16,16 @@ function Dashboard() {
   const qc = useQueryClient();
   const { user } = Route.useRouteContext();
   const [formData, setFormData] = useState({ title: "", slug: "" });
+  const deleteSiteFn = useServerFn(deleteSite);
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteSiteFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Site excluído");
+      qc.invalidateQueries({ queryKey: ["my-sites", user.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const { data: sub } = useQuery({
     queryKey: ["my-subscription", user.id],
@@ -274,6 +286,15 @@ function Dashboard() {
                 }}
                 className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent/40">
                 📋 Copiar
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm("Deseja realmente excluir seu site? Esta ação é irreversível.")) {
+                    deleteMut.mutate(site.id);
+                  }
+                }}
+                className="rounded-md border border-destructive/30 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/5">
+                Excluir
               </button>
             </>
           )}
