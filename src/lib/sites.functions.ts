@@ -387,30 +387,25 @@ Direto, estruturado, sem conversa fiada.`;
 ${brief || data.prompt}
 
 REGRAS OBRIGATÓRIAS DE DESIGN PREMIUM:
-- Design "World-Class": O site deve parecer feito por uma agência de elite. Use espaços em branco generosos (whitespace), tipografia grande e impactante, e micro-interações.
+- Design "World-Class": O site deve parecer feito por uma agência de elite.
 - Responsividade Total: Layout impecável em mobile, tablet e desktop.
-- Efeitos de Vidro (Glassmorphism): Use fundos semi-transparentes com desfoque (backdrop-blur) em menus e cards se combinar com o estilo.
-- Animações: Use CSS para animações de fade-in e slide-up conforme o usuário rola a página.
-- Gradientes e Sombras: Use gradientes sutis e sombras "soft" (soft shadows) para dar profundidade.
-- Hovers Incríveis: Botões devem ter efeitos de escala, mudança de cor de brilho e transições suaves.
+- Efeitos e Animações: Use micro-interações, hover nos botões e animações de scroll.
 
-REGRAS TÉCNICAS E DE IMAGEM:
-- HTML5 semântico completo.
-- Tailwind CSS (CDN): <script src="https://cdn.tailwindcss.com"></script>
-- Fontes Google: Importe fontes elegantes (como 'Inter', 'Playfair Display' ou 'Montserrat') via @import no style.
-- Imagens Reais: Use EXCLUSIVAMENTE as imagens fornecidas abaixo com as URLs exatas.
-- Layout de Imagens: Se for "logo", coloque no canto superior esquerdo ou centro do Nav. Se for "banner", deve ser o fundo da seção Hero ou um elemento de destaque lateral.
-- NÃO invente URLs de imagens. NÃO use placeholders cinzas. Se não tiver imagem para uma seção, use um ícone SVG elegante do Lucide (use <img> com src da CDN de ícones ou SVG inline).
+REGRAS CRÍTICAS DE IMAGEM (NÃO IGNORE):
+- Use EXCLUSIVAMENTE as URLs de imagens reais fornecidas abaixo.
+- Você DEVE incluir todas as imagens listadas no código HTML final usando a tag <img src="URL_REAL">.
+- Se uma imagem tem a etiqueta [logo], use-a como logotipo oficial no Header.
+- Se uma imagem tem a etiqueta [banner] ou [hero], use-a como fundo ou destaque principal da primeira seção.
+- NUNCA use URLs inventadas, placeholders cinzas ou imagens externas de bancos (como Unsplash).
+- Se não houver imagens para uma seção, use ícones SVG elegantes ou layouts baseados em cores e tipografia.
 
-URLs de Imagens Disponíveis:
-${(data.images ?? []).map((im) => `[${im.label}] ${im.url}`).join("\n")}
+LISTA DE IMAGENS REAIS PARA INCLUIR NO SITE AGORA:
+${(data.images ?? []).map((im) => `ETIQUETA: "${im.label}" -> URL: "${im.url}"`).join("\n") || "NENHUMA IMAGEM ENVIADA"}
 
 OUTRAS REGRAS:
-- WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX (use o número informado no pedido se houver), target="_blank" rel="noopener"
-- Inclua <title>, meta description, og tags
-- NÃO escreva nada fora do HTML, sem markdown. Entregue APENAS o código.
-
-Pedido original do usuário: "${data.prompt}"
+- WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX (use o número informado no pedido se houver).
+- NÃO use Markdown (sem \`\`\`html). Entregue APENAS o código HTML puro começando em <!DOCTYPE html>.
+- Pedido original: "${data.prompt}"
 
 Retorne APENAS o código HTML completo, pronto para publicar. Sem explicações.`;
 
