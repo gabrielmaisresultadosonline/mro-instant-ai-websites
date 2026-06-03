@@ -197,12 +197,25 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   }
 
   const TABS: Array<{ key: Tab; label: string }> = [
+    { key: "dashboard", label: "Dashboard" },
     { key: "users", label: "Usuários" },
     { key: "sites", label: "Sites" },
     { key: "subscriptions", label: "Assinaturas" },
     { key: "outbox", label: "Fila de e-mails" },
     { key: "kiwify", label: "Webhooks Kiwify" },
     { key: "settings", label: "Configurações" },
+  ];
+
+  const TEMPLATES: Array<{ value: string; label: string }> = [
+    { value: "activation", label: "Compra aprovada — criar senha (ativação)" },
+    { value: "renewal_thanks", label: "Pagamento confirmado / renovação" },
+    { value: "reminder_2d", label: "Lembrete: vence em 2 dias" },
+    { value: "reminder_1d", label: "Lembrete: vence amanhã" },
+    { value: "expired_grace", label: "Expirado — período de carência (10 dias)" },
+    { value: "canceled", label: "Assinatura cancelada" },
+    { value: "refunded", label: "Reembolso processado" },
+    { value: "deleted", label: "Acesso excluído" },
+    { value: "password_reset", label: "Recuperação de senha" },
   ];
 
   return (
@@ -215,6 +228,55 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           </button>
         ))}
       </div>
+
+      {tab === "dashboard" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              { label: "Usuários", value: stats?.totals.users ?? 0, color: "text-white" },
+              { label: "Assinantes ativos", value: stats?.totals.active ?? 0, color: "text-emerald-400" },
+              { label: "Em carência", value: stats?.totals.grace ?? 0, color: "text-amber-400" },
+              { label: "Cancelados", value: stats?.totals.canceled ?? 0, color: "text-red-400" },
+              { label: "Pagamentos (30d)", value: stats?.totals.paymentsLast30 ?? 0, color: "text-emerald-400" },
+              { label: "Cancelamentos (30d)", value: stats?.totals.cancelsLast30 ?? 0, color: "text-red-400" },
+              { label: "Vencem em ≤7d", value: stats?.totals.expiringSoon ?? 0, color: "text-amber-400" },
+              { label: "Vencem em ≤2d", value: stats?.totals.expiringIn2d ?? 0, color: "text-amber-400" },
+            ].map((c) => (
+              <div key={c.label} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <div className="text-[11px] uppercase tracking-wide text-white/60">{c.label}</div>
+                <div className={`mt-1 font-display text-2xl font-bold ${c.color}`}>{c.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-white/10">
+            <div className="border-b border-white/10 px-4 py-3 text-sm font-semibold">Próximos vencimentos</div>
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
+                <tr><th className="px-4 py-3">Usuário</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Vence em</th><th className="px-4 py-3">Dias restantes</th></tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {(stats?.nextExpirations ?? []).length === 0 ? (
+                  <tr><td colSpan={4} className="px-4 py-8 text-center text-white/50">Sem assinaturas ativas.</td></tr>
+                ) : stats!.nextExpirations.map((x) => {
+                  const exp = x.subscription_expires_at ? new Date(x.subscription_expires_at) : null;
+                  const days = exp ? Math.max(0, Math.ceil((exp.getTime() - Date.now()) / 86400000)) : 0;
+                  return (
+                    <tr key={x.id}>
+                      <td className="px-4 py-3">{x.name}</td>
+                      <td className="px-4 py-3 text-xs">{x.email}</td>
+                      <td className="px-4 py-3 text-xs">{exp ? exp.toLocaleDateString("pt-BR") : "—"}</td>
+                      <td className={`px-4 py-3 text-xs ${days <= 2 ? "text-red-400" : days <= 7 ? "text-amber-400" : "text-white/70"}`}>{days}d</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+
 
 
       {tab === "users" && (
