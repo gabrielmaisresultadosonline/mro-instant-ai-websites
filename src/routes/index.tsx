@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
+import sitesShowcase from "@/assets/sites-showcase.png.asset.json";
+
+const KIWIFY_URL = "https://pay.kiwify.com.br/1mMYvVU";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MRO.BIO — Site completo com I.A em menos de 5 minutos" },
-      { name: "description", content: "Crie um site profissional com I.A generativa. Sem hospedagem, sem domínio. Apenas um comando." },
+      { title: "MRO.BIO — Site completo com I.A em menos de 5 minutos · R$67/ano" },
+      { name: "description", content: "Crie um site profissional com I.A generativa. R$67 no ano à vista, ou 12x de R$6,97. Sem hospedagem, sem domínio." },
     ],
   }),
   component: Landing,
@@ -24,9 +27,11 @@ function Landing() {
       <Pricing />
       <FaqCta />
       <Footer />
+      <StickyBuyCta />
     </div>
   );
 }
+
 
 function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -56,7 +61,9 @@ function Header() {
         </nav>
         <div className="flex items-center gap-2">
           <Link to="/login" className="hidden rounded-md px-3 py-2 text-sm font-medium hover:bg-accent/30 md:inline-flex">Entrar</Link>
-          <Link to="/cadastro" className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">Criar grátis</Link>
+          <a href="#planos" className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
+            Site por R$6,97
+          </a>
         </div>
       </div>
     </header>
@@ -90,10 +97,10 @@ function Hero() {
               <span className="font-semibold text-foreground"> seunome.mro.bio</span> com um único comando.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/cadastro" className="group inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
-                Criar meu site grátis
+              <a href="#planos" className="group inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
+                Quero meu site por R$6,97
                 <span className="transition-transform group-hover:translate-x-1">→</span>
-              </Link>
+              </a>
               <a href="#como-funciona" className="rounded-md border border-border bg-background px-6 py-3.5 text-base font-medium hover:bg-accent/30 hover:border-foreground/30 transition">
                 Ver como funciona
               </a>
@@ -102,7 +109,7 @@ function Hero() {
               {[
                 "Subdomínio próprio incluso",
                 "Edita até 4× por semana",
-                "Insights de visitas em tempo real",
+                "1 ano de acesso a partir da compra",
                 "Pixels do Facebook, Google e TikTok",
               ].map((t) => (
                 <li key={t} className="flex items-center gap-2">
@@ -113,56 +120,34 @@ function Hero() {
             </ul>
           </div>
 
-          <HeroPreview />
+          <HeroShowcase />
         </div>
       </div>
     </section>
   );
 }
 
-function HeroPreview() {
+function HeroShowcase() {
   return (
     <div className="relative">
-      <div className="floaty rounded-2xl border border-border bg-card p-2 shadow-[var(--shadow-elevate)]">
-        <div className="flex items-center gap-1.5 px-3 py-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-          <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-          <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-          <span className="ml-3 truncate text-xs text-muted-foreground">delulu.mro.bio</span>
-          <span className="ml-auto text-[10px] text-muted-foreground">🔒 ssl</span>
-        </div>
-        <div className="overflow-hidden rounded-xl bg-surface">
-          <div className="relative bg-[oklch(0.12_0_0)] p-6 text-[oklch(1_0_0)] overflow-hidden">
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
-            <div className="font-display text-2xl font-bold">Delulu Café</div>
-            <p className="mt-1 text-sm text-white/60">O café mais delulu da cidade — 24h, açúcar opcional.</p>
-            <button className="mt-4 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:scale-[1.03] transition">
-              Pedir agora
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-3 p-4">
-            <div className="aspect-square rounded-md bg-brand animate-pulse" />
-            <div className="aspect-square rounded-md bg-foreground/90" />
-            <div className="aspect-square rounded-md bg-muted" />
-          </div>
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-muted-foreground">
-            <span>Pronto em 4 min</span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" style={{ animation: "pulseDot 1.4s ease-in-out infinite" }} />
-              312 visitas hoje
-            </span>
-          </div>
-        </div>
+      <div className="floaty relative">
+        <img
+          src={sitesShowcase.url}
+          alt="Exemplos de sites criados com a I.A da MRO em notebook, monitor e celular"
+          className="w-full h-auto drop-shadow-[0_30px_60px_rgba(0,0,0,0.18)]"
+          loading="eager"
+        />
       </div>
-      <div className="absolute -right-4 -top-4 rotate-3 rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background shadow-lg">
+      <div className="absolute right-0 -top-3 md:-right-2 md:-top-4 rotate-3 rounded-full bg-foreground px-3 py-1.5 text-xs md:text-sm font-semibold text-background shadow-lg">
         gerado por I.A ✦
       </div>
-      <div className="absolute -bottom-4 -left-4 -rotate-3 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-brand-foreground shadow-lg">
+      <div className="absolute left-0 -bottom-3 md:-left-2 md:-bottom-4 -rotate-3 rounded-full bg-brand px-3 py-1.5 text-xs md:text-sm font-semibold text-brand-foreground shadow-lg">
         ⚡ em 5 minutos
       </div>
     </div>
   );
 }
+
 
 function Marquee() {
   const items = [
@@ -266,9 +251,9 @@ function HowItWorks() {
           ))}
         </div>
         <div className="mt-12">
-          <Link to="/cadastro" className="inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
-            Começar agora — é grátis <span>→</span>
-          </Link>
+          <a href="#planos" className="inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
+            Quero meu site por R$6,97 <span>→</span>
+          </a>
         </div>
       </div>
     </section>
@@ -360,45 +345,62 @@ function Pricing() {
     <section id="planos" className="mx-auto max-w-6xl px-5 py-24">
       <Reveal>
         <div className="text-center">
-          <span className="chip">Planos</span>
+          <span className="chip">Oferta única</span>
           <h2 className="mt-4 font-display text-4xl font-bold md:text-5xl">
-            Começa grátis. <span className="text-gradient-brand">Quando precisar, é simples.</span>
+            Seu site por <span className="text-gradient-brand">R$ 6,97</span> por mês.
           </h2>
+          <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
+            Um pagamento. 1 ano inteiro de acesso. Sem mensalidade surpresa, sem assinatura recorrente.
+          </p>
         </div>
       </Reveal>
-      <div className="mt-12 grid gap-5 md:grid-cols-2">
+
+      <div className="mt-12 flex justify-center">
         <Reveal>
-          <div className="card-glow h-full rounded-2xl border border-border bg-card p-8">
-            <div className="font-display text-2xl font-bold">Free</div>
-            <p className="mt-1 text-sm text-muted-foreground">Para validar sua ideia agora.</p>
-            <div className="mt-6 font-display text-5xl font-bold">R$ 0</div>
-            <ul className="mt-6 space-y-2.5 text-sm">
-              <li className="flex gap-2"><span className="text-brand font-bold">✓</span> 1 site em seunome.mro.bio</li>
-              <li className="flex gap-2"><span className="text-brand font-bold">✓</span> 4 edições por semana</li>
-              <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Insights básicos</li>
-              <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Pixels (FB, GA, TikTok)</li>
-            </ul>
-            <Link to="/cadastro" className="mt-7 inline-flex w-full justify-center rounded-md btn-dark px-5 py-3 text-sm font-semibold">Começar grátis</Link>
-          </div>
-        </Reveal>
-        <Reveal delay={120}>
-          <div className="relative h-full rounded-2xl border-2 border-brand bg-card p-8 shadow-[var(--shadow-brand)] overflow-hidden">
-            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand/30 blur-3xl" />
-            <div className="relative flex items-center gap-2">
-              <div className="font-display text-2xl font-bold">PRO</div>
-              <span className="chip bg-brand text-brand-foreground border-brand">em breve</span>
+          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border-2 border-brand bg-card p-8 md:p-10 shadow-[var(--shadow-brand)]">
+            <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-brand/30 blur-3xl" />
+            <div className="absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-brand/20 blur-3xl" />
+
+            <div className="relative">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="chip bg-brand text-brand-foreground border-brand">MRO.BIO Anual</span>
+                <span className="chip">1 ano de acesso</span>
+              </div>
+
+              <div className="mt-6 flex items-end gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">12x de</div>
+                  <div className="font-display text-6xl md:text-7xl font-bold leading-none">
+                    R$ <span className="text-gradient-brand">6,97</span>
+                  </div>
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                ou <span className="font-semibold text-foreground">R$ 67,00</span> à vista (1 ano completo)
+              </p>
+
+              <ul className="mt-7 space-y-2.5 text-sm">
+                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> 1 site em <span className="font-semibold">seunome.mro.bio</span></li>
+                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Geração e edição com I.A (até 4× por semana)</li>
+                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Insights de visitas em tempo real</li>
+                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Pixel próprio + Facebook, Google e TikTok</li>
+                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Biblioteca de imagens com sua logo</li>
+                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> SSL e hospedagem inclusos por 1 ano</li>
+              </ul>
+
+              <a
+                href={KIWIFY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-md bg-green-600 hover:bg-green-700 px-6 py-4 text-base md:text-lg font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
+              >
+                Comprar agora — R$ 6,97/mês
+                <span>→</span>
+              </a>
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                Pagamento seguro via Kiwify · Pix, cartão ou boleto
+              </p>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Mais sites, edições ilimitadas, domínio próprio.</p>
-            <div className="mt-6 font-display text-5xl font-bold">—</div>
-            <ul className="mt-6 space-y-2.5 text-sm">
-              <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Sites ilimitados</li>
-              <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Edições ilimitadas</li>
-              <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Domínio próprio conectado</li>
-              <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Insights avançados</li>
-            </ul>
-            <button disabled className="mt-7 inline-flex w-full justify-center cursor-not-allowed rounded-md bg-muted px-5 py-3 text-sm font-semibold text-muted-foreground">
-              Aviso quando lançar
-            </button>
           </div>
         </Reveal>
       </div>
@@ -418,17 +420,22 @@ function FaqCta() {
             <span className="chip border-white/20 bg-white/10 text-background">Pronto pra começar?</span>
             <h2 className="mt-5 font-display text-4xl font-bold md:text-6xl leading-[1.05]">
               Seu site no ar em <span className="text-brand">5 minutos.</span>
-              <br /> Sério.
+              <br /> Por R$ 6,97 por mês.
             </h2>
             <p className="mt-4 max-w-2xl text-base md:text-lg text-white/75">
-              Sem hospedagem, sem domínio, sem código. Só um comando.
+              R$ 67,00 à vista ou 12x de R$ 6,97. 1 ano inteiro de acesso, sem mensalidade recorrente.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/cadastro" className="rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
-                Criar meu site agora
-              </Link>
+              <a
+                href={KIWIFY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md bg-green-600 hover:bg-green-700 px-6 py-3.5 text-base font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
+              >
+                Comprar agora — R$ 6,97
+              </a>
               <Link to="/login" className="rounded-md border border-white/25 px-6 py-3.5 text-base font-semibold hover:bg-white/10 transition">
-                Já tenho conta
+                Já comprei · Entrar
               </Link>
             </div>
           </div>
@@ -440,7 +447,7 @@ function FaqCta() {
 
 function Footer() {
   return (
-    <footer className="border-t border-border">
+    <footer className="border-t border-border pb-24 md:pb-8">
       <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-5 py-8 text-sm text-muted-foreground md:flex-row md:items-center">
         <div className="flex items-center gap-2">
           <span className="grid h-7 w-7 place-items-center rounded-md btn-brand font-display text-sm font-bold">M</span>
@@ -449,13 +456,40 @@ function Footer() {
         </div>
         <div className="flex gap-5">
           <Link to="/login">Entrar</Link>
-          <Link to="/cadastro">Criar conta</Link>
+          <a href="#planos">Comprar</a>
           <Link to="/administracao">Administração</Link>
         </div>
       </div>
     </footer>
   );
 }
+
+function StickyBuyCta() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 600);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 md:hidden ${
+        show ? "translate-y-0" : "translate-y-full"
+      }`}
+    >
+      <div className="m-3 rounded-2xl border border-border bg-background/95 p-3 shadow-2xl backdrop-blur">
+        <a
+          href="#planos"
+          className="flex items-center justify-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 px-5 py-3.5 text-base font-bold text-white"
+        >
+          Site por R$ 6,97 → comprar
+        </a>
+      </div>
+    </div>
+  );
+}
+
 
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useReveal<HTMLDivElement>();
