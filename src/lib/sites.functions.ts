@@ -407,8 +407,8 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
 3. BOTÕES: Todos os botões de CTA (Chamada para Ação) devem ser verdes (ex: bg-green-500, hover:bg-green-600).
 4. CONTEÚDO: Atenção total ao tema "${data.prompt}". Use textos persuasivos e profissionais em português.
 5. DESIGN: Use Tailwind CSS, Google Fonts (escolha fontes elegantes), gradientes modernos, sombras suaves e animações. O site deve ter no mínimo 6 seções bem definidas.
-6. WHATSAPP: Links no formato https://wa.me/55...`;
-6. SAÍDA: Retorne APENAS o código HTML completo. Sem markdown, sem explicações.
+6. WHATSAPP: Links no formato https://wa.me/55...
+7. SAÍDA: Retorne APENAS o código HTML completo. Sem markdown, sem explicações.
 
 NÃO USE PLACEHOLDERS. USE OS LINKS REAIS FORNECIDOS.`;
 
