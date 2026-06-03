@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
-import sitesShowcase from "@/assets/sites-showcase.png.asset.json";
+const sitesShowcase = { url: "/images/sites-showcase.png" };
 
 const KIWIFY_URL = "https://pay.kiwify.com.br/1mMYvVU";
 
@@ -72,14 +72,14 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden pt-10 md:pt-16">
+    <section className="relative overflow-hidden pt-4 md:pt-6">
       {/* background layers */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[oklch(0.99_0.06_95)] via-background to-background" />
       <div className="absolute inset-0 -z-10 bg-grid" />
       <div className="blob -z-10 left-[-10%] top-[-10%] h-[420px] w-[420px] bg-[oklch(0.92_0.18_95)]" />
       <div className="blob -z-10 right-[-10%] top-[20%] h-[360px] w-[360px] bg-[oklch(0.85_0.15_85)] opacity-40" />
 
-      <div className="mx-auto max-w-6xl px-5 py-16 md:py-24">
+      <div className="mx-auto max-w-6xl px-5 py-6 md:py-10">
         <div className="grid items-center gap-12 md:grid-cols-[1.1fr_1fr]">
           <div>
             <span className="chip animate-fade-in">
