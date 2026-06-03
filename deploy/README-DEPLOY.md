@@ -8,11 +8,11 @@ Este pacote roda o app **MRO.BIO** em uma VPS Ubuntu, com **Caddy** servindo o d
 ## 1. Pré-requisitos
 
 - VPS Ubuntu 24.04 LTS (Hostinger ou qualquer outro).
-- Domínio `mro.bio` com DNS gerenciado por **Cloudflare** (necessário para o certificado wildcard via DNS-01).
-- Token Cloudflare com permissão **Zone.DNS:Edit** apenas na zona `mro.bio`.
+- Domínio `mro.bio` apontando para o IP da VPS.
+- O Caddy emite certificados HTTPS sob demanda para `mro.bio`, `www.mro.bio` e subdomínios publicados.
 - O backend (banco/auth) já está provisionado pelo **Lovable Cloud** — você só precisa das chaves.
 
-Configure no seu DNS Cloudflare (modo "DNS only", nuvem cinza):
+Configure no seu DNS/registrador:
 
 | Tipo | Nome        | Conteúdo     |
 | ---- | ----------- | ------------ |
@@ -64,7 +64,6 @@ sudo nano /opt/mro.bio/deploy/caddy.env
 ```
 
 - `ADMIN_EMAIL_CERT` — seu email (Let's Encrypt usa para notificações)
-- `CLOUDFLARE_API_TOKEN` — token criado no painel da Cloudflare
 
 ---
 
@@ -81,7 +80,7 @@ Acompanhe a emissão do certificado:
 sudo docker compose logs -f caddy
 ```
 
-Quando aparecer `certificate obtained successfully` para `mro.bio` e `*.mro.bio`, está no ar:
+Quando o Caddy iniciar sem erro e responder em HTTPS, está no ar:
 
 - `https://mro.bio` — landing + cadastro + login + dashboard
 - `https://mro.bio/administracao` — painel admin
@@ -103,7 +102,7 @@ sudo docker compose up -d --build
 ## 6. Como o roteamento funciona
 
 ```
-*.mro.bio           ─▶ Caddy (TLS wildcard via Cloudflare DNS-01)
+*.mro.bio           ─▶ Caddy (TLS on-demand via HTTP-01)
                        └─▶ rewrite p/ /api/public/site/<slug>
                            └─▶ container "app" (TanStack Start)
                                └─▶ HTML salvo do usuário (com pixels injetados)
@@ -111,8 +110,8 @@ sudo docker compose up -d --build
 mro.bio / www       ─▶ Caddy ─▶ container "app" (landing, cadastro, dashboard, admin)
 ```
 
-A primeira vez que cada subdomínio é acessado, o Caddy já tem o certificado
-wildcard pronto — não há delay.
+A primeira vez que cada subdomínio é acessado, o Caddy emite o certificado
+sob demanda depois de validar em `/api/public/cert-check`.
 
 ---
 
@@ -120,7 +119,7 @@ wildcard pronto — não há delay.
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
-| `403 / could not solve DNS-01` | Token Cloudflare sem permissão `Zone.DNS:Edit` | Recrie o token e atualize `caddy.env`, depois `docker compose restart caddy` |
+| `module not registered: http.matchers.host_regexp` | Caddyfile antigo usando matcher indisponível na imagem `caddy:2-alpine` | Atualize o projeto e reinicie o Caddy |
 | Site abre mas sem CSS/imagens | Build não rodou | `docker compose up -d --build` |
 | `Site não publicado` em `<slug>.mro.bio` | Usuário ainda não clicou em "Publicar" no editor | Esperado |
 | Admin não consegue logar | `ADMIN_EMAIL`/`ADMIN_PASSWORD` errados no `app.env` | Edite e `docker compose restart app` |
