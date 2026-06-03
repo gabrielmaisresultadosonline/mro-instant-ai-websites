@@ -345,19 +345,27 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     }
 
     // Step 1 — briefing (uses whichever chat model is available, prefers openai > deepseek > claude)
-    const briefPrompt = `Você é um diretor criativo especializado em sites de alta conversão. O usuário pediu este site:
+    const briefPrompt = `Você é um diretor criativo de ELITE especializado em sites de altíssima conversão, design premium e interfaces modernas. O usuário solicitou este site:
 "${data.prompt}"
 
 Imagens disponíveis (use as URLs LITERALMENTE):
 ${(data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)"}
 
-REGRAS DE IMAGENS E CONTEÚDO:
-1. Se houver imagens na lista acima, use-as obrigatoriamente.
-2. NÃO adicione imagens extras ou genéricas que não foram enviadas pelo usuário (sem placeholders, sem unsplash, sem pixabay).
-3. Gere o conteúdo estritamente com base no que foi pedido e nas informações fornecidas. Melhore o texto para ser profissional, mas não invente serviços ou informações que não existem no pedido.
-4. Identifique onde cada imagem listada acima deve ser usada com base na etiqueta ([logo], [banner], [foto], etc).
+REGRAS DE IMAGENS E CONTEÚDO (CRÍTICAS):
+1. Use TODAS as imagens fornecidas acima. Se houver uma etiqueta [logo], ela DEVE ser o logotipo principal no header.
+2. Se houver etiquetas [banner] ou [hero], use-as em seções de destaque com texto sobreposto ou layouts de impacto.
+3. NÃO use placeholders ou imagens genéricas. Se não houver imagens suficientes, foque em tipografia incrível, cores vibrantes e layouts baseados em formas/gradientes CSS.
+4. O conteúdo deve ser rico, persuasivo e profissional. Não crie sites vazios.
+5. Melhore o texto para ser magnético e profissional, expandindo os serviços mencionados de forma realista.
 
-Responda em português um briefing curto e prático: nome/título, paleta (3 hex), seções (5-8) com título e copy profissional, CTAs claros, e onde colocar cada imagem listada. Direto, sem explicações extras.`;
+Responda em português um briefing detalhado e luxuoso:
+- Nome/Título do site
+- Paleta de cores premium (4-5 hex que combinem com as imagens/segmento)
+- Tipografia sugerida (Serif para títulos, Sans para corpo se for luxo; Sans arrojada se for tech)
+- Estrutura de Seções (7-9 seções): Hero Impactante, Sobre nós detalhado, Serviços com cards, Galeria (se houver fotos), Prova Social, CTA Principal, Rodapé completo.
+- Instrução específica de onde cada imagem [tag] será posicionada para maximizar o design.
+
+Direto, estruturado, sem conversa fiada.`;
 
     let brief = "";
     try {
@@ -374,32 +382,37 @@ Responda em português um briefing curto e prático: nome/título, paleta (3 hex
       }
     } catch (e) { console.error("brief error", e); }
 
-    const codePrompt = `Gere um site HTML PROFISSIONAL de altíssima qualidade em português, UMA página, baseado neste briefing:
+    const codePrompt = `Gere um site HTML DE LUXO, ULTRA PROFISSIONAL e de ALTA CONVERSÃO em português, UMA página, baseado neste briefing:
 
 ${brief || data.prompt}
 
-REGRAS OBRIGATÓRIAS DE QUALIDADE:
-- O site deve ser COMPLETO, RESPONSIVO (mobile-first), LINDO e PROFISSIONAL.
-- Design Moderno: Use seções bem espaçadas, tipografia elegante e sombras suaves.
-- Efeitos Visuais: Inclua efeitos de hover em botões e cards, transições suaves (transition-all duration-300) e animações discretas ao rolar (pode usar AOS via CDN se desejar ou apenas classes CSS).
-- Layout Criativo: Não faça apenas blocos simples; use grids assimétricos, fundos com gradientes leves e elementos que se sobrepõem elegantemente.
+REGRAS OBRIGATÓRIAS DE DESIGN PREMIUM:
+- Design "World-Class": O site deve parecer feito por uma agência de elite. Use espaços em branco generosos (whitespace), tipografia grande e impactante, e micro-interações.
+- Responsividade Total: Layout impecável em mobile, tablet e desktop.
+- Efeitos de Vidro (Glassmorphism): Use fundos semi-transparentes com desfoque (backdrop-blur) em menus e cards se combinar com o estilo.
+- Animações: Use CSS para animações de fade-in e slide-up conforme o usuário rola a página.
+- Gradientes e Sombras: Use gradientes sutis e sombras "soft" (soft shadows) para dar profundidade.
+- Hovers Incríveis: Botões devem ter efeitos de escala, mudança de cor de brilho e transições suaves.
 
-REGRAS TÉCNICAS:
-- HTML completo começando com <!DOCTYPE html>
-- Tailwind via CDN: <script src="https://cdn.tailwindcss.com"></script>
-- Estrutura semântica (header, main, sections, footer)
-- Use TODAS as imagens fornecidas abaixo com as URLs exatas em <img src="..."> — NÃO invente URLs, NÃO use placeholders, NÃO use imagens externas não fornecidas.
-- Se a etiqueta for "logo", use obrigatoriamente no Header/Navbar.
-- Se a etiqueta for "banner" ou "hero", use obrigatoriamente no topo/primeira seção.
-- Google Fonts (Inter ou Space Grotesk)
+REGRAS TÉCNICAS E DE IMAGEM:
+- HTML5 semântico completo.
+- Tailwind CSS (CDN): <script src="https://cdn.tailwindcss.com"></script>
+- Fontes Google: Importe fontes elegantes (como 'Inter', 'Playfair Display' ou 'Montserrat') via @import no style.
+- Imagens Reais: Use EXCLUSIVAMENTE as imagens fornecidas abaixo com as URLs exatas.
+- Layout de Imagens: Se for "logo", coloque no canto superior esquerdo ou centro do Nav. Se for "banner", deve ser o fundo da seção Hero ou um elemento de destaque lateral.
+- NÃO invente URLs de imagens. NÃO use placeholders cinzas. Se não tiver imagem para uma seção, use um ícone SVG elegante do Lucide (use <img> com src da CDN de ícones ou SVG inline).
+
+URLs de Imagens Disponíveis:
+${(data.images ?? []).map((im) => `[${im.label}] ${im.url}`).join("\n")}
+
+OUTRAS REGRAS:
 - WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX (use o número informado no pedido se houver), target="_blank" rel="noopener"
 - Inclua <title>, meta description, og tags
 - NÃO escreva nada fora do HTML, sem markdown. Entregue APENAS o código.
 
-Imagens fornecidas para uso (USE APENAS ESTAS):
-${(data.images ?? []).map((im) => `- etiqueta="${im.label}" → URL="${im.url}"`).join("\n") || "(nenhuma)"}
+Pedido original do usuário: "${data.prompt}"
 
-Pedido original do usuário: "${data.prompt}"`;
+Retorne APENAS o código HTML completo, pronto para publicar. Sem explicações.`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
