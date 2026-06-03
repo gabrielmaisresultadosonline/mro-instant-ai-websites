@@ -16,6 +16,10 @@ function Dashboard() {
   const qc = useQueryClient();
   const { user } = Route.useRouteContext();
   const [formData, setFormData] = useState({ title: "", slug: "" });
+  const [isSlugManual, setIsSlugManual] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({ title: "", slug: "" });
+  const [isEditSlugManual, setIsEditSlugManual] = useState(false);
   const deleteSiteFn = useServerFn(deleteSite);
 
   const deleteMut = useMutation({
