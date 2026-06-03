@@ -352,25 +352,26 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       console.log(`[GenerateSite] Images list:\n${imagesList}`);
     }
 
-    const briefPrompt = `Você é um Diretor de Arte de uma agência de luxo. 
+    const briefPrompt = `Você é um Diretor de Arte Sênior de uma agência de Branding de Luxo.
 O cliente enviou este pedido:
 "${data.prompt}"
 
 IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS):
 ${imagesList}
 
-REGRAS RÍGIDAS DE CONTEÚDO:
-1. FIDELIDADE TOTAL: Se o cliente pediu "Essência dos Cachos", o site deve ser focado EXCLUSIVAMENTE nisso. Não invente outros ramos de negócio.
-2. SEM IMAGENS DA INTERNET: É proibido usar Unsplash, Google Images, Placeholders ou qualquer URL externa. Se não houver imagem do cliente, use fundos coloridos, gradientes ou ícones.
-3. LOGO: Se houver imagem com etiqueta "logo" (ou similar), ela é a prioridade máxima do cabeçalho.
-4. CORES: Respeite as cores do pedido. Se não houver, use uma paleta Premium/Luxo. BOTÕES DE CTA DEVEM SER VERDES (#22c55e ou similar).
+REGRAS RÍGIDAS DE ESTILO E CONTEÚDO:
+1. DESIGN PREMIUM: O site não pode ser "seco". Use seções com fundos alternados (claro/escuro), tipografia elegante, espaçamentos generosos (padding substancial), bordas arredondadas modernas e efeitos de hover.
+2. FIDELIDADE TOTAL: Se o cliente pediu "Essência dos Cachos", o site deve ser focado EXCLUSIVAMENTE nisso. Use linguagem persuasiva e específica para o nicho.
+3. SEM IMAGENS DA INTERNET: É proibido usar Unsplash, Google Images, Placeholders ou qualquer URL externa. Se não houver imagem do cliente para uma seção, use fundos coloridos, gradientes luxuosos ou ícones SVG modernos.
+4. LOGO: Se houver imagem com etiqueta "logo" (ou similar), ela deve estar no topo, em destaque.
+5. CORES: Respeite as cores do pedido. BOTÕES DE CTA DEVEM SER VERDES (#22c55e ou #16a34a) para transmitir ação.
 
 Responda em português um briefing técnico com:
-- Paleta de cores (HEX)
-- Estrutura de Seções detalhada (Mínimo 6 seções: Header, Hero, Sobre, Serviços, Galeria/Destaque, Contato/Footer)
-- Mapeamento exato de quais LINKS de imagem serão usados em cada seção.
+- Paleta de cores completa (HEX)
+- Estrutura de Seções (Mínimo 6 seções: Header, Hero Impactante, Sobre Nós Detalhado, Nossos Serviços/Diferenciais, Galeria ou Prova Social, Contato/Footer)
+- Mapeamento exato de quais LINKS de imagem reais serão usados em cada local.
 
-Seja direto e profissional.`;
+Seja direto, autoritário e focado em alta conversão.`;
 
     let brief = "";
     try {
@@ -390,7 +391,9 @@ Seja direto e profissional.`;
       }
     } catch (e) { console.error("brief error", e); }
 
-    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END DO MUNDO. Crie um site HTML/Tailwind COMPLETO, LUXUOSO e RESPONSIVO.
+    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE INTERFACE DO MUNDO. Crie um site HTML/Tailwind COMPLETO, LUXUOSO, RESPONSIVO e ESTILOSO.
+
+NÃO CRIE UM SITE SIMPLES OU SECO. Use designs modernos, animações de entrada (Intersections Observer ou Tailwind Animate), gradientes de fundo sutis e tipografia refinada.
 
 BRIEFING:
 ${brief}
@@ -398,19 +401,18 @@ ${brief}
 PEDIDO DO CLIENTE:
 "${data.prompt}"
 
-IMAGENS DO CLIENTE (USE ESTES LINKS):
+IMAGENS DO CLIENTE (USE EXCLUSIVAMENTE ESTES LINKS):
 ${imagesList}
 
 REGRAS TÉCNICAS INVIOLÁVEIS:
-1. LOGOTIPO: Se houver imagem com etiqueta "logo", insira-a no <header> usando <img src="LINK_DA_IMAGEM" class="h-16 w-auto object-contain" alt="Logo">. Remova qualquer título em texto do cabeçalho se a logo estiver presente.
-2. PROIBIDO IMAGENS EXTERNAS: NUNCA use unsplash.com, placeholder.com ou links externos. Use APENAS os links da lista acima. Se faltar imagem para uma seção, use ícones SVG ou decorações em CSS/Tailwind.
-3. BOTÕES: Todos os botões de CTA (Chamada para Ação) devem ser verdes (ex: bg-green-500, hover:bg-green-600).
-4. CONTEÚDO: Atenção total ao tema "${data.prompt}". Use textos persuasivos e profissionais em português.
-5. DESIGN: Use Tailwind CSS, Google Fonts (escolha fontes elegantes), gradientes modernos, sombras suaves e animações. O site deve ter no mínimo 6 seções bem definidas.
-6. WHATSAPP: Links no formato https://wa.me/55...
-7. SAÍDA: Retorne APENAS o código HTML completo. Sem markdown, sem explicações.
+1. LOGOTIPO: Se houver imagem com etiqueta "logo", insira-a no <header> usando <img src="LINK_DA_IMAGEM" class="h-16 w-auto object-contain" alt="Logo">. Se houver logo, NÃO use título em texto no cabeçalho.
+2. PROIBIDO IMAGENS EXTERNAS: NUNCA use unsplash.com, placeholder.com ou qualquer link que não esteja na lista acima. Se faltar imagem para uma seção, use gradientes CSS sofisticados ou ícones SVG.
+3. BOTÕES: Todos os botões de CTA (Chamada para Ação) devem ser VERDES (bg-green-600, hover:bg-green-700) com texto branco e cantos arredondados.
+4. ESTILO: Use Tailwind CSS. O design deve ser rico, com seções bem separadas, sombras (shadow-lg), e transições suaves. Mínimo de 6 seções.
+5. WHATSAPP: Botão flutuante ou link de contato usando https://wa.me/55...
+6. SAÍDA: Retorne APENAS o código HTML completo dentro de <html>...</html>. Sem markdown, sem introduções.
 
-NÃO USE PLACEHOLDERS. USE OS LINKS REAIS FORNECIDOS.`;
+DÊ VIDA AO SITE. USE OS LINKS REAIS DAS IMAGENS FORNECIDAS.`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
