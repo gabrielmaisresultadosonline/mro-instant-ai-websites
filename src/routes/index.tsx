@@ -72,7 +72,7 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden pt-10 md:pt-16">
+    <section className="relative overflow-hidden pt-4 md:pt-6">
       {/* background layers */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[oklch(0.99_0.06_95)] via-background to-background" />
       <div className="absolute inset-0 -z-10 bg-grid" />
