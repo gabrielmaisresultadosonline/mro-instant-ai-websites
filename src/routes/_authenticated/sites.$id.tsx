@@ -127,6 +127,7 @@ function SiteEditor() {
     setGenerating(true);
     try {
       const chosen = (imgs?.images ?? []).filter((im) => selected.has(im.public_url));
+      console.log("[Editor] Sending images to generation:", chosen.map(c => ({ label: c.label, url: c.public_url })));
       const images = chosen.map((im) => ({
         url: im.public_url.startsWith("http") ? im.public_url : (window.location.origin.includes("mro.bio") ? `https://mro.bio${im.public_url}` : `${window.location.origin}${im.public_url}`),
         label: im.label!.trim(),

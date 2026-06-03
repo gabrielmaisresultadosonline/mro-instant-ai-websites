@@ -347,6 +347,11 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     // Step 1 — briefing
     const imagesList = (data.images ?? []).map((im, i) => `- ETIQUETA: "${im.label}" | LINK: ${im.url}`).join("\n") || "(Nenhuma imagem enviada)";
     
+    console.log(`[GenerateSite] User: ${userId} | Site: ${data.id} | Images count: ${data.images?.length ?? 0}`);
+    if (data.images && data.images.length > 0) {
+      console.log(`[GenerateSite] Images list:\n${imagesList}`);
+    }
+
     const briefPrompt = `Você é um Diretor de Arte de uma agência de luxo. 
 O cliente enviou este pedido:
 "${data.prompt}"
@@ -357,8 +362,8 @@ ${imagesList}
 REGRAS RÍGIDAS DE CONTEÚDO:
 1. FIDELIDADE TOTAL: Se o cliente pediu "Essência dos Cachos", o site deve ser focado EXCLUSIVAMENTE nisso. Não invente outros ramos de negócio.
 2. SEM IMAGENS DA INTERNET: É proibido usar Unsplash, Google Images, Placeholders ou qualquer URL externa. Se não houver imagem do cliente, use fundos coloridos, gradientes ou ícones.
-3. LOGO: Se houver imagem com etiqueta "logo", ela é a prioridade máxima do cabeçalho.
-4. CORES: Respeite as cores do pedido. Se não houver, use uma paleta Premium/Luxo.
+3. LOGO: Se houver imagem com etiqueta "logo" (ou similar), ela é a prioridade máxima do cabeçalho.
+4. CORES: Respeite as cores do pedido. Se não houver, use uma paleta Premium/Luxo. BOTÕES DE CTA DEVEM SER VERDES (#22c55e ou similar).
 
 Responda em português um briefing técnico com:
 - Paleta de cores (HEX)
@@ -378,6 +383,9 @@ Seja direto e profissional.`;
         if (r.ok) {
           const j = await r.json() as { choices: { message: { content: string } }[] };
           brief = j.choices?.[0]?.message?.content ?? "";
+          console.log(`[GenerateSite] Brief generated successfully`);
+        } else {
+          console.error(`[GenerateSite] Brief generation failed: ${r.status}`);
         }
       }
     } catch (e) { console.error("brief error", e); }
@@ -396,10 +404,11 @@ ${imagesList}
 REGRAS TÉCNICAS INVIOLÁVEIS:
 1. LOGOTIPO: Se houver imagem com etiqueta "logo", insira-a no <header> usando <img src="LINK_DA_IMAGEM" class="h-16 w-auto object-contain" alt="Logo">. Remova qualquer título em texto do cabeçalho se a logo estiver presente.
 2. PROIBIDO IMAGENS EXTERNAS: NUNCA use unsplash.com, placeholder.com ou links externos. Use APENAS os links da lista acima. Se faltar imagem para uma seção, use ícones SVG ou decorações em CSS/Tailwind.
-3. CONTEÚDO: Atenção total ao tema "${data.prompt}". Use textos persuasivos e profissionais em português.
-4. DESIGN: Use Tailwind CSS, Google Fonts (escolha fontes elegantes), gradientes modernos, sombras suaves e animações. O site deve ter no mínimo 6 seções bem definidas.
-5. WHATSAPP: Links no formato https://wa.me/55...
-6. SAÍDA: Retorne APENAS o código HTML completo. Sem markdown, sem explicações.
+3. BOTÕES: Todos os botões de CTA (Chamada para Ação) devem ser verdes (ex: bg-green-500, hover:bg-green-600).
+4. CONTEÚDO: Atenção total ao tema "${data.prompt}". Use textos persuasivos e profissionais em português.
+5. DESIGN: Use Tailwind CSS, Google Fonts (escolha fontes elegantes), gradientes modernos, sombras suaves e animações. O site deve ter no mínimo 6 seções bem definidas.
+6. WHATSAPP: Links no formato https://wa.me/55...
+7. SAÍDA: Retorne APENAS o código HTML completo. Sem markdown, sem explicações.
 
 NÃO USE PLACEHOLDERS. USE OS LINKS REAIS FORNECIDOS.`;
 
