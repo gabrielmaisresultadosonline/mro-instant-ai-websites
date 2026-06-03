@@ -11,26 +11,40 @@ export const Route = createFileRoute("/api/public/webhooks/kiwify")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const expected = process.env.KIWIFY_WEBHOOK_TOKEN;
-        if (!expected) return new Response("server not configured", { status: 500 });
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         const url = new URL(request.url);
         const token = url.searchParams.get("token") ?? request.headers.get("x-kiwify-token") ?? "";
-        if (token !== expected) return new Response("forbidden", { status: 403 });
-
         const raw = await request.text();
-        let payload: any;
-        try { payload = JSON.parse(raw); } catch { return new Response("bad json", { status: 400 }); }
+        let payload: any = null;
+        try { payload = JSON.parse(raw); } catch { /* keep raw */ }
 
-        const { event, orderId, email, name } = extractKiwifyFields(payload);
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { event, orderId, email, name } = payload ? extractKiwifyFields(payload) : { event: "unknown", orderId: null, email: null, name: null } as any;
 
-        // Always log
+        const expected = process.env.KIWIFY_WEBHOOK_TOKEN;
+
+        // ALWAYS log the inbound attempt first (even with bad/missing token),
+        // so the admin panel shows that Kiwify reached us.
         const { data: logRow } = await supabaseAdmin
           .from("kiwify_webhook_log")
-          .insert({ event, order_id: orderId, email, payload, status: "received" })
+          .insert({
+            event: event || "unknown",
+            order_id: orderId,
+            email,
+            payload: payload ?? { _raw: raw.slice(0, 4000) },
+            status: "received",
+          })
           .select("id")
           .single();
+
+        if (!expected) {
+          await supabaseAdmin.from("kiwify_webhook_log").update({ status: "error", error: "KIWIFY_WEBHOOK_TOKEN not set on server" }).eq("id", logRow!.id);
+          return new Response("server not configured", { status: 500 });
+        }
+        if (token !== expected) {
+          await supabaseAdmin.from("kiwify_webhook_log").update({ status: "error", error: `forbidden: token mismatch (received ${token ? token.slice(0,4) + "…" : "empty"})` }).eq("id", logRow!.id);
+          return new Response("forbidden", { status: 403 });
+        }
 
         try {
           if (!email) {
