@@ -287,6 +287,15 @@ function Dashboard() {
                 className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent/40">
                 📋 Copiar
               </button>
+              <button
+                onClick={() => {
+                  if (confirm("Deseja realmente excluir seu site? Esta ação é irreversível.")) {
+                    deleteMut.mutate(site.id);
+                  }
+                }}
+                className="rounded-md border border-destructive/30 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/5">
+                Excluir
+              </button>
             </>
           )}
         </div>
