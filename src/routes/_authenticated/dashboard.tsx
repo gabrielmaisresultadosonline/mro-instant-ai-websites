@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,6 +13,20 @@ function Dashboard() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const { user } = Route.useRouteContext();
+  const [formData, setFormData] = useState({ title: "", slug: "" });
+
+  const { data: sub } = useQuery({
+    queryKey: ["my-subscription", user.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("subscription_status, subscription_expires_at")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: list, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-sites", user.id],
@@ -29,61 +43,40 @@ function Dashboard() {
   });
   const site = list?.sites[0];
 
-  const ensureSiteMut = useMutation({
-    mutationFn: async () => {
+  const createSiteMut = useMutation({
+    mutationFn: async (vars: { title: string; slug: string }) => {
       const { data: currentUser, error: userError } = await supabase.auth.getUser();
       const uid = currentUser.user?.id;
-      const email = currentUser.user?.email ?? user.email ?? "";
-      if (userError || !uid) throw new Error("Sessão não encontrada. Saia e entre novamente.");
+      if (userError || !uid) throw new Error("Sessão não encontrada.");
 
-      const { data: existing, error: existingError } = await supabase
+      const slug = toSiteSlug(vars.slug || vars.title);
+      if (slug.length < 3) throw new Error("O link do site deve ter pelo menos 3 caracteres.");
+
+      const { data: created, error: createError } = await supabase
         .from("sites")
+        .insert({
+          owner_id: uid,
+          slug,
+          title: vars.title.trim().slice(0, 80) || "Meu site"
+        })
         .select("id, slug")
-        .eq("owner_id", uid)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-      if (existingError) throw new Error(existingError.message);
-      if (existing?.[0]) return existing[0];
+        .single();
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name, email")
-        .eq("id", uid)
-        .maybeSingle();
-
-      const titleSeed = (profile?.name || email.split("@")[0] || "Meu site").trim();
-      const baseSlug = toSiteSlug(titleSeed || email.split("@")[0] || "meu-site");
-      const suffixes = ["", `-${Math.floor(100 + Math.random() * 900)}`, `-${crypto.randomUUID().slice(0, 5)}`];
-      let lastError = "";
-
-      for (const suffix of suffixes) {
-        const slug = fitSlug(baseSlug, suffix);
-        const { data: created, error: createError } = await supabase
-          .from("sites")
-          .insert({ owner_id: uid, slug, title: titleSeed.slice(0, 80) || "Meu site" })
-          .select("id, slug")
-          .single();
-
-        if (!createError && created) return created;
-        lastError = createError?.message ?? "";
-        if (!isDuplicateSlugError(createError)) break;
+      if (createError) {
+        if (isDuplicateSlugError(createError)) {
+          throw new Error("Este link já está em uso. Escolha outro.");
+        }
+        throw new Error(createError.message);
       }
-
-      throw new Error(lastError || "Não foi possível preparar seu site agora.");
+      return created;
     },
     onSuccess: (created) => {
-      toast.success("Seu editor está pronto.");
+      toast.success("Site criado com sucesso!");
       qc.invalidateQueries({ queryKey: ["my-sites", user.id] });
       nav({ to: "/sites/$id", params: { id: created.id }, replace: true });
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
-  useEffect(() => {
-    if (!isLoading && list && !site && !ensureSiteMut.isPending && !ensureSiteMut.isSuccess && !ensureSiteMut.isError) {
-      ensureSiteMut.mutate();
-    }
-  }, [list, isLoading, site, ensureSiteMut]);
 
   const { data: full } = useQuery({
     queryKey: ["site", site?.id],
@@ -99,6 +92,7 @@ function Dashboard() {
     },
     enabled: !!site,
   });
+
   const { data: insights } = useQuery({
     queryKey: ["insights", site?.id],
     queryFn: async () => {
@@ -144,32 +138,84 @@ function Dashboard() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (isError || ensureSiteMut.isError) {
+  if (isError) {
     return (
       <main className="mx-auto max-w-2xl px-5 py-20 text-center">
         <div className="rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-elevate)]">
-          <h1 className="font-display text-2xl font-bold">Não conseguimos abrir seu editor agora</h1>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Seu pagamento está ativo, mas houve uma falha ao carregar ou preparar o site.
-          </p>
-          <p className="mt-2 text-xs text-muted-foreground">{ensureSiteMut.error?.message ?? error?.message}</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button onClick={() => refetch()} className="rounded-md btn-brand px-5 py-2.5 text-sm font-semibold">
-              Tentar novamente
-            </button>
-            <Link to="/sites/novo" className="rounded-md border border-border px-5 py-2.5 text-sm font-semibold hover:bg-accent/40">
-              Criar manualmente
-            </Link>
-          </div>
+          <h1 className="font-display text-2xl font-bold">Erro ao carregar dashboard</h1>
+          <p className="mt-3 text-sm text-muted-foreground">{error?.message}</p>
+          <button onClick={() => refetch()} className="mt-6 rounded-md btn-brand px-5 py-2.5 text-sm font-semibold">
+            Tentar novamente
+          </button>
         </div>
       </main>
     );
   }
 
-  if (isLoading || ensureSiteMut.isPending || !site) {
+  if (isLoading) {
     return (
       <main className="mx-auto max-w-6xl px-5 py-20 text-center">
-        <p className="text-sm text-muted-foreground">Preparando seu editor...</p>
+        <p className="text-sm text-muted-foreground">Carregando dashboard...</p>
+      </main>
+    );
+  }
+
+  // Se não tem site, mostra o formulário de criação
+  if (!site) {
+    return (
+      <main className="mx-auto max-w-xl px-5 py-16">
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-elevate)]">
+          <h1 className="font-display text-2xl font-bold text-center">Bem-vindo ao MRO.BIO!</h1>
+          <p className="mt-2 text-sm text-muted-foreground text-center">
+            Para começar, dê um nome ao seu site e escolha o link de acesso.
+          </p>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createSiteMut.mutate(formData);
+            }}
+            className="mt-8 space-y-5"
+          >
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Nome do seu site</label>
+              <input
+                type="text"
+                required
+                placeholder="Ex: Minha Empresa"
+                className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-brand"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Link do site (slug)</label>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  required
+                  placeholder="ex-empresa"
+                  className="w-full rounded-lg border border-border bg-background pl-4 pr-20 py-2.5 text-sm outline-none focus:border-brand font-mono"
+                  value={formData.slug || toSiteSlug(formData.title)}
+                  onChange={(e) => setFormData({ ...formData, slug: toSiteSlug(e.target.value) })}
+                />
+                <span className="absolute right-4 text-xs font-mono text-muted-foreground">.mro.bio</span>
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Seu link será: <span className="font-mono">{(formData.slug || toSiteSlug(formData.title)) || "..."}.mro.bio</span>
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={createSiteMut.isPending}
+              className="w-full rounded-lg btn-brand py-3 text-sm font-bold shadow-lg shadow-brand/20 disabled:opacity-50"
+            >
+              {createSiteMut.isPending ? "Criando site..." : "Criar meu site agora"}
+            </button>
+          </form>
+        </div>
       </main>
     );
   }
@@ -181,15 +227,20 @@ function Dashboard() {
     ? [insights.last.country, insights.last.region, insights.last.city].filter(Boolean).join(" — ") || "Localidade desconhecida"
     : "";
 
+  const expiresAt = sub?.subscription_expires_at;
+  const daysRemaining = expiresAt 
+    ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
   return (
     <main className="mx-auto max-w-6xl px-5 py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold">{site.title || site.slug}</h1>
+          <h1 className="font-display text-3xl font-bold uppercase">{site.title || site.slug}</h1>
           <p className="text-sm text-muted-foreground">
             <span className="font-mono">{site.slug}.mro.bio</span>
             {" · "}
-            <span className={site.is_published ? "text-emerald-500" : "text-amber-500"}>
+            <span className={site.is_published ? "text-emerald-500 font-medium" : "text-amber-500 font-medium"}>
               {site.is_published ? "🟢 Publicado" : "🟡 Rascunho"}
             </span>
           </p>
@@ -235,11 +286,12 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card label="Visitas totais" value={String(insights?.total ?? 0)} />
         <Card label="Site criado em" value={createdAt} />
         <Card label="Último acesso" value={lastVisit} sub={lastVisitLoc} />
         <Card label="Gerações no mês" value={`${(site as { gens_this_month?: number }).gens_this_month ?? 0}/3`} />
+        <Card label="Uso restante" value={`${daysRemaining} dias`} />
       </div>
 
       <section className="mt-8 rounded-xl border border-border bg-card p-5">
@@ -272,12 +324,7 @@ function toSiteSlug(value: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 30)
     .replace(/-+$/g, "");
-  return clean.length >= 3 ? clean : `site-${clean || "mro"}`.slice(0, 30).replace(/-+$/g, "");
-}
-
-function fitSlug(base: string, suffix: string) {
-  const maxBase = Math.max(3, 30 - suffix.length);
-  return `${base.slice(0, maxBase).replace(/-+$/g, "")}${suffix}`;
+  return clean;
 }
 
 function isDuplicateSlugError(error: { code?: string; message?: string } | null) {
