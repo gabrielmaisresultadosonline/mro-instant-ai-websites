@@ -64,7 +64,7 @@ function SiteEditor() {
   const [pixels, setPixels] = useState<Pixels>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"preview" | "history" | "pixels" | "insights">("preview");
+  const [tab, setTab] = useState<"preview" | "history" | "settings" | "insights">("preview");
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
   const [confirmInfo, setConfirmInfo] = useState(false);   // popup pre-generate (info check)
   const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
