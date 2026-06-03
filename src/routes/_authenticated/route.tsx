@@ -58,8 +58,19 @@ function AuthLayout() {
           </div>
         </div>
       </header>
-      {isError ? <SubscriptionCheckError /> : blocked ? <BlockedScreen status={status} sub={sub} /> : <Outlet />}
+      {isLoading ? <SubscriptionChecking /> : isError ? <SubscriptionCheckError /> : blocked ? <BlockedScreen status={status} sub={sub} /> : <Outlet />}
     </div>
+  );
+}
+
+function SubscriptionChecking() {
+  return (
+    <main className="mx-auto max-w-2xl px-5 py-16">
+      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-[var(--shadow-elevate)]">
+        <h1 className="font-display text-2xl font-bold">Confirmando seu acesso…</h1>
+        <p className="mt-3 text-sm text-muted-foreground">Estamos verificando a assinatura vinculada à sua conta.</p>
+      </div>
+    </main>
   );
 }
 
