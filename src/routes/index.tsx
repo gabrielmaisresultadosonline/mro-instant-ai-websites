@@ -153,17 +153,22 @@ function HeroShowcase() {
 
 function VideoPresentation() {
   return (
-    <section className="mx-auto max-w-5xl px-5 py-8 md:py-12">
+    <section className="mx-auto max-w-5xl px-5 py-12 md:py-20">
       <Reveal>
-        <div className="text-center mb-8">
-          <h2 className="font-display text-3xl font-bold md:text-4xl">
-            Conheça o sistema <span className="text-brand">MRO.BIO</span>
+        <div className="text-center mb-10">
+          <span className="chip mb-4">Apresentação</span>
+          <h2 className="font-display text-4xl font-bold md:text-5xl">
+            Veja o <span className="text-gradient-brand">MRO.BIO</span> em ação
           </h2>
+          <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
+            Descubra como criar seu site completo em menos de 5 minutos com nossa tecnologia de I.A.
+          </p>
         </div>
-        <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-border bg-card shadow-2xl transition-all hover:shadow-[0_0_30px_rgba(255,107,0,0.15)]">
+        <div className="group relative aspect-video w-full overflow-hidden rounded-[2rem] border-4 border-muted/30 bg-card shadow-[0_32px_80px_-20px_rgba(0,0,0,0.2)] transition-all hover:border-brand/50">
+          <div className="absolute inset-0 bg-brand/5 group-hover:bg-transparent transition-colors pointer-events-none" />
           <iframe
             src="https://www.youtube.com/embed/NQ9iA_RO2Ls"
-            title="CONHECÇA o sistema MRO.BIO"
+            title="CONHEÇA o sistema MRO.BIO"
             className="absolute inset-0 h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
