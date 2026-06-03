@@ -104,7 +104,11 @@ function Hero() {
               <span className="font-semibold text-foreground"> seunome.mro.bio</span> com um único comando.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#planos" className="group inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
+              <a 
+                href="#planos" 
+                className="group inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold"
+                onClick={() => fbEvent("InitiateCheckout", { content_name: "Hero CTA" })}
+              >
                 Quero meu site por R$6,97
                 <span className="transition-transform group-hover:translate-x-1">→</span>
               </a>
