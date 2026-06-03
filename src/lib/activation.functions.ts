@@ -33,10 +33,45 @@ export const completeActivation = createServerFn({ method: "POST" })
     if (new Date(row.expires_at).getTime() < Date.now()) throw new Error("Este link expirou.");
     if (!row.profile_id) throw new Error("Conta não encontrada.");
 
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("name, email, subscription_status, subscription_expires_at, subscription_activated_at")
+      .eq("id", row.profile_id)
+      .maybeSingle();
+
     const { error } = await supabaseAdmin.auth.admin.updateUserById(row.profile_id, { password: data.password });
     if (error) throw new Error(error.message);
 
-    await supabaseAdmin.from("activation_tokens").update({ used_at: new Date().toISOString() }).eq("id", row.id);
+    const nowIso = new Date().toISOString();
+    const profileEmail = (prof?.email ?? row.email).trim().toLowerCase();
+    const tokenEmail = row.email.trim().toLowerCase();
+    const isAlreadyActive =
+      prof?.subscription_status === "active" &&
+      !!prof.subscription_expires_at &&
+      new Date(prof.subscription_expires_at).getTime() > Date.now();
+
+    // If the payment webhook has already activated this profile, keep it active.
+    // This also repairs older accounts where the profile exists but activation fields were not finalized.
+    if (profileEmail === tokenEmail && !isAlreadyActive) {
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          subscription_status: "active",
+          subscription_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          subscription_activated_at: prof?.subscription_activated_at ?? nowIso,
+          grace_period_ends_at: null,
+          reminder_2d_sent_at: null,
+          reminder_1d_sent_at: null,
+          expired_notice_sent_at: null,
+        })
+        .eq("id", row.profile_id);
+    }
+
+    await supabaseAdmin.from("activation_tokens").update({ used_at: nowIso }).eq("id", row.id);
+    await enqueueEmail(supabaseAdmin, { email: row.email, name: prof?.name ?? row.email }, {
+      name: "credentials",
+      data: { name: prof?.name ?? row.email, email: row.email, password: data.password },
+    });
     return { ok: true, email: row.email };
   });
 
