@@ -144,7 +144,15 @@ function SiteEditor() {
       qc.invalidateQueries({ queryKey: ["generations", id] });
       toast.success(`Gerado com ${PROVIDER_LABEL[res.provider]} — ${res.gensUsed}/${res.monthlyLimit} no mês`);
     } catch (e) {
-      toast.error((e as Error).message);
+      const msg = (e as Error).message;
+      toast.error(msg);
+      if (msg.includes("Sessão inválida") || msg.includes("Unauthorized")) {
+        // Se a sessão expirou ou as chaves mudaram, oferecemos logout
+        if (confirm("Sua sessão parece ter expirado ou as chaves do servidor foram alteradas. Deseja sair e entrar novamente para sincronizar?")) {
+          await Route.useRouteContext().supabase.auth.signOut();
+          window.location.href = "/login";
+        }
+      }
     } finally {
       setGenerating(false);
     }
@@ -323,9 +331,18 @@ function SiteEditor() {
               placeholder="Ex.: Quero um site de coach de emagrecimento para mulheres 30+, tom amigável, com depoimentos e botão de WhatsApp. Inclua nome, endereço, telefone e principais serviços."
               className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none" />
             <button onClick={openGenerateFlow} disabled={generating || monthlyLeft <= 0}
-              className="mt-3 w-full rounded-md btn-brand py-2.5 text-sm font-semibold disabled:opacity-60">
+              className="mt-3 w-full rounded-md btn-brand py-2.5 text-sm font-semibold disabled:opacity-60 relative overflow-hidden">
               {generating ? "Gerando com I.A…" : monthlyLeft <= 0 ? "Limite mensal atingido" : "✨ Gerar com I.A"}
+              {generating && (
+                <div className="absolute bottom-0 left-0 h-1 bg-white/30 animate-[progress_15s_ease-in-out_infinite]" style={{ width: '100%' }} />
+              )}
             </button>
+            <style>{`
+              @keyframes progress {
+                0% { width: 0%; }
+                100% { width: 100%; }
+              }
+            `}</style>
             <p className="mt-2 text-[11px] text-muted-foreground">
               Você tem <strong>{monthlyLeft}</strong> de {monthlyLimit} gerações disponíveis este mês. Cada geração usa uma versão diferente da nossa <strong>I.A MRO</strong> e fica salva no histórico.
             </p>

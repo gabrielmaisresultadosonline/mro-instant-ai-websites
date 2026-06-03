@@ -277,9 +277,16 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: site, error: siteErr } = await supabase
+    
+    // Using admin to check site ownership to avoid RLS issues with legacy keys
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: site, error: siteErr } = await supabaseAdmin
       .from("sites").select("*").eq("id", data.id).eq("owner_id", userId).single();
-    if (siteErr || !site) throw new Error("Site não encontrado");
+    
+    if (siteErr || !site) {
+      console.error("[GenerateSite] Site não encontrado ou sem permissão:", siteErr);
+      throw new Error("Site não encontrado ou você não tem permissão para editá-lo.");
+    }
 
     // Monthly window reset (30 days)
     const monthStart = new Date(site.month_started_at as string).getTime();
@@ -323,7 +330,6 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     // Choose provider via round-robin
     const provider: Provider = PROVIDERS[providerIdx % PROVIDERS.length];
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: settings } = await supabaseAdmin
       .from("admin_settings")
       .select("openai_token, deepseek_token, claude_token")

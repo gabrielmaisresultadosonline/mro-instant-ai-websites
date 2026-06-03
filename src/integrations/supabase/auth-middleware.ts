@@ -6,15 +6,11 @@ import type { Database } from './types'
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+    const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+    const SUPABASE_PUBLISHABLE_KEY = (process.env.SUPABASE_PUBLISHABLE_KEY || "").trim();
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      const missing = [
-        ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-        ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
-      ];
-      console.warn(`[Supabase] Missing variable(s): ${missing.join(', ')}`);
+      console.warn(`[Supabase] Missing variable(s): ${!SUPABASE_URL ? "SUPABASE_URL" : ""} ${!SUPABASE_PUBLISHABLE_KEY ? "SUPABASE_PUBLISHABLE_KEY" : ""}`);
     }
     
     const request = getRequest();
@@ -44,7 +40,11 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-      throw new Error('Unauthorized: Invalid token or session expired');
+      console.error("[AuthMiddleware] Erro ao validar token:", authError?.message || "Usuário não encontrado");
+      
+      // Se estivermos em produção/VPS, pode haver um descasamento de chaves.
+      // Instruímos o usuário a deslogar e logar novamente para sincronizar a sessão com as novas chaves.
+      throw new Error(`Sessão inválida ou expirada. Por favor, saia (logout) e entre novamente no painel para atualizar suas chaves no navegador. (${authError?.message || "User not found"})`);
     }
 
     return next({
