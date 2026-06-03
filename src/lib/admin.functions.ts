@@ -161,7 +161,12 @@ export const adminResetUserGenerations = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("sites")
-      .update({ edits_this_week: 0, week_started_at: new Date().toISOString() })
+      .update({ 
+        gens_this_month: 0, 
+        month_started_at: new Date().toISOString(),
+        edits_this_week: 0, 
+        week_started_at: new Date().toISOString() 
+      })
       .eq("owner_id", data.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
