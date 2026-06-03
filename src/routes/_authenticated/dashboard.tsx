@@ -94,6 +94,41 @@ function Dashboard() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateSiteMut = useMutation({
+    mutationFn: async (vars: { title: string; slug: string }) => {
+      if (!site) return;
+      const newSlug = toSiteSlug(vars.slug || vars.title);
+      if (newSlug.length < 3) throw new Error("O link deve ter pelo menos 3 caracteres.");
+
+      const isChangingSlug = newSlug !== site.slug;
+      if (isChangingSlug && (site.slug_changes_count || 0) >= 1) {
+        throw new Error("Você já alterou seu link uma vez. Novas alterações só serão permitidas após 1 ano.");
+      }
+
+      const { error } = await supabase
+        .from("sites")
+        .update({
+          title: vars.title.trim().slice(0, 80),
+          slug: newSlug,
+          slug_changes_count: isChangingSlug ? (site.slug_changes_count || 0) + 1 : (site.slug_changes_count || 0),
+          last_slug_change_at: isChangingSlug ? new Date().toISOString() : site.last_slug_change_at
+        })
+        .eq("id", site.id)
+        .eq("owner_id", user.id);
+
+      if (error) {
+        if (isDuplicateSlugError(error)) throw new Error("Este link já está em uso.");
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Informações atualizadas!");
+      setIsEditing(false);
+      qc.invalidateQueries({ queryKey: ["my-sites", user.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const { data: full } = useQuery({
     queryKey: ["site", site?.id],
     queryFn: async () => {
