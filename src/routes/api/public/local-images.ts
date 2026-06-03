@@ -93,7 +93,7 @@ export const Route = createFileRoute("/api/public/local-images")({
           const image: LocalImage = {
             id,
             path: relativePath,
-            public_url: `/api/public/img/${encodeURIComponent(relativePath)}`,
+            public_url: `/api/public/img/${relativePath}`,
             label: label || null,
             created_at: new Date().toISOString(),
           };
