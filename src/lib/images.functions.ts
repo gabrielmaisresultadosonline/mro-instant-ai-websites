@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 export const listMyImages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -33,25 +35,21 @@ export const registerImage = createServerFn({ method: "POST" })
     let publicUrl = "";
     
     if (data.base64 && data.filename) {
-      // Decode base64 and upload to storage using Admin client to bypass Legacy Key errors
       const base64Data = data.base64.split(",")[1];
       const buffer = Buffer.from(base64Data, "base64");
-      const path = `${userId}/${data.filename}`;
+      const relativePath = `${userId}/${data.filename}`;
+      const fullDir = path.join(process.cwd(), "public", "uploads", userId);
+      const fullPath = path.join(fullDir, data.filename);
       
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("site-images")
-        .upload(path, buffer, { 
-          contentType: "image/jpeg",
-          upsert: true 
-        });
+      try {
+        await fs.mkdir(fullDir, { recursive: true });
+        await fs.writeFile(fullPath, buffer);
         
-      if (uploadError) throw new Error("Erro ao salvar arquivo: " + uploadError.message);
-      
-      imagePath = path;
-      publicUrl = `/api/public/img/${encodeURIComponent(path)}`;
-    } else if (imagePath) {
-      if (!imagePath.startsWith(`${userId}/`)) throw new Error("Caminho inválido.");
-      publicUrl = `/api/public/img/${encodeURIComponent(imagePath)}`;
+        imagePath = relativePath;
+        publicUrl = `/api/public/img/${encodeURIComponent(relativePath)}`;
+      } catch (e) {
+        throw new Error("Erro ao gravar no disco do servidor: " + (e as Error).message);
+      }
     }
 
     const { data: row, error } = await supabaseAdmin
@@ -98,8 +96,13 @@ export const deleteImage = createServerFn({ method: "POST" })
     const { data: img } = await supabaseAdmin.from("site_images").select("path").eq("id", data.id).eq("owner_id", userId).maybeSingle();
     if (!img) throw new Error("Imagem não encontrada");
     
-    // Deleta do storage e do banco
-    await supabaseAdmin.storage.from("site-images").remove([img.path]);
+    const filePath = path.join(process.cwd(), "public", "uploads", img.path);
+    try {
+      await fs.unlink(filePath);
+    } catch (e) {
+      console.error("Erro ao deletar arquivo físico:", e);
+    }
+
     await supabaseAdmin.from("site_images").delete().eq("id", data.id).eq("owner_id", userId);
     
     return { ok: true };
