@@ -25,6 +25,7 @@ import { Route as ApiPublicWebhooksKiwifyRouteImport } from './routes/api/public
 import { Route as ApiPublicSiteSlugRouteImport } from './routes/api/public/site/$slug'
 import { Route as ApiPublicImgSplatRouteImport } from './routes/api/public/img/$'
 import { Route as ApiPublicCronSubscriptionsRouteImport } from './routes/api/public/cron/subscriptions'
+import { Route as ApiPublicCronEmailOutboxRouteImport } from './routes/api/public/cron/email-outbox'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -106,6 +107,12 @@ const ApiPublicCronSubscriptionsRoute =
     path: '/api/public/cron/subscriptions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronEmailOutboxRoute =
+  ApiPublicCronEmailOutboxRouteImport.update({
+    id: '/api/public/cron/email-outbox',
+    path: '/api/public/cron/email-outbox',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
@@ -136,6 +144,7 @@ export interface FileRoutesByTo {
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
@@ -155,6 +164,7 @@ export interface FileRoutesById {
   '/_authenticated/sites/$id': typeof AuthenticatedSitesIdRoute
   '/_authenticated/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
+  '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/cron/email-outbox'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/cron/email-outbox'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
@@ -209,6 +221,7 @@ export interface FileRouteTypes {
     | '/_authenticated/sites/$id'
     | '/_authenticated/sites/novo'
     | '/api/public/cert-check'
+    | '/api/public/cron/email-outbox'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
@@ -225,6 +238,7 @@ export interface RootRouteChildren {
   ObObrigadoRoute: typeof ObObrigadoRoute
   RedefinirSenhaTokenRoute: typeof RedefinirSenhaTokenRoute
   ApiPublicCertCheckRoute: typeof ApiPublicCertCheckRoute
+  ApiPublicCronEmailOutboxRoute: typeof ApiPublicCronEmailOutboxRoute
   ApiPublicCronSubscriptionsRoute: typeof ApiPublicCronSubscriptionsRoute
   ApiPublicImgSplatRoute: typeof ApiPublicImgSplatRoute
   ApiPublicSiteSlugRoute: typeof ApiPublicSiteSlugRoute
@@ -345,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronSubscriptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/email-outbox': {
+      id: '/api/public/cron/email-outbox'
+      path: '/api/public/cron/email-outbox'
+      fullPath: '/api/public/cron/email-outbox'
+      preLoaderRoute: typeof ApiPublicCronEmailOutboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -373,6 +394,7 @@ const rootRouteChildren: RootRouteChildren = {
   ObObrigadoRoute: ObObrigadoRoute,
   RedefinirSenhaTokenRoute: RedefinirSenhaTokenRoute,
   ApiPublicCertCheckRoute: ApiPublicCertCheckRoute,
+  ApiPublicCronEmailOutboxRoute: ApiPublicCronEmailOutboxRoute,
   ApiPublicCronSubscriptionsRoute: ApiPublicCronSubscriptionsRoute,
   ApiPublicImgSplatRoute: ApiPublicImgSplatRoute,
   ApiPublicSiteSlugRoute: ApiPublicSiteSlugRoute,
