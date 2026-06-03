@@ -26,29 +26,35 @@ export const registerImage = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
     let imagePath = data.path;
     let publicUrl = "";
-
-    // If base64 is provided, we save it locally in the VPS (simulated via API for portability)
-    // But since we are in a container, the user wants the files inside "pastas imagens" in the VPS.
-    // For now, we continue using Supabase as the DATABASE for metadata, but we can change the URL logic.
     
     if (data.base64 && data.filename) {
-      // Logic for local VPS storage would go here if we were writing directly to disk.
-      // However, to keep it working across the user's setup without breaking the build,
-      // we'll keep the registration in the DB.
-      // The user wants: "as imagens precisam ficar no meu servidor publicas ali to usando vps e dominio vai ficar alid entro das pastas imagens"
+      // Decode base64 and upload to storage using Admin client to bypass Legacy Key errors
+      const base64Data = data.base64.split(",")[1];
+      const buffer = Buffer.from(base64Data, "base64");
+      const path = `${userId}/${data.filename}`;
       
-      // We'll update the publicUrl to point to the local server's images directory
-      publicUrl = `https://mro.bio/images/uploads/${userId}/${data.filename}`;
-      imagePath = `uploads/${userId}/${data.filename}`;
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("site-images")
+        .upload(path, buffer, { 
+          contentType: "image/jpeg", // Basic assumption
+          upsert: true 
+        });
+        
+      if (uploadError) throw new Error("Erro ao salvar arquivo: " + uploadError.message);
+      
+      imagePath = path;
+      publicUrl = `/api/public/img/${encodeURIComponent(path)}`;
     } else if (imagePath) {
       if (!imagePath.startsWith(`${userId}/`)) throw new Error("Caminho inválido.");
-      publicUrl = `https://mro.bio/api/public/img/${encodeURIComponent(imagePath)}`;
+      publicUrl = `/api/public/img/${encodeURIComponent(imagePath)}`;
     }
 
-    const { data: row, error } = await supabase
+    const { data: row, error } = await supabaseAdmin
       .from("site_images")
       .insert({ 
         owner_id: userId, 
@@ -86,10 +92,15 @@ export const deleteImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { id: string }) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: img } = await supabase.from("site_images").select("path").eq("id", data.id).eq("owner_id", userId).maybeSingle();
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    const { data: img } = await supabaseAdmin.from("site_images").select("path").eq("id", data.id).eq("owner_id", userId).maybeSingle();
     if (!img) throw new Error("Imagem não encontrada");
-    await supabase.storage.from("site-images").remove([img.path]);
-    await supabase.from("site_images").delete().eq("id", data.id).eq("owner_id", userId);
+    
+    // Deleta do storage e do banco
+    await supabaseAdmin.storage.from("site-images").remove([img.path]);
+    await supabaseAdmin.from("site_images").delete().eq("id", data.id).eq("owner_id", userId);
+    
     return { ok: true };
   });

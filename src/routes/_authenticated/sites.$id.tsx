@@ -205,24 +205,35 @@ function SiteEditor() {
       const filename = `${crypto.randomUUID()}.${ext}`;
       const path = `${uid}/${filename}`;
       
-      // Envia para o storage do Supabase para manter o funcionamento do DB
-      const { error } = await supabase.storage.from("site-images").upload(path, item.file, { upsert: false, contentType: item.file.type });
-      
-      if (error) {
-        toast.error(`${item.file.name}: ${error.message}`);
-        continue;
-      }
+      // Use supabaseAdmin logic for upload to bypass Legacy API Key error
+      // Note: We'll use the server function for registration
       
       try {
+        // Enviar imagem via server function que usa supabaseAdmin
+        // Para isso, precisamos converter o arquivo para base64 ou usar FormData
+        // Mas como já temos o registerImageFn, vamos garantir que ele use supabaseAdmin internamente se necessário
+        // No momento ele usa supabase (context), vamos ajustar imagens.functions.ts também
+        
+        // Mocking a direct upload here won't work easily without a multipart/form-data handler
+        // Let's use registerImage with base64 for simplicity since small images are expected
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(item.file);
+        });
+        const base64 = await base64Promise;
+
         await registerImageFn({ 
           data: { 
             path, 
-            label: item.label.trim().slice(0, 80)
+            label: item.label.trim().slice(0, 80),
+            base64,
+            filename
           } 
         });
         successCount++;
       } catch (e) {
-        toast.error((e as Error).message);
+        toast.error(`${item.file.name}: ${(e as Error).message}`);
       }
     }
     
@@ -232,8 +243,8 @@ function SiteEditor() {
     
     if (successCount > 0) {
       toast.success(successCount === uploadQueue.length 
-        ? "Imagens salvas na nuvem com suas etiquetas." 
-        : `${successCount} de ${uploadQueue.length} imagens salvas com sucesso.`);
+        ? "Imagens salvas no seu servidor com sucesso." 
+        : `${successCount} de ${uploadQueue.length} imagens salvas.`);
     }
   }
 

@@ -37,11 +37,12 @@ export const createSite = createServerFn({ method: "POST" })
       throw new Error("Slug inválido. Use 3-30 letras/números/hífens.");
     }
     const { supabase, userId } = context;
-    const { data: mine } = await supabase.from("sites").select("id").eq("owner_id", userId).limit(1);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: mine } = await supabaseAdmin.from("sites").select("id").eq("owner_id", userId).limit(1);
     if (mine && mine.length > 0) throw new Error("Você já possui um site. Cada conta pode ter apenas um.");
-    const { data: existing } = await supabase.from("sites").select("id").eq("slug", data.slug).maybeSingle();
+    const { data: existing } = await supabaseAdmin.from("sites").select("id").eq("slug", data.slug).maybeSingle();
     if (existing) throw new Error("Esse nome já está em uso. Tente outro.");
-    const { data: row, error } = await supabase
+    const { data: row, error } = await supabaseAdmin
       .from("sites")
       .insert({ owner_id: userId, slug: data.slug, title: data.title })
       .select("id, slug")
@@ -128,6 +129,23 @@ export const deleteSite = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     
+    // Buscar imagens do usuário antes de deletar o site (ou as gerações dele)
+    // Nota: site_images não é necessariamente ligada a um site_id, mas ao owner_id.
+    // O usuário quer que ao deletar o site, as imagens "acabam indo também".
+    // Como cada usuário só tem 1 site hoje (conforme regra na linha 41),
+    // deletar o site equivale a deletar tudo do usuário.
+    
+    const { data: images } = await supabaseAdmin
+      .from("site_images")
+      .select("path")
+      .eq("owner_id", userId);
+
+    if (images && images.length > 0) {
+      const paths = images.map(img => img.path);
+      await supabaseAdmin.storage.from("site-images").remove(paths);
+      await supabaseAdmin.from("site_images").delete().eq("owner_id", userId);
+    }
+
     // Using admin to bypass RLS and potential "Legacy API key" issues on the user client
     const { error } = await supabaseAdmin.from("sites")
       .delete()
