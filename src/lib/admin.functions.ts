@@ -105,8 +105,21 @@ export const adminGetSettings = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    // Using admin access to bypass RLS issues on VPS
     const { data: row, error } = await supabaseAdmin.from("admin_settings").select("openai_token, deepseek_token, claude_token").eq("id", true).single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[AdminSettings] Erro ao buscar configurações:", error.message);
+      // If table is missing or some other error, return default empty
+      return {
+        openai_configured: false,
+        deepseek_configured: false,
+        claude_configured: false,
+        openai_mask: "",
+        deepseek_mask: "",
+        claude_mask: "",
+      };
+    }
     const mask = (t?: string | null) => (t ? `${t.slice(0, 6)}…${t.slice(-4)}` : "");
     return {
       openai_configured: !!row?.openai_token,

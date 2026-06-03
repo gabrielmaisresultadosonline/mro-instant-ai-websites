@@ -37,14 +37,27 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     // Em ambientes VPS com erro de "Legacy API keys", o cliente comum falha ao validar o JWS.
     // Usamos o supabaseAdmin no servidor para validar o token diretamente.
     const { supabaseAdmin } = await import('./client.server');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    // In VPS environment, the user client might have issues with session validation.
+    // We use the admin client to validate the token directly against Supabase.
+    let user;
+    let authError;
+    try {
+      const res = await supabaseAdmin.auth.getUser(token);
+      user = res.data.user;
+      authError = res.error;
+    } catch (err: any) {
+      console.error("[AuthMiddleware] Exception during getUser:", err);
+      authError = err;
+    }
 
     if (authError || !user) {
-      console.error("[AuthMiddleware] Erro ao validar token:", authError?.message || "Usuário não encontrado");
+      const errorMsg = authError?.message || "Usuário não encontrado";
+      console.error("[AuthMiddleware] Erro ao validar token:", errorMsg);
       
-      // Se estivermos em produção/VPS, pode haver um descasamento de chaves.
-      // Instruímos o usuário a deslogar e logar novamente para sincronizar a sessão com as novas chaves.
-      throw new Error(`Sessão inválida ou expirada. Por favor, saia (logout) e entre novamente no painel para atualizar suas chaves no navegador. (${authError?.message || "User not found"})`);
+      // If we are in production/VPS, there might be a key mismatch.
+      // Instruct the user to logout and login again to sync the session.
+      throw new Error(`Sessão inválida ou expirada. Por favor, SAIA (logout) e ENTRE novamente no painel para atualizar suas chaves. Detalhes: ${errorMsg}`);
     }
 
     return next({
