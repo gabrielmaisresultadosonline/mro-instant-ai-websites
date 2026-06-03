@@ -13,6 +13,21 @@ function Dashboard() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const { user } = Route.useRouteContext();
+  const [isCreating, setIsCreating] = useState(false);
+  const [formData, setFormData] = useState({ title: "", slug: "" });
+
+  const { data: sub } = useQuery({
+    queryKey: ["my-subscription", user.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("subscription_status, subscription_expires_at")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: list, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-sites", user.id],
@@ -29,61 +44,38 @@ function Dashboard() {
   });
   const site = list?.sites[0];
 
-  const ensureSiteMut = useMutation({
-    mutationFn: async () => {
+  const createSiteMut = useMutation({
+    mutationFn: async (vars: { title: string; slug: string }) => {
       const { data: currentUser, error: userError } = await supabase.auth.getUser();
       const uid = currentUser.user?.id;
-      const email = currentUser.user?.email ?? user.email ?? "";
-      if (userError || !uid) throw new Error("Sessão não encontrada. Saia e entre novamente.");
+      if (userError || !uid) throw new Error("Sessão não encontrada.");
 
-      const { data: existing, error: existingError } = await supabase
+      const slug = toSiteSlug(vars.slug || vars.title);
+      const { data: created, error: createError } = await supabase
         .from("sites")
+        .insert({
+          owner_id: uid,
+          slug,
+          title: vars.title.trim().slice(0, 80) || "Meu site"
+        })
         .select("id, slug")
-        .eq("owner_id", uid)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-      if (existingError) throw new Error(existingError.message);
-      if (existing?.[0]) return existing[0];
+        .single();
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name, email")
-        .eq("id", uid)
-        .maybeSingle();
-
-      const titleSeed = (profile?.name || email.split("@")[0] || "Meu site").trim();
-      const baseSlug = toSiteSlug(titleSeed || email.split("@")[0] || "meu-site");
-      const suffixes = ["", `-${Math.floor(100 + Math.random() * 900)}`, `-${crypto.randomUUID().slice(0, 5)}`];
-      let lastError = "";
-
-      for (const suffix of suffixes) {
-        const slug = fitSlug(baseSlug, suffix);
-        const { data: created, error: createError } = await supabase
-          .from("sites")
-          .insert({ owner_id: uid, slug, title: titleSeed.slice(0, 80) || "Meu site" })
-          .select("id, slug")
-          .single();
-
-        if (!createError && created) return created;
-        lastError = createError?.message ?? "";
-        if (!isDuplicateSlugError(createError)) break;
+      if (createError) {
+        if (isDuplicateSlugError(createError)) {
+          throw new Error("Este link já está em uso. Escolha outro.");
+        }
+        throw new Error(createError.message);
       }
-
-      throw new Error(lastError || "Não foi possível preparar seu site agora.");
+      return created;
     },
     onSuccess: (created) => {
-      toast.success("Seu editor está pronto.");
+      toast.success("Site criado com sucesso!");
       qc.invalidateQueries({ queryKey: ["my-sites", user.id] });
       nav({ to: "/sites/$id", params: { id: created.id }, replace: true });
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
-  useEffect(() => {
-    if (!isLoading && list && !site && !ensureSiteMut.isPending && !ensureSiteMut.isSuccess && !ensureSiteMut.isError) {
-      ensureSiteMut.mutate();
-    }
-  }, [list, isLoading, site, ensureSiteMut]);
 
   const { data: full } = useQuery({
     queryKey: ["site", site?.id],
