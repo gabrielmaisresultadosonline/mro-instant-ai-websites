@@ -119,6 +119,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  
+  useEffect(() => {
+    initFbPixel();
+    fbEvent("PageView");
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthSync />
