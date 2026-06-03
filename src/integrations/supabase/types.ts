@@ -88,6 +88,7 @@ export type Database = {
           id: string
           last_error: string | null
           locked_at: string | null
+          provider_message_id: string | null
           sent_at: string | null
           status: string
           subject: string
@@ -103,6 +104,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           locked_at?: string | null
+          provider_message_id?: string | null
           sent_at?: string | null
           status?: string
           subject: string
@@ -118,6 +120,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           locked_at?: string | null
+          provider_message_id?: string | null
           sent_at?: string | null
           status?: string
           subject?: string
