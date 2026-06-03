@@ -405,17 +405,14 @@ REGRAS TÉCNICAS E DE IMAGEM:
 URLs de Imagens Disponíveis:
 ${(data.images ?? []).map((im) => `[${im.label}] ${im.url}`).join("\n")}
 
-Retorne APENAS o código HTML completo, pronto para publicar. Sem explicações.`;
-- Se a etiqueta for "banner" ou "hero", use obrigatoriamente no topo/primeira seção.
-- Google Fonts (Inter ou Space Grotesk)
+OUTRAS REGRAS:
 - WhatsApp: SEMPRE https://wa.me/55XXXXXXXXXXX (use o número informado no pedido se houver), target="_blank" rel="noopener"
 - Inclua <title>, meta description, og tags
 - NÃO escreva nada fora do HTML, sem markdown. Entregue APENAS o código.
 
-Imagens fornecidas para uso (USE APENAS ESTAS):
-${(data.images ?? []).map((im) => `- etiqueta="${im.label}" → URL="${im.url}"`).join("\n") || "(nenhuma)"}
+Pedido original do usuário: "${data.prompt}"
 
-Pedido original do usuário: "${data.prompt}"`;
+Retorne APENAS o código HTML completo, pronto para publicar. Sem explicações.`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
