@@ -20,6 +20,7 @@ function Dashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ title: "", slug: "" });
   const [isEditSlugManual, setIsEditSlugManual] = useState(false);
+  const [showAffiliateModal, setShowAffiliateModal] = useState(false);
   const deleteSiteFn = useServerFn(deleteSite);
 
   const deleteMut = useMutation({
