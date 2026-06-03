@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { adminLogin, adminListUsers, adminListSites, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail } from "@/lib/admin.functions";
+import { adminLogin, adminListUsers, adminListSites, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail, adminDashboardStats, adminGetKiwifyWebhookUrl, adminSendTestEmail } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/administracao")({
   ssr: false,
@@ -101,9 +101,12 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const grantFn = useServerFn(adminGrantSubscription);
   const revokeFn = useServerFn(adminRevokeSubscription);
   const retryFn = useServerFn(adminRetryEmail);
+  const statsFn = useServerFn(adminDashboardStats);
+  const kiwifyUrlFn = useServerFn(adminGetKiwifyWebhookUrl);
+  const sendTestFn = useServerFn(adminSendTestEmail);
 
-  type Tab = "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "settings";
-  const [tab, setTab] = useState<Tab>("users");
+  type Tab = "dashboard" | "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "settings";
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number }>>([]);
   const [sites, setSites] = useState<Array<{ id: string; slug: string; title: string; owner_id: string; is_published: boolean; updated_at: string; visits: number }>>([]);
   const [subs, setSubs] = useState<Array<{ id: string; name: string; email: string; subscription_status: string; subscription_expires_at: string | null; grace_period_ends_at: string | null; kiwify_order_id: string | null; last_payment_at: string | null }>>([]);
@@ -113,15 +116,24 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const [openaiInput, setOpenaiInput] = useState("");
   const [deepseekInput, setDeepseekInput] = useState("");
   const [claudeInput, setClaudeInput] = useState("");
+  const [stats, setStats] = useState<{ totals: { users: number; active: number; grace: number; canceled: number; expiringSoon: number; expiringIn2d: number; paymentsLast30: number; cancelsLast30: number }; nextExpirations: Array<{ id: string; name: string; email: string; subscription_expires_at: string | null }> } | null>(null);
+  const [kiwifyUrl, setKiwifyUrl] = useState<{ url: string; configured: boolean } | null>(null);
+  const [testEmailTo, setTestEmailTo] = useState("");
+  const [testTemplate, setTestTemplate] = useState("activation");
+  const [sendingTest, setSendingTest] = useState(false);
 
   async function reload() {
     try {
-      if (tab === "users") { const r = await usersFn({ data: { token } }); setUsers(r.users); }
+      if (tab === "dashboard") { const r = await statsFn({ data: { token } }); setStats(r); }
+      else if (tab === "users") { const r = await usersFn({ data: { token } }); setUsers(r.users); }
       else if (tab === "sites") { const r = await sitesFn({ data: { token } }); setSites(r.sites); }
       else if (tab === "subscriptions") { const r = await subsFn({ data: { token } }); setSubs(r.rows); }
       else if (tab === "outbox") { const r = await outboxFn({ data: { token, status: "all" } }); setOutbox(r.rows); }
       else if (tab === "kiwify") { const r = await kiwifyFn({ data: { token } }); setKiwify(r.rows); }
-      else { const r = await getSettingsFn({ data: { token } }); setSettings(r); }
+      else {
+        const r = await getSettingsFn({ data: { token } }); setSettings(r);
+        const k = await kiwifyUrlFn({ data: { token } }); setKiwifyUrl(k);
+      }
     } catch (e) {
       const msg = (e as Error).message;
       if (msg.includes("autorizado")) { toast.error("Sessão expirada"); onLogout(); }
@@ -130,6 +142,18 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   }
 
   useEffect(() => { void reload(); /* eslint-disable-next-line */ }, [tab]);
+
+  async function handleSendTest() {
+    if (!testEmailTo.trim()) { toast.error("Informe o e-mail destino"); return; }
+    setSendingTest(true);
+    try {
+      await sendTestFn({ data: { token, to: testEmailTo.trim(), template: testTemplate } });
+      toast.success("E-mail de teste enfileirado");
+      if (tab === "outbox") void reload();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setSendingTest(false); }
+  }
+
 
   async function handleDeleteUser(uid: string, email: string) {
     if (!confirm(`Excluir o usuário ${email}? Essa ação não pode ser desfeita.`)) return;
@@ -173,12 +197,25 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   }
 
   const TABS: Array<{ key: Tab; label: string }> = [
+    { key: "dashboard", label: "Dashboard" },
     { key: "users", label: "Usuários" },
     { key: "sites", label: "Sites" },
     { key: "subscriptions", label: "Assinaturas" },
     { key: "outbox", label: "Fila de e-mails" },
     { key: "kiwify", label: "Webhooks Kiwify" },
     { key: "settings", label: "Configurações" },
+  ];
+
+  const TEMPLATES: Array<{ value: string; label: string }> = [
+    { value: "activation", label: "Compra aprovada — criar senha (ativação)" },
+    { value: "renewal_thanks", label: "Pagamento confirmado / renovação" },
+    { value: "reminder_2d", label: "Lembrete: vence em 2 dias" },
+    { value: "reminder_1d", label: "Lembrete: vence amanhã" },
+    { value: "expired_grace", label: "Expirado — período de carência (10 dias)" },
+    { value: "canceled", label: "Assinatura cancelada" },
+    { value: "refunded", label: "Reembolso processado" },
+    { value: "deleted", label: "Acesso excluído" },
+    { value: "password_reset", label: "Recuperação de senha" },
   ];
 
   return (
@@ -191,6 +228,55 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           </button>
         ))}
       </div>
+
+      {tab === "dashboard" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              { label: "Usuários", value: stats?.totals.users ?? 0, color: "text-white" },
+              { label: "Assinantes ativos", value: stats?.totals.active ?? 0, color: "text-emerald-400" },
+              { label: "Em carência", value: stats?.totals.grace ?? 0, color: "text-amber-400" },
+              { label: "Cancelados", value: stats?.totals.canceled ?? 0, color: "text-red-400" },
+              { label: "Pagamentos (30d)", value: stats?.totals.paymentsLast30 ?? 0, color: "text-emerald-400" },
+              { label: "Cancelamentos (30d)", value: stats?.totals.cancelsLast30 ?? 0, color: "text-red-400" },
+              { label: "Vencem em ≤7d", value: stats?.totals.expiringSoon ?? 0, color: "text-amber-400" },
+              { label: "Vencem em ≤2d", value: stats?.totals.expiringIn2d ?? 0, color: "text-amber-400" },
+            ].map((c) => (
+              <div key={c.label} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <div className="text-[11px] uppercase tracking-wide text-white/60">{c.label}</div>
+                <div className={`mt-1 font-display text-2xl font-bold ${c.color}`}>{c.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-white/10">
+            <div className="border-b border-white/10 px-4 py-3 text-sm font-semibold">Próximos vencimentos</div>
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
+                <tr><th className="px-4 py-3">Usuário</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Vence em</th><th className="px-4 py-3">Dias restantes</th></tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {(stats?.nextExpirations ?? []).length === 0 ? (
+                  <tr><td colSpan={4} className="px-4 py-8 text-center text-white/50">Sem assinaturas ativas.</td></tr>
+                ) : stats!.nextExpirations.map((x) => {
+                  const exp = x.subscription_expires_at ? new Date(x.subscription_expires_at) : null;
+                  const days = exp ? Math.max(0, Math.ceil((exp.getTime() - Date.now()) / 86400000)) : 0;
+                  return (
+                    <tr key={x.id}>
+                      <td className="px-4 py-3">{x.name}</td>
+                      <td className="px-4 py-3 text-xs">{x.email}</td>
+                      <td className="px-4 py-3 text-xs">{exp ? exp.toLocaleDateString("pt-BR") : "—"}</td>
+                      <td className={`px-4 py-3 text-xs ${days <= 2 ? "text-red-400" : days <= 7 ? "text-amber-400" : "text-white/70"}`}>{days}d</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+
 
 
       {tab === "users" && (
@@ -287,8 +373,24 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           </div>
 
           <button onClick={handleSaveTokens} className="rounded-md btn-brand px-5 py-2.5 text-sm font-semibold">Salvar chaves</button>
+
+          <div className="mt-6 rounded-lg border border-white/10 p-4">
+            <div className="text-xs uppercase tracking-wide text-white/60">URL do Webhook da Kiwify</div>
+            <p className="mt-1 text-xs text-white/50">Cole esta URL no painel da Kiwify (Configurações → Webhooks). Ela já inclui o token de segurança.</p>
+            <div className="mt-3 flex gap-2">
+              <input readOnly value={kiwifyUrl?.url ?? "Carregando…"}
+                className="flex-1 rounded-md border border-white/20 bg-white/10 p-2.5 font-mono text-xs" />
+              <button
+                onClick={() => { if (kiwifyUrl?.url) { navigator.clipboard.writeText(kiwifyUrl.url); toast.success("URL copiada"); } }}
+                className="rounded-md btn-brand px-4 py-2 text-xs font-semibold">Copiar</button>
+            </div>
+            {kiwifyUrl && !kiwifyUrl.configured && (
+              <p className="mt-2 text-xs text-red-300">⚠ KIWIFY_WEBHOOK_TOKEN não configurado no servidor.</p>
+            )}
+          </div>
         </div>
       )}
+
 
       {tab === "subscriptions" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">
@@ -328,8 +430,27 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       )}
 
       {tab === "outbox" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="text-sm font-semibold">Enviar e-mail de teste</div>
+            <p className="mt-1 text-xs text-white/60">Enfileira um e-mail real (com prefixo <code>[TESTE]</code>) usando o template escolhido. Os dados são fictícios.</p>
+            <div className="mt-3 grid gap-2 md:grid-cols-[1fr_2fr_auto]">
+              <input type="email" value={testEmailTo} onChange={(e) => setTestEmailTo(e.target.value)} placeholder="destino@exemplo.com"
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <select value={testTemplate} onChange={(e) => setTestTemplate(e.target.value)}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none">
+                {TEMPLATES.map((t) => <option key={t.value} value={t.value} className="bg-foreground">{t.label}</option>)}
+              </select>
+              <button onClick={handleSendTest} disabled={sendingTest}
+                className="rounded-md btn-brand px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                {sendingTest ? "Enviando…" : "Enviar teste"}
+              </button>
+            </div>
+          </div>
+
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="min-w-full text-sm">
+
             <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
               <tr><th className="px-4 py-3">Para</th><th className="px-4 py-3">Assunto</th><th className="px-4 py-3">Template</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Tent.</th><th className="px-4 py-3">Criado</th><th className="px-4 py-3"></th></tr>
             </thead>
@@ -357,6 +478,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           <p className="border-t border-white/10 p-3 text-xs text-white/50">
             ℹ Os e-mails ficam aqui até o worker SMTP no VPS Ubuntu lê-los e enviar via <code>suporte@mro.bio</code>.
           </p>
+        </div>
         </div>
       )}
 

@@ -261,3 +261,106 @@ export const adminRetryEmail = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+// ============================================================
+// Dashboard stats + Kiwify webhook URL + Test emails
+// ============================================================
+
+export const adminDashboardStats = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string }) => z.object({ token: z.string() }).parse(i))
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const now = new Date();
+    const in7 = new Date(now.getTime() + 7 * 86400000).toISOString();
+    const in2 = new Date(now.getTime() + 2 * 86400000).toISOString();
+    const last30 = new Date(now.getTime() - 30 * 86400000).toISOString();
+
+    const [{ count: totalUsers }, { count: activeSubs }, { count: graceSubs }, { count: canceledSubs }, { count: expiringSoon }, { count: expiringIn2d }, { data: recentPayments, count: paymentsLast30 }, { count: cancelsLast30 }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }),
+      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("subscription_status", "active"),
+      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("subscription_status", "grace"),
+      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("subscription_status", "canceled"),
+      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("subscription_status", "active").lte("subscription_expires_at", in7).gte("subscription_expires_at", now.toISOString()),
+      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("subscription_status", "active").lte("subscription_expires_at", in2).gte("subscription_expires_at", now.toISOString()),
+      supabaseAdmin.from("subscription_events").select("id", { count: "exact" }).in("event_type", ["kiwify_approved", "kiwify_renewed", "admin_granted"]).gte("created_at", last30),
+      supabaseAdmin.from("subscription_events").select("id", { count: "exact", head: true }).in("event_type", ["kiwify_canceled", "admin_revoked", "kiwify_refund"]).gte("created_at", last30),
+    ]);
+
+    const { data: nextExpirations } = await supabaseAdmin
+      .from("profiles")
+      .select("id, name, email, subscription_expires_at")
+      .eq("subscription_status", "active")
+      .gte("subscription_expires_at", now.toISOString())
+      .order("subscription_expires_at", { ascending: true })
+      .limit(10);
+
+    return {
+      totals: {
+        users: totalUsers ?? 0,
+        active: activeSubs ?? 0,
+        grace: graceSubs ?? 0,
+        canceled: canceledSubs ?? 0,
+        expiringSoon: expiringSoon ?? 0,
+        expiringIn2d: expiringIn2d ?? 0,
+        paymentsLast30: paymentsLast30 ?? (recentPayments?.length ?? 0),
+        cancelsLast30: cancelsLast30 ?? 0,
+      },
+      nextExpirations: nextExpirations ?? [],
+    };
+  });
+
+export const adminGetKiwifyWebhookUrl = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string }) => z.object({ token: z.string() }).parse(i))
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const tokenVal = process.env.KIWIFY_WEBHOOK_TOKEN ?? "";
+    const base = process.env.PUBLIC_BASE_URL ?? "https://mro.bio";
+    return {
+      url: `${base}/api/public/webhooks/kiwify?token=${encodeURIComponent(tokenVal)}`,
+      configured: !!tokenVal,
+    };
+  });
+
+export const adminSendTestEmail = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; to: string; template: string }) =>
+    z.object({
+      token: z.string(),
+      to: z.string().email(),
+      template: z.enum(["activation", "renewal_thanks", "reminder_2d", "reminder_1d", "expired_grace", "canceled", "refunded", "deleted", "password_reset"]),
+    }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { renderTemplate } = await import("@/lib/email-templates.server");
+
+    const name = "Teste";
+    const inOneYear = new Date(Date.now() + 365 * 86400000).toLocaleDateString("pt-BR");
+    const in10 = new Date(Date.now() + 10 * 86400000).toLocaleDateString("pt-BR");
+    const sample = {
+      activation: { name, activationUrl: "https://mro.bio/ativar/teste-token-123" },
+      renewal_thanks: { name, expiresAt: inOneYear },
+      reminder_2d: { name, expiresAt: inOneYear, renewUrl: "https://mro.bio/renovar" },
+      reminder_1d: { name, expiresAt: inOneYear, renewUrl: "https://mro.bio/renovar" },
+      expired_grace: { name, deleteAt: in10, renewUrl: "https://mro.bio/renovar" },
+      canceled: { name },
+      refunded: { name },
+      deleted: { name },
+      password_reset: { name, resetUrl: "https://mro.bio/redefinir-senha/teste-token-123" },
+    } as const;
+    const tpl = { name: data.template, data: sample[data.template as keyof typeof sample] } as Parameters<typeof renderTemplate>[0];
+    const r = renderTemplate(tpl);
+    const { error } = await supabaseAdmin.from("email_outbox").insert({
+      to_email: data.to,
+      to_name: "Teste MRO.BIO",
+      subject: `[TESTE] ${r.subject}`,
+      body_html: r.html,
+      body_text: r.text,
+      template: data.template,
+      status: "pending",
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
