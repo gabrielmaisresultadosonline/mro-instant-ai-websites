@@ -80,7 +80,7 @@ function Dashboard() {
   });
 
   useEffect(() => {
-    if (!isLoading && list && !site && !ensureSiteMut.isPending && !ensureSiteMut.isSuccess) {
+    if (!isLoading && list && !site && !ensureSiteMut.isPending && !ensureSiteMut.isSuccess && !ensureSiteMut.isError) {
       ensureSiteMut.mutate();
     }
   }, [list, isLoading, site, ensureSiteMut]);
