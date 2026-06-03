@@ -364,19 +364,27 @@ O cliente enviou este pedido:
 IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS REAIS PARA GERAR O SITE):
 ${imagesList}
 
-REGRAS RÍGIDAS DE ESTILO E CONTEÚDO:
-1. DESIGN PREMIUM: O site não pode ser "seco". Use seções com fundos alternados (claro/escuro), tipografia elegante, espaçamentos generosos (padding substancial), bordas arredondadas modernas e efeitos de hover.
-2. FIDELIDADE TOTAL: Se o cliente pediu "Essência dos Cachos", o site deve ser focado EXCLUSIVAMENTE nisso. Use linguagem persuasiva e específica para o nicho.
-3. SEM IMAGENS DA INTERNET: É proibido usar Unsplash, Google Images, Placeholders ou qualquer URL externa. Se não houver imagem do cliente para uma seção, use fundos coloridos, gradientes luxuosos ou ícones SVG modernos.
-4. LOGO: Se houver imagem com etiqueta "logo" (ou similar), ela DEVE ser usada no <header> de forma obrigatória.
-5. CORES: Respeite as cores do pedido. BOTÕES DE CTA DEVEM SER VERDES (#22c55e ou #16a34a) para transmitir ação.
+DIRETRIZES DE DESIGN DE ALTO NÍVEL (ESTÉTICA PREMIUM):
+1. IMPACTO VISUAL: O site deve ser deslumbrante e profissional. Use seções com fundos alternados, tipografia moderna e elegante, e espaçamentos (paddings e margins) generosos para criar respiro.
+2. ELEMENTOS MODERNOS: Incorpore bordas arredondadas (rounded-2xl ou rounded-3xl), sombras suaves (shadow-lg/xl), gradientes sutis e luxuosos, e padrões de fundo (patterns) discretos.
+3. INTERATIVIDADE: Adicione efeitos de hover refinados em botões e cards. O site deve parecer vivo, não estático.
+4. ESTRUTURA RICA: Mínimo de 6 seções bem definidas:
+   - Header: Navegação limpa com a logo do cliente.
+   - Hero: Título impactante, subtítulo persuasivo e CTA principal.
+   - Sobre Nós: Narrativa envolvente sobre a marca.
+   - Serviços/Produtos: Grid moderno com ícones ou imagens reais.
+   - Prova Social/Galeria: Depoimentos ou fotos reais do trabalho.
+   - Rodapé (Footer): Completo com contatos e links sociais.
+5. REGRAS DE IMAGENS: Proibido placeholders ou imagens externas (Unsplash, etc). Se não houver imagem para uma seção, use gradientes premium ou ícones SVG elegantes que combinem com a marca.
+6. CORES E CTAS: Respeite a paleta solicitada. Botões de CTA (Chamada para Ação) devem ser verdes vibrantes e atraentes (#22c55e ou #16a34a).
+7. RESPONSIVIDADE: O design deve ser impecável em dispositivos móveis e desktop.
 
 Responda em português um briefing técnico com:
 - Paleta de cores completa (HEX)
-- Estrutura de Seções (Mínimo 6 seções: Header, Hero Impactante, Sobre Nós Detalhado, Nossos Serviços/Diferenciais, Galeria ou Prova Social, Contato/Footer)
-- Mapeamento exato de quais LINKS de imagem reais serão usados em cada local, identificando cada uma pela sua ETIQUETA.
+- Estrutura de Seções detalhada
+- Mapeamento exato de quais LINKS de imagem reais serão usados em cada local.
 
-Seja direto, autoritário e focado em alta conversão.`;
+Seja autoritário, criativo e focado em converter visitantes em clientes.`;
 
     let brief = "";
     try {
