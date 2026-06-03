@@ -69,10 +69,25 @@ export const completeActivation = createServerFn({ method: "POST" })
 
     await supabaseAdmin.from("activation_tokens").update({ used_at: nowIso }).eq("id", row.id);
     if (row.purpose === "activate") {
-      await enqueueEmail(supabaseAdmin, { email: row.email, name: prof?.name ?? row.email }, {
-        name: "credentials",
-        data: { name: prof?.name ?? row.email, email: row.email, password: data.password },
-      });
+      try {
+        const [{ renderTemplate }, { sendEmail }] = await Promise.all([
+          import("./email-templates.server"),
+          import("./smtp-sender.server"),
+        ]);
+        const rendered = renderTemplate({
+          name: "credentials",
+          data: { name: prof?.name ?? row.email, email: row.email, password: data.password },
+        });
+        await sendEmail({
+          to: row.email,
+          toName: prof?.name ?? row.email,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
+        });
+      } catch (mailError) {
+        console.error("[activation] failed to send credentials email:", mailError instanceof Error ? mailError.message : String(mailError));
+      }
     }
     return { ok: true, email: row.email };
   });
