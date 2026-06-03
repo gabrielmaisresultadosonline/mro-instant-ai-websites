@@ -251,9 +251,9 @@ function HowItWorks() {
           ))}
         </div>
         <div className="mt-12">
-          <Link to="/cadastro" className="inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
-            Começar agora — é grátis <span>→</span>
-          </Link>
+          <a href="#planos" className="inline-flex items-center gap-2 rounded-md btn-brand px-6 py-3.5 text-base font-semibold">
+            Quero meu site por R$6,97 <span>→</span>
+          </a>
         </div>
       </div>
     </section>
