@@ -49,7 +49,7 @@ function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sites")
-        .select("id, slug, title, is_published, gens_this_month, month_started_at, next_provider_idx, edits_this_week, week_started_at, updated_at, created_at")
+        .select("id, slug, title, is_published, gens_this_month, month_started_at, next_provider_idx, edits_this_week, week_started_at, updated_at, created_at, slug_changes_count, last_slug_change_at")
         .eq("owner_id", user.id)
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
