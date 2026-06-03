@@ -503,6 +503,7 @@ function FaqCta() {
                 href={KIWIFY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => fbEvent("AddToCart", { content_name: "Plano Anual CTA Final", value: 67.00, currency: "BRL" })}
                 className="rounded-md bg-green-600 hover:bg-green-700 px-6 py-3.5 text-base font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
               >
                 Comprar agora — R$ 6,97
