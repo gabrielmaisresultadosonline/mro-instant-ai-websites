@@ -344,33 +344,29 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       throw new Error(`A chave da I.A "${provider}" não foi configurada. Avise o administrador.`);
     }
 
-    // Step 1 — briefing (uses whichever chat model is available, prefers openai > deepseek > claude)
-    const imagesList = (data.images ?? []).map((im, i) => `${i + 1}. [${im.label}] ${im.url}`).join("\n") || "(nenhuma)";
+    // Step 1 — briefing
+    const imagesList = (data.images ?? []).map((im, i) => `IMAGEM_${i + 1}: [Etiqueta: ${im.label}] URL: ${im.url}`).join("\n") || "(Nenhuma imagem enviada)";
     
-    const briefPrompt = `Você é um diretor criativo de ELITE especializado em sites de altíssima conversão e design premium.
-O usuário enviou esta descrição exata:
+    const briefPrompt = `Você é um Diretor de Arte de uma agência de luxo. 
+O cliente enviou este pedido:
 "${data.prompt}"
 
-REGRAS RÍGIDAS DE CONTEÚDO:
-1. Respeite INTEGRALMENTE as informações fornecidas. NÃO invente serviços, endereços ou contatos que não foram pedidos.
-2. Expanda o conteúdo apenas para torná-lo profissional, mantendo a ESSÊNCIA do que foi solicitado.
-3. Se o usuário forneceu pouco texto, foque em um design "Clean" e minimalista, sem encher linguiça.
-
-IMAGENS DISPONÍVEIS (URLs REAIS):
+IMAGENS DO CLIENTE (OBRIGATÓRIO USAR):
 ${imagesList}
 
-REGRAS DE IMAGENS:
-1. Se houver uma imagem com etiqueta [logo], ela DEVE ser o logotipo principal.
-2. Se houver [banner] ou [hero], use-as em seções de destaque.
-3. Use as URLs exatamente como fornecidas.
+REGRAS RÍGIDAS:
+1. DESIGN PREMIUM: O site deve ser visualmente deslumbrante, moderno e elegante.
+2. CORES: Se o usuário não especificou cores, use uma paleta luxuosa (ex: Dourado e Preto, ou tons pastéis sofisticados). Se ele especificou, siga à risca.
+3. LOGO: Se houver uma imagem com etiqueta [logo], ela DEVE ser o elemento principal do cabeçalho.
+4. CONTEÚDO: Respeite as informações do usuário (nome, serviços, contato).
+5. WHATSAPP: Se houver um número, os botões devem abrir: https://wa.me/55NUMERO (removendo parênteses e espaços).
 
-Responda em português um briefing estruturado:
-- Nome/Título do site
-- Paleta de cores (4-5 hex)
-- Estrutura de Seções (Hero, Sobre, Serviços, Galeria, Contato, Rodapé)
-- Instrução de onde cada imagem [etiqueta] será posicionada.
+Responda em português um briefing técnico com:
+- Paleta de cores (HEX)
+- Estrutura de Seções detalhada (Mínimo 6 seções)
+- Onde cada imagem será usada exatamente.
 
-Direto, sem introduções.`;
+Seja direto.`;
 
     let brief = "";
     try {
@@ -378,7 +374,7 @@ Direto, sem introduções.`;
         const r = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: briefPrompt }], temperature: 0.5 }),
+          body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: briefPrompt }], temperature: 0.4 }),
         });
         if (r.ok) {
           const j = await r.json() as { choices: { message: { content: string } }[] };
@@ -387,28 +383,25 @@ Direto, sem introduções.`;
       }
     } catch (e) { console.error("brief error", e); }
 
-    const codePrompt = `Gere o código HTML de um site profissional e luxuoso seguindo ESTREITAMENTE o briefing e a descrição abaixo.
+    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END DO MUNDO. Sua missão é criar um site HTML/Tailwind DESLUMBRANTE e COMPLETO.
 
-DESCRIÇÃO ORIGINAL DO USUÁRIO:
+BRIEFING DE ARTE:
+${brief}
+
+PEDIDO ORIGINAL DO CLIENTE:
 "${data.prompt}"
 
-BRIEFING:
-${brief || "Siga a descrição original."}
-
-IMAGENS DISPONÍVEIS (OBRIGATÓRIO USAR):
+IMAGENS REAIS DO CLIENTE (VOCÊ DEVE USAR TODAS):
 ${imagesList}
 
-REGRAS CRÍTICAS:
-1. RESPEITO À DESCRIÇÃO: Não adicione seções ou informações que não foram solicitadas. Se o usuário pediu algo simples, faça algo simples e elegante.
-2. IMAGENS: Se houver uma imagem [logo], ela DEVE estar no <header>. Se houver [banner], deve estar na seção Hero. Use as URLs REAIS fornecidas.
-3. QUALIDADE: Use Tailwind CSS (via CDN) para um design moderno, Glassmorphism, e fontes do Google Fonts.
-4. ESTRUTURA: Retorne APENAS o código HTML completo em um único arquivo, sem comentários, pronto para uso.
-5. LINGUAGEM: Site em português.
+REGRAS DE OURO (NÃO QUEBRE):
+1. USE AS IMAGENS: Se houver uma imagem com etiqueta [logo], coloque-a no Header com <img src="URL" class="h-12 w-auto">. NÃO invente texto se houver logo.
+2. LAYOUT COMPLETO: Crie um site longo, com Header, Hero (Destaque), Sobre, Serviços (Cards elegantes), Galeria (se houver fotos), Contato e Footer.
+3. DESIGN: Use Tailwind CSS. Adicione gradientes, sombras suaves, animações de hover e fontes elegantes (Google Fonts).
+4. CÓDIGO: Retorne APENAS o código HTML puro, sem Markdown, pronto para abrir no navegador.
+5. WHATSAPP: Gere o link correto para o número no prompt (ex: https://wa.me/557130351655).
 
-URLs DE IMAGENS QUE VOCÊ DEVE USAR:
-${imagesList}
-
-Não use placeholders. Se uma imagem foi enviada, use-a.`;
+NUNCA use placeholders. Use apenas as URLs de imagem fornecidas acima.`;
 
     function cleanHtml(s: string) {
       return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
