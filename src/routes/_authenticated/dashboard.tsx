@@ -425,13 +425,52 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Card label="Visitas totais" value={String(insights?.total ?? 0)} />
         <Card label="Site criado em" value={createdAt} />
         <Card label="Último acesso" value={lastVisit} sub={lastVisitLoc} />
         <Card label="Gerações no mês" value={`${(site as { gens_this_month?: number }).gens_this_month ?? 0}/3`} />
         <Card label="Uso restante" value={`${daysRemaining} dias`} />
+        <div 
+          onClick={() => setShowAffiliateModal(true)}
+          className="cursor-pointer rounded-xl border border-brand/30 bg-brand/5 p-4 transition-all hover:bg-brand/10 hover:border-brand"
+        >
+          <div className="text-xs uppercase tracking-wide text-brand font-bold">Ganhe dinheiro</div>
+          <div className="mt-1 font-display text-lg font-bold leading-tight">SEJA UM AFILIADO 30%</div>
+          <div className="mt-1 text-[10px] text-muted-foreground uppercase">Clique e saiba mais</div>
+        </div>
       </div>
+
+      {showAffiliateModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h2 className="font-display text-2xl font-bold text-center">Seja um afiliado MRO.BIO!</h2>
+            <p className="mt-4 text-center text-muted-foreground leading-relaxed">
+              Indique o <span className="font-bold text-foreground">MRO.BIO</span> e receba <span className="text-emerald-500 font-bold">30% de comissão</span> recorrente por cada venda realizada através do seu link.
+            </p>
+            
+            <div className="mt-8 space-y-3">
+              <a 
+                href="https://dashboard.kiwify.com/join/affiliate/4MQti5Q4" 
+                target="_blank" 
+                rel="noreferrer"
+                className="block w-full rounded-lg btn-brand py-3.5 text-center text-sm font-bold shadow-lg shadow-brand/20"
+              >
+                Quero ser um afiliado Kiwify 🚀
+              </a>
+              <button 
+                onClick={() => setShowAffiliateModal(false)}
+                className="w-full rounded-lg border border-border py-3 text-sm font-medium hover:bg-accent/40"
+              >
+                Fechar
+              </button>
+            </div>
+            <p className="mt-4 text-[10px] text-center text-muted-foreground uppercase">
+              Plataforma parceira: Kiwify
+            </p>
+          </div>
+        </div>
+      )}
 
       <section className="mt-8 rounded-xl border border-border bg-card p-5">
         <h2 className="mb-3 font-display text-lg font-bold">Top regiões</h2>
