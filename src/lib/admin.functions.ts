@@ -154,6 +154,19 @@ export const adminResetUserGenerations = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminDeleteSite = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; siteId: string }) =>
+    z.object({ token: z.string(), siteId: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("sites").delete().eq("id", data.siteId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
 // ============================================================
 // Kiwify / Subscriptions / Email outbox admin
 // ============================================================

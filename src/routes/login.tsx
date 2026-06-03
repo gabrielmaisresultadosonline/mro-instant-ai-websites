@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -14,15 +14,24 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("mrobio_login_email");
+    if (savedEmail) setEmail(savedEmail);
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+    
+    localStorage.setItem("mrobio_login_email", email);
+    
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/dashboard" });
   }
+
 
   return (
     <div className="grid min-h-screen place-items-center bg-background px-5">

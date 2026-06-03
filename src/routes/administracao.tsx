@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { adminLogin, adminListUsers, adminListSites, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail, adminDashboardStats, adminGetKiwifyWebhookUrl, adminSendTestEmail } from "@/lib/admin.functions";
+import { adminLogin, adminListUsers, adminListSites, adminDeleteSite, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail, adminDashboardStats, adminGetKiwifyWebhookUrl, adminSendTestEmail } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/administracao")({
   ssr: false,
@@ -91,6 +91,7 @@ function AdminLogin({ onLogin }: { onLogin: (t: string) => void }) {
 function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => void }) {
   const usersFn = useServerFn(adminListUsers);
   const sitesFn = useServerFn(adminListSites);
+  const delSiteFn = useServerFn(adminDeleteSite);
   const delUserFn = useServerFn(adminDeleteUser);
   const resetGenFn = useServerFn(adminResetUserGenerations);
   const getSettingsFn = useServerFn(adminGetSettings);
@@ -165,6 +166,12 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     try { await resetGenFn({ data: { token, userId: uid } }); toast.success("Gerações renovadas"); }
     catch (e) { toast.error((e as Error).message); }
   }
+  async function handleDeleteSite(sid: string, slug: string) {
+    if (!confirm(`Excluir o site ${slug}.mro.bio? Essa ação não pode ser desfeita.`)) return;
+    try { await delSiteFn({ data: { token, siteId: sid } }); toast.success("Site excluído"); void reload(); }
+    catch (e) { toast.error((e as Error).message); }
+  }
+
   async function handleGrant(uid: string, email: string) {
     const d = prompt(`Quantos dias de acesso conceder para ${email}?`, "365");
     if (!d) return;
@@ -328,8 +335,12 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                   <td className="px-4 py-3">{s.visits}</td>
                   <td className="px-4 py-3 text-xs text-white/60">{new Date(s.updated_at).toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3 text-right">
-                    <a href={`https://${s.slug}.mro.bio`} target="_blank" rel="noreferrer"
-                      className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">Ver ↗</a>
+                    <div className="flex justify-end gap-2">
+                      <a href={`https://${s.slug}.mro.bio`} target="_blank" rel="noreferrer"
+                        className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">Ver ↗</a>
+                      <button onClick={() => handleDeleteSite(s.id, s.slug)}
+                        className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10">Excluir</button>
+                    </div>
                   </td>
                 </tr>
               ))}
