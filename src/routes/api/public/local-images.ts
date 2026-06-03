@@ -93,7 +93,7 @@ export const Route = createFileRoute("/api/public/local-images")({
           const image: LocalImage = {
             id,
             path: relativePath,
-            public_url: `https://mro.bio/uploads/${relativePath}`,
+            public_url: `/uploads/${relativePath}`,
             label: label || null,
             created_at: new Date().toISOString(),
           };
