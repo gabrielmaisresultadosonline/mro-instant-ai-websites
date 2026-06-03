@@ -57,8 +57,9 @@ function Dashboard() {
       return { sites: data ?? [] };
     },
     retry: 2,
+    staleTime: 0, // Garante que pegamos dados frescos
   });
-  const site = list?.sites[0];
+  const site = list?.sites && list.sites.length > 0 ? list.sites[0] : null;
 
   const createSiteMut = useMutation({
     mutationFn: async (vars: { title: string; slug: string }) => {
