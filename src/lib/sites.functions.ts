@@ -128,21 +128,31 @@ export const deleteSite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
     
-    // Buscar imagens do usuário antes de deletar o site (ou as gerações dele)
-    // Nota: site_images não é necessariamente ligada a um site_id, mas ao owner_id.
-    // O usuário quer que ao deletar o site, as imagens "acabam indo também".
-    // Como cada usuário só tem 1 site hoje (conforme regra na linha 41),
-    // deletar o site equivale a deletar tudo do usuário.
-    
+    // Buscar imagens do usuário para deletar do HD da VPS
     const { data: images } = await supabaseAdmin
       .from("site_images")
       .select("path")
       .eq("owner_id", userId);
 
     if (images && images.length > 0) {
-      const paths = images.map(img => img.path);
-      await supabaseAdmin.storage.from("site-images").remove(paths);
+      for (const img of images) {
+        const filePath = path.join(process.cwd(), "public", "uploads", img.path);
+        try {
+          await fs.unlink(filePath);
+        } catch (e) {
+          console.error("Erro ao deletar arquivo:", filePath, e);
+        }
+      }
+      
+      // Deleta as pastas vazias do usuário
+      const userDir = path.join(process.cwd(), "public", "uploads", userId);
+      try {
+        await fs.rm(userDir, { recursive: true, force: true });
+      } catch (e) {}
+
       await supabaseAdmin.from("site_images").delete().eq("owner_id", userId);
     }
 
