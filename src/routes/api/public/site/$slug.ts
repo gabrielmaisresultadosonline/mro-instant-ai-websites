@@ -42,7 +42,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           return new Response("Site indisponível", { status: 503 });
         }
 
-        const publicDb = createClient(supabaseUrl, supabaseKey, {
+        const publicDb = createClient<any>(supabaseUrl, supabaseKey, {
           auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
         });
 
