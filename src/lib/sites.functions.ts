@@ -681,7 +681,7 @@ ${baseHtml}`;
       .insert({
         site_id: gen.site_id,
         owner_id: userId,
-        provider,
+        provider: actualProvider,
         prompt: gen.prompt ?? "",
         edit_prompt: data.prompt,
         parent_generation_id: rootId,
