@@ -107,9 +107,13 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const sendTestFn = useServerFn(adminSendTestEmail);
   const createUserFn = useServerFn(adminCreateManualUser);
   const updateQuotaFn = useServerFn(adminUpdateUserQuota);
+  const resellerListFn = useServerFn(adminListResellerOrders);
+  const resellerResendFn = useServerFn(adminResendResellerAccess);
+  const resellerMarkPaidFn = useServerFn(adminMarkResellerPaid);
 
-  type Tab = "dashboard" | "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "settings";
+  type Tab = "dashboard" | "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "reseller" | "settings";
   const [tab, setTab] = useState<Tab>("dashboard");
+  const [resellerOrders, setResellerOrders] = useState<Array<{ id: string; order_nsu: string; name: string; email: string; whatsapp: string; amount_cents: number; status: string; checkout_url: string | null; user_id: string | null; paid_at: string | null; provisioned_at: string | null; last_error: string | null; created_at: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number; max_sites?: number; is_reseller?: boolean; created_by_admin?: boolean }>>([]);
   const [sites, setSites] = useState<Array<{ id: string; slug: string; title: string; owner_id: string; is_published: boolean; updated_at: string; visits: number }>>([]);
   const [subs, setSubs] = useState<Array<{ id: string; name: string; email: string; subscription_status: string; subscription_expires_at: string | null; grace_period_ends_at: string | null; kiwify_order_id: string | null; last_payment_at: string | null }>>([]);
