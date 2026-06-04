@@ -606,7 +606,7 @@ REGRAS TÉCNICAS:
 - LOGO: Se houver imagem "logo", use no header.
 - CTAs: Botões verdes vibrantes (bg-green-600).
 - ESTRUTURA: Mínimo 6 seções.
-- SAÍDA: Retorne APENAS o código HTML completo.`;
+- SAÍDA: Retorne APENAS o código HTML completo. SEJA CONCISO E EFICIENTE NO CÓDIGO.`;
 
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
