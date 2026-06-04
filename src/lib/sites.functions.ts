@@ -669,9 +669,6 @@ PEDIDO DE EDIÇÃO:
 HTML ATUAL (BASE — EDITE ESTE):
 ${baseHtml}`;
 
-    function _unused_cleanHtml(s: string) { return s; }
-    void _unused_cleanHtml;
-
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3);
     const actualProvider: Provider = providerUsed;
 
