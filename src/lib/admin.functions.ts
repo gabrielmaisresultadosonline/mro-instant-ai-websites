@@ -327,6 +327,87 @@ export const adminDashboardStats = createServerFn({ method: "POST" })
       .order("subscription_expires_at", { ascending: true })
       .limit(10);
 
+
+// ============================================================
+// Reseller orders (InfinitePay)
+// ============================================================
+
+export const adminListResellerOrders = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; status?: string }) =>
+    z.object({
+      token: z.string(),
+      status: z.enum(["pending", "paid", "provisioned", "failed", "all"]).default("all"),
+    }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let q = supabaseAdmin
+      .from("reseller_orders")
+      .select("id, order_nsu, name, email, whatsapp, amount_cents, status, checkout_url, transaction_nsu, invoice_slug, receipt_url, user_id, paid_at, provisioned_at, last_check_at, last_error, created_at")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (data.status !== "all") q = q.eq("status", data.status);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminResendResellerAccess = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; orderId: string }) =>
+    z.object({ token: z.string(), orderId: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: order } = await supabaseAdmin
+      .from("reseller_orders")
+      .select("name, email, user_id")
+      .eq("id", data.orderId)
+      .maybeSingle();
+    if (!order || !order.user_id) throw new Error("Pedido ainda não provisionado.");
+
+    const tokenBytes = new Uint8Array(32);
+    crypto.getRandomValues(tokenBytes);
+    const token = Array.from(tokenBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const email = order.email.trim().toLowerCase();
+    await supabaseAdmin.from("activation_tokens").insert({
+      token, email, profile_id: order.user_id, purpose: "reset",
+      expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
+    const { renderTemplate } = await import("@/lib/email-templates.server");
+    const r = renderTemplate({
+      name: "password_reset",
+      data: { name: order.name, resetUrl: `https://mro.bio/redefinir-senha/${token}` },
+    });
+    await supabaseAdmin.from("email_outbox").insert({
+      to_email: email, to_name: order.name,
+      subject: r.subject, body_html: r.html, body_text: r.text,
+      template: "password_reset", status: "pending",
+    });
+    return { ok: true };
+  });
+
+export const adminMarkResellerPaid = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; orderId: string }) =>
+    z.object({ token: z.string(), orderId: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("reseller_orders")
+      .update({ status: "paid", paid_at: new Date().toISOString() })
+      .eq("id", data.orderId);
+    // Provision via the public reseller fn module
+    const { checkResellerOrder } = await import("@/lib/reseller.functions");
+    const { data: row } = await supabaseAdmin.from("reseller_orders").select("order_nsu").eq("id", data.orderId).maybeSingle();
+    if (row) {
+      try { await (checkResellerOrder as unknown as (a: { data: { orderNsu: string } }) => Promise<unknown>)({ data: { orderNsu: row.order_nsu } }); } catch { /* ignore */ }
+    }
+    return { ok: true };
+  });
+
     return {
       totals: {
         users: totalUsers ?? 0,
