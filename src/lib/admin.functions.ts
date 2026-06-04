@@ -55,7 +55,7 @@ export const adminListUsers = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
-      .select("id, name, email, whatsapp, cpf, created_at")
+      .select("id, name, email, whatsapp, cpf, created_at, max_sites, is_reseller, created_by_admin")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     // Attach site count per user
