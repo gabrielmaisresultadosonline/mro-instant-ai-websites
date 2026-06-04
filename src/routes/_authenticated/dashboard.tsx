@@ -535,6 +535,7 @@ function Dashboard() {
           </ul>
         )}
       </section>
+      <TutorialButton />
     </main>
   );
 }
