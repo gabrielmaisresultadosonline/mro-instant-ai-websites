@@ -59,9 +59,12 @@ function Login() {
         <button disabled={loading} className="mt-5 w-full rounded-md btn-brand px-5 py-3 text-sm font-semibold disabled:opacity-60">
           {loading ? "Entrando..." : "Entrar"}
         </button>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Ainda não tem conta? <Link to="/cadastro" className="font-semibold text-foreground">Criar agora</Link>
-        </p>
+        <a
+          href="https://pay.kiwify.com.br/1mMYvVU"
+          className="mt-3 block w-full rounded-md border border-brand bg-background px-5 py-3 text-center text-sm font-semibold text-foreground hover:bg-brand/10 transition"
+        >
+          Comprar agora →
+        </a>
       </form>
     </div>
   );
