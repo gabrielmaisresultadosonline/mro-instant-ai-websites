@@ -632,7 +632,7 @@ REGRAS: Mínimo 6 seções. Botões de CTA verdes (bg-green-600). Retorne APENAS
       monthlyLimit: MONTHLY_LIMIT,
     };
   });
-  });
+
 
 // --- Edit a generated model (keeps same model, applies tweaks) ---
 export const getEditQuota = createServerFn({ method: "GET" })
