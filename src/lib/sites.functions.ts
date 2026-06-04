@@ -119,6 +119,23 @@ export const saveSite = createServerFn({ method: "POST" })
 
     const { error } = await supabase.from("sites").update(update).eq("id", data.id).eq("owner_id", userId);
     if (error) throw new Error(error.message);
+
+    // Provisiona SSL automaticamente para o subdomínio quando o site é publicado
+    // ou quando o link (slug) é alterado. Fire-and-forget: não bloqueia o save.
+    const finalSlug = (update.slug as string | undefined) ?? site.slug;
+    const shouldProvision = update.is_published === true || update.slug !== undefined;
+    if (shouldProvision && finalSlug) {
+      const url = process.env.SSL_PROVISION_URL;
+      const token = process.env.SSL_PROVISION_TOKEN;
+      if (url && token) {
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ slug: finalSlug }),
+        }).catch((e) => console.error("[SSL] provision failed:", e));
+      }
+    }
+
     return { ok: true };
   });
 
