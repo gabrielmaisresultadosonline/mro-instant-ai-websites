@@ -101,7 +101,7 @@ async function provisionOrder(orderId: string): Promise<{ provisioned: boolean }
     name: "activation",
     data: { name: order.name, activationUrl: `${BASE}/ativar/${token}` },
   });
-  await supabaseAdmin.from("email_outbox").insert({
+  const { data: outboxRow } = await supabaseAdmin.from("email_outbox").insert({
     to_email: email,
     to_name: order.name,
     subject: r.subject,
@@ -109,7 +109,11 @@ async function provisionOrder(orderId: string): Promise<{ provisioned: boolean }
     body_text: r.text,
     template: "activation",
     status: "pending",
-  });
+  }).select("id").single();
+  if (outboxRow?.id) {
+    const { flushEmailNow } = await import("@/lib/email-flush.server");
+    await flushEmailNow(outboxRow.id);
+  }
 
   // 5) Mark provisioned
   await supabaseAdmin
