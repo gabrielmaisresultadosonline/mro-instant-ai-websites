@@ -195,6 +195,26 @@ function SiteEditor() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  async function runEdit() {
+    if (!activeGen) { toast.error("Você precisa ter uma versão ativa para editar."); return; }
+    if (editPrompt.trim().length < 5) { toast.error("Descreva o que deseja editar."); return; }
+    if (editsLeft <= 0) { toast.error(`Você usou as ${editsLimit} edições deste modelo no mês.`); return; }
+    setEditing(true);
+    try {
+      const res = await editGenFn({ data: { generationId: activeGen.id, prompt: editPrompt } });
+      setPreview({ id: res.generationId, provider: res.provider, html: res.html });
+      setEditPrompt("");
+      setTab("preview");
+      qc.invalidateQueries({ queryKey: ["generations", id] });
+      qc.invalidateQueries({ queryKey: ["edit-quota", activeGen.id] });
+      toast.success(`Edição pronta — ${res.editsUsed}/${res.editsLimit} no mês deste modelo.`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEditing(false);
+    }
+  }
+
   async function openHistoryItem(genId: string) {
     try {
       const row = await getGenHtmlFn({ data: { id: genId } });
