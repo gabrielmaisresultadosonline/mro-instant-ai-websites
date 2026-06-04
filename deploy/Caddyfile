@@ -27,10 +27,19 @@ mro.bio, www.mro.bio {
 	}
 	encode zstd gzip
 
-	@sub header_regexp slug Host ^([a-z0-9][a-z0-9-]{1,28}[a-z0-9])\.mro\.bio$
+	@subRoot {
+		header_regexp slug Host ^([a-z0-9][a-z0-9-]{1,28}[a-z0-9])\.mro\.bio$
+		path /
+	}
 
-	handle @sub {
-		rewrite / /api/public/site/{re.slug.1}
+	handle @subRoot {
+		rewrite * /api/public/site/{re.slug.1}
+		reverse_proxy app:3000
+	}
+
+	@subPath header_regexp slug Host ^([a-z0-9][a-z0-9-]{1,28}[a-z0-9])\.mro\.bio$
+
+	handle @subPath {
 		rewrite * /api/public/site/{re.slug.1}{uri}
 		reverse_proxy app:3000
 	}
