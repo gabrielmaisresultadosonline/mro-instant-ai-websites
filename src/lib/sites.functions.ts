@@ -541,6 +541,8 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
 2. IMAGENS REAIS: Use os links acima em seções de Hero, Galeria e Serviços. NUNCA invente URLs ou use placeholders externos.
 3. CTAs VERDES: Todos os botões de ação principal DEVEM ser verdes vibrantes (bg-green-600, hover:bg-green-700) para máxima conversão.
 4. ESTRUTURA RICA: Mínimo de 6 seções (Header, Hero Impactante, Sobre Nós, Serviços com Cards, Galeria/Social, Contato/Footer).
+5. SAÍDA: Retorne APENAS o código HTML completo.`;
+
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7);
     const actualProvider: Provider = providerUsed;
 
