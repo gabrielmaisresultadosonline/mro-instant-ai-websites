@@ -654,12 +654,7 @@ export const editGeneration = createServerFn({ method: "POST" })
       deepseek: settings?.deepseek_token,
       claude: settings?.claude_token,
     };
-    let provider: Provider = gen.provider as Provider;
-    if (!tokens[provider]) {
-      const fallback = (["claude", "openai", "deepseek"] as const).find((p) => !!tokens[p]);
-      if (!fallback) throw new Error("Nenhuma chave de I.A configurada. Avise o administrador.");
-      provider = fallback;
-    }
+    const provider: Provider = (gen.provider as Provider) ?? "deepseek";
 
     const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e um PEDIDO DE EDIÇÃO do cliente.
 REGRAS:
