@@ -38,6 +38,8 @@ function SiteEditor() {
   const getGenHtmlFn = useServerFn(getGenerationHtml);
   const activateGenFn = useServerFn(activateGeneration);
   const deleteGenFn = useServerFn(deleteGeneration);
+  const editGenFn = useServerFn(editGeneration);
+  const getEditQuotaFn = useServerFn(getEditQuota);
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
