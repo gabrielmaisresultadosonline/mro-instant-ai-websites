@@ -262,6 +262,13 @@ export type Database = {
             foreignKeyName: "site_generations_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
+            referencedRelation: "published_sites_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_generations_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
@@ -296,6 +303,13 @@ export type Database = {
           site_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "site_images_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "published_sites_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "site_images_site_id_fkey"
             columns: ["site_id"]
@@ -340,6 +354,13 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "site_visits_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "published_sites_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "site_visits_site_id_fkey"
             columns: ["site_id"]
@@ -464,7 +485,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      published_sites_public: {
+        Row: {
+          html: string | null
+          id: string | null
+          is_blocked: boolean | null
+          pixels: Json | null
+          slug: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
