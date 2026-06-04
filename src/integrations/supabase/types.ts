@@ -167,13 +167,16 @@ export type Database = {
         Row: {
           cpf: string
           created_at: string
+          created_by_admin: boolean
           email: string
           expired_notice_sent_at: string | null
           grace_period_ends_at: string | null
           id: string
+          is_reseller: boolean
           kiwify_customer_email: string | null
           kiwify_order_id: string | null
           last_payment_at: string | null
+          max_sites: number
           name: string
           reminder_1d_sent_at: string | null
           reminder_2d_sent_at: string | null
@@ -186,13 +189,16 @@ export type Database = {
         Insert: {
           cpf: string
           created_at?: string
+          created_by_admin?: boolean
           email: string
           expired_notice_sent_at?: string | null
           grace_period_ends_at?: string | null
           id: string
+          is_reseller?: boolean
           kiwify_customer_email?: string | null
           kiwify_order_id?: string | null
           last_payment_at?: string | null
+          max_sites?: number
           name: string
           reminder_1d_sent_at?: string | null
           reminder_2d_sent_at?: string | null
@@ -205,13 +211,16 @@ export type Database = {
         Update: {
           cpf?: string
           created_at?: string
+          created_by_admin?: boolean
           email?: string
           expired_notice_sent_at?: string | null
           grace_period_ends_at?: string | null
           id?: string
+          is_reseller?: boolean
           kiwify_customer_email?: string | null
           kiwify_order_id?: string | null
           last_payment_at?: string | null
+          max_sites?: number
           name?: string
           reminder_1d_sent_at?: string | null
           reminder_2d_sent_at?: string | null

@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { adminLogin, adminListUsers, adminListSites, adminDeleteSite, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail, adminDashboardStats, adminGetKiwifyWebhookUrl, adminSendTestEmail } from "@/lib/admin.functions";
+import { adminLogin, adminListUsers, adminListSites, adminDeleteSite, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail, adminDashboardStats, adminGetKiwifyWebhookUrl, adminSendTestEmail, adminCreateManualUser, adminUpdateUserQuota } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/administracao")({
   ssr: false,
@@ -105,10 +105,12 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const statsFn = useServerFn(adminDashboardStats);
   const kiwifyUrlFn = useServerFn(adminGetKiwifyWebhookUrl);
   const sendTestFn = useServerFn(adminSendTestEmail);
+  const createUserFn = useServerFn(adminCreateManualUser);
+  const updateQuotaFn = useServerFn(adminUpdateUserQuota);
 
   type Tab = "dashboard" | "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "settings";
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number }>>([]);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number; max_sites?: number; is_reseller?: boolean; created_by_admin?: boolean }>>([]);
   const [sites, setSites] = useState<Array<{ id: string; slug: string; title: string; owner_id: string; is_published: boolean; updated_at: string; visits: number }>>([]);
   const [subs, setSubs] = useState<Array<{ id: string; name: string; email: string; subscription_status: string; subscription_expires_at: string | null; grace_period_ends_at: string | null; kiwify_order_id: string | null; last_payment_at: string | null }>>([]);
   const [outbox, setOutbox] = useState<Array<{ id: string; to_email: string; subject: string; template: string; status: string; attempts: number; last_error: string | null; created_at: string; sent_at: string | null }>>([]);
@@ -122,6 +124,8 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const [testEmailTo, setTestEmailTo] = useState("");
   const [testTemplate, setTestTemplate] = useState("activation");
   const [sendingTest, setSendingTest] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", whatsapp: "", cpf: "", maxSites: 1, sendEmail: true });
+  const [creatingUser, setCreatingUser] = useState(false);
 
   async function reload() {
     try {
@@ -154,6 +158,29 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     } catch (e) { toast.error((e as Error).message); }
     finally { setSendingTest(false); }
   }
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (newUser.password.length < 6) { toast.error("Senha mínima de 6 caracteres"); return; }
+    setCreatingUser(true);
+    try {
+      await createUserFn({ data: { token, ...newUser } });
+      toast.success(`Usuário ${newUser.email} criado${newUser.sendEmail ? " e e-mail enfileirado" : ""}`);
+      setNewUser({ name: "", email: "", password: "", whatsapp: "", cpf: "", maxSites: 1, sendEmail: true });
+      void reload();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setCreatingUser(false); }
+  }
+
+  async function handleEditQuota(uid: string, email: string, current: number) {
+    const v = prompt(`Quantos sites ${email} pode criar?`, String(current));
+    if (!v) return;
+    const n = parseInt(v, 10);
+    if (!n || n < 1 || n > 100) return toast.error("Número inválido (1-100).");
+    try { await updateQuotaFn({ data: { token, userId: uid, maxSites: n } }); toast.success("Cota atualizada"); void reload(); }
+    catch (e) { toast.error((e as Error).message); }
+  }
+
 
 
   async function handleDeleteUser(uid: string, email: string) {
@@ -287,36 +314,86 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
 
 
       {tab === "users" && (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="min-w-full text-sm">
-            <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
-              <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">CPF</th><th className="px-4 py-3">Sites</th><th className="px-4 py-3">Cadastro</th><th className="px-4 py-3"></th></tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {users.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-white/50">Nenhum usuário ainda.</td></tr>
-              ) : users.map((u) => (
-                <tr key={u.id}>
-                  <td className="px-4 py-3">{u.name}</td>
-                  <td className="px-4 py-3">{u.email}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{u.whatsapp}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{u.cpf}</td>
-                  <td className="px-4 py-3">{u.site_count}</td>
-                  <td className="px-4 py-3 text-xs text-white/60">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleResetGen(u.id, u.email)}
-                        className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Renovar gerações</button>
-                      <button onClick={() => handleDeleteUser(u.id, u.email)}
-                        className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10">Excluir</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-5">
+          <form onSubmit={handleCreateUser} className="rounded-xl border border-brand/30 bg-brand/5 p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-lg font-bold">Cadastrar usuário manualmente</h2>
+                <p className="text-xs text-white/60">Crie a conta com e-mail e senha. Marque para enviar os dados de acesso por e-mail.</p>
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input required placeholder="Nome" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <input required type="email" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <input required type="text" placeholder="Senha (mín. 6 caracteres)" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm font-mono focus:border-brand focus:outline-none" />
+              <input placeholder="WhatsApp (opcional)" value={newUser.whatsapp} onChange={(e) => setNewUser({ ...newUser, whatsapp: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <input placeholder="CPF (opcional)" value={newUser.cpf} onChange={(e) => setNewUser({ ...newUser, cpf: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <label className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 p-2.5 text-sm">
+                <span className="text-white/70">Sites permitidos:</span>
+                <input type="number" min={1} max={100} value={newUser.maxSites} onChange={(e) => setNewUser({ ...newUser, maxSites: Math.max(1, parseInt(e.target.value || "1", 10)) })}
+                  className="w-20 rounded border border-white/20 bg-white/5 px-2 py-1 text-sm" />
+                {newUser.maxSites > 1 && <span className="ml-2 rounded bg-brand/20 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">VIP Revendedor</span>}
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={newUser.sendEmail} onChange={(e) => setNewUser({ ...newUser, sendEmail: e.target.checked })} />
+                Enviar dados de acesso por e-mail
+              </label>
+              <button disabled={creatingUser} type="submit"
+                className="rounded-md btn-brand px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                {creatingUser ? "Criando…" : "Criar usuário"}
+              </button>
+            </div>
+          </form>
+
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
+                <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">CPF</th><th className="px-4 py-3">Sites</th><th className="px-4 py-3">Cota</th><th className="px-4 py-3">Cadastro</th><th className="px-4 py-3"></th></tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {users.length === 0 ? (
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-white/50">Nenhum usuário ainda.</td></tr>
+                ) : users.map((u) => (
+                  <tr key={u.id}>
+                    <td className="px-4 py-3">
+                      {u.name}
+                      {u.is_reseller && <span className="ml-2 rounded bg-brand/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand">VIP</span>}
+                      {u.created_by_admin && <span className="ml-1 text-[9px] uppercase text-white/40">manual</span>}
+                    </td>
+                    <td className="px-4 py-3">{u.email}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{u.whatsapp}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{u.cpf}</td>
+                    <td className="px-4 py-3">{u.site_count}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => handleEditQuota(u.id, u.email, u.max_sites ?? 1)}
+                        className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">
+                        {u.max_sites ?? 1} site{(u.max_sites ?? 1) > 1 ? "s" : ""} ✎
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-white/60">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleResetGen(u.id, u.email)}
+                          className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Renovar gerações</button>
+                        <button onClick={() => handleDeleteUser(u.id, u.email)}
+                          className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10">Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
 
       {tab === "sites" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">

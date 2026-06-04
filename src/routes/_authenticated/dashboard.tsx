@@ -37,13 +37,15 @@ function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("subscription_status, subscription_expires_at")
+        .select("subscription_status, subscription_expires_at, max_sites, is_reseller")
         .eq("id", user.id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
+  const isReseller = !!(sub as { is_reseller?: boolean } | null)?.is_reseller;
+  const maxSites = (sub as { max_sites?: number } | null)?.max_sites ?? 1;
 
   const { data: list, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-sites", user.id],
@@ -295,9 +297,50 @@ function Dashboard() {
     ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
 
+  const sitesCount = list?.sites?.length ?? 0;
+  const canCreateMore = sitesCount < maxSites;
+
   return (
     <main className="mx-auto max-w-6xl px-5 py-10">
+      {isReseller && (
+        <div className="mb-6 rounded-2xl border border-brand bg-gradient-to-r from-brand/20 via-brand/10 to-transparent p-5 shadow-lg shadow-brand/10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-brand text-lg font-bold text-brand-foreground">★</span>
+              <div>
+                <div className="font-display text-lg font-bold uppercase tracking-wide">Usuário VIP · Revendedor</div>
+                <div className="text-xs text-muted-foreground">Você pode criar até <strong>{maxSites} sites</strong> com slugs diferentes. {sitesCount}/{maxSites} usados.</div>
+              </div>
+            </div>
+            {canCreateMore && (
+              <Link to="/sites/novo" className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">+ Novo site</Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isReseller && (list?.sites?.length ?? 0) > 1 && (
+        <div className="mb-6 rounded-xl border border-border bg-card p-4">
+          <div className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Meus sites ({sitesCount})</div>
+          <ul className="divide-y divide-border">
+            {list!.sites.map((s) => (
+              <li key={s.id} className="flex items-center justify-between py-2 text-sm">
+                <div>
+                  <span className="font-mono">{s.slug}.mro.bio</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{s.title || "—"}</span>
+                  <span className={`ml-2 text-xs ${s.is_published ? "text-emerald-500" : "text-amber-500"}`}>
+                    {s.is_published ? "🟢 publicado" : "🟡 rascunho"}
+                  </span>
+                </div>
+                <Link to="/sites/$id" params={{ id: s.id }} className="rounded border border-border px-3 py-1 text-xs font-medium hover:bg-accent/40">Editar</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-end justify-between gap-3">
+
         <div className="flex-1">
           {isEditing ? (
             <div className="space-y-3 max-w-md">

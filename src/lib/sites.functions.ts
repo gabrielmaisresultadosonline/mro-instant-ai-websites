@@ -38,8 +38,14 @@ export const createSite = createServerFn({ method: "POST" })
     }
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: mine } = await supabaseAdmin.from("sites").select("id").eq("owner_id", userId).limit(1);
-    if (mine && mine.length > 0) throw new Error("Você já possui um site. Cada conta pode ter apenas um.");
+    const { data: profile } = await supabaseAdmin.from("profiles").select("max_sites").eq("id", userId).maybeSingle();
+    const maxSites = (profile as { max_sites?: number } | null)?.max_sites ?? 1;
+    const { data: mine } = await supabaseAdmin.from("sites").select("id").eq("owner_id", userId);
+    if ((mine?.length ?? 0) >= maxSites) {
+      throw new Error(maxSites === 1
+        ? "Você já possui um site. Cada conta pode ter apenas um."
+        : `Você atingiu o limite de ${maxSites} sites da sua conta.`);
+    }
     const { data: existing } = await supabaseAdmin.from("sites").select("id").eq("slug", data.slug).maybeSingle();
     if (existing) throw new Error("Esse nome já está em uso. Tente outro.");
     const { data: row, error } = await supabaseAdmin
