@@ -551,180 +551,35 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 }
 
 function ResellerPlan() {
-  const checkoutFn = useServerFn(createResellerCheckout);
-  const [form, setForm] = useState({ name: "", email: "", whatsapp: "" });
-  const [loading, setLoading] = useState(false);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.name.trim() || !form.email.trim() || !form.whatsapp.trim()) {
-      toast.error("Preencha nome, email e WhatsApp.");
-      return;
-    }
-    setLoading(true);
-    try {
-      fbEvent("InitiateCheckout", { content_name: "Plano Revenda", value: 297, currency: "BRL" });
-      const { checkoutUrl } = await checkoutFn({ data: form });
-      window.location.href = checkoutUrl;
-    } catch (err) {
-      toast.error((err as Error).message);
-      setLoading(false);
-    }
-  }
-
   return (
     <section id="revenda" className="relative bg-foreground text-background overflow-hidden">
       <div className="absolute inset-0 bg-grid-dark opacity-50" />
       <div className="blob left-[-5%] top-[10%] h-[420px] w-[420px] bg-brand opacity-30" />
       <div className="blob right-[-5%] bottom-[5%] h-[360px] w-[360px] bg-[oklch(0.78_0.15_85)] opacity-25" />
 
-      <div className="relative mx-auto max-w-6xl px-5 py-24">
+      <div className="relative mx-auto max-w-4xl px-5 py-24 text-center">
         <Reveal>
-          <div className="text-center max-w-3xl mx-auto">
-            <span className="chip border-brand/50 bg-brand/10 text-brand">🚀 Plano Revenda · Renda Extra</span>
-            <h2 className="mt-4 font-display text-4xl font-bold md:text-5xl leading-[1.05]">
-              Revenda sites profissionais e fature
-              <br />
-              <span className="text-brand">mais de R$ 3.000 por mês.</span>
-            </h2>
-            <p className="mt-5 text-lg text-white/75">
-              Sua proposta é melhor do que tudo no mercado: empresas hoje pagam hospedagem mensal, domínio anual e ainda contratam um designer. Com o MRO.BIO, você entrega tudo isso por <strong className="text-white">um único pagamento anual</strong>.
-            </p>
-          </div>
-        </Reveal>
+          <span className="chip border-brand/50 bg-brand/10 text-brand">🚀 Plano Revenda · Renda Extra</span>
+          <h2 className="mt-5 font-display text-4xl font-bold md:text-6xl leading-[1.05]">
+            Revenda sites profissionais e fature
+            <br />
+            <span className="text-brand">mais de R$ 3.000 por mês.</span>
+          </h2>
+          <p className="mx-auto mt-7 max-w-2xl text-lg text-white/75 md:text-xl">
+            Sua proposta é <strong className="text-white">melhor do que tudo no mercado</strong>: empresas hoje pagam hospedagem mensal, domínio anual e ainda contratam um designer. Com o MRO.BIO, você entrega tudo isso por <strong className="text-white">um único pagamento anual</strong>.
+          </p>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          {/* Comparativo */}
-          <Reveal>
-            <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-7 backdrop-blur-sm">
-              <h3 className="font-display text-xl font-bold">Por que as empresas vão escolher você</h3>
-              <p className="mt-1 text-sm text-white/60">Comparado ao mercado tradicional:</p>
-              <ul className="mt-5 space-y-3 text-sm">
-                <li className="flex justify-between gap-3 rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-                  <span>Hospedagem profissional</span>
-                  <span className="font-semibold text-red-300">R$ 40/mês</span>
-                </li>
-                <li className="flex justify-between gap-3 rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-                  <span>Domínio próprio (.com.br)</span>
-                  <span className="font-semibold text-red-300">R$ 40/ano</span>
-                </li>
-                <li className="flex justify-between gap-3 rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-                  <span>Designer / desenvolvedor</span>
-                  <span className="font-semibold text-red-300">R$ 700+ uma vez</span>
-                </li>
-                <li className="flex justify-between gap-3 rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-                  <span>Manutenção mensal</span>
-                  <span className="font-semibold text-red-300">R$ 40/mês recorrente</span>
-                </li>
-                <li className="flex justify-between gap-3 rounded-lg bg-brand/15 border border-brand/40 p-3 mt-4">
-                  <span className="font-semibold">Com você (MRO.BIO)</span>
-                  <span className="font-bold text-brand">1× R$ 297/ano · tudo incluso</span>
-                </li>
-              </ul>
-              <p className="mt-4 text-xs text-white/55">
-                Hospedagem, SSL, subdomínio <code>nomedaempresa.mro.bio</code> e edição com I.A — incluídos no preço único.
-              </p>
-            </div>
-          </Reveal>
-
-          {/* Lucro */}
-          <Reveal>
-            <div className="rounded-2xl border-2 border-brand bg-brand/10 p-7 backdrop-blur-sm relative overflow-hidden">
-              <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-brand/40 blur-3xl" />
-              <div className="relative">
-                <h3 className="font-display text-xl font-bold">Seu lucro líquido por site</h3>
-                <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-lg bg-white/5 border border-white/15 p-3">
-                    <div className="text-[11px] uppercase text-white/55">Você paga</div>
-                    <div className="mt-1 font-display text-2xl font-bold">R$ 36</div>
-                    <div className="text-[11px] text-white/55">por site (no plano)</div>
-                  </div>
-                  <div className="rounded-lg bg-white/5 border border-white/15 p-3">
-                    <div className="text-[11px] uppercase text-white/55">Você vende por</div>
-                    <div className="mt-1 font-display text-2xl font-bold">R$ 297</div>
-                    <div className="text-[11px] text-white/55">para cada empresa</div>
-                  </div>
-                </div>
-                <div className="mt-4 rounded-xl border-2 border-brand bg-brand text-brand-foreground p-5">
-                  <div className="text-xs font-bold uppercase">Lucro líquido por site</div>
-                  <div className="font-display text-4xl font-bold">R$ 261</div>
-                </div>
-                <div className="mt-4 rounded-xl border border-white/15 bg-white/5 p-5">
-                  <div className="text-xs uppercase text-white/55">Vendendo 10 sites no plano</div>
-                  <div className="font-display text-4xl font-bold text-brand">R$ 2.610</div>
-                  <div className="text-xs text-white/55">de lucro líquido — e seu plano paga R$ 360 cobrindo os 10 sites.</div>
-                </div>
-                <p className="mt-4 text-xs text-white/55">
-                  Vende 30 sites no ano? <strong className="text-white">R$ 7.830 líquidos</strong>. Recorrente todo ano que o cliente renovar.
-                </p>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-
-        {/* CTA + formulário */}
-        <Reveal>
-          <div className="mt-10 grid gap-6 rounded-3xl border-2 border-brand bg-card text-foreground p-8 md:p-10 md:grid-cols-[1fr_1fr] shadow-[var(--shadow-brand)]">
-            <div>
-              <span className="chip bg-brand text-brand-foreground border-brand">Assine agora</span>
-              <h3 className="mt-4 font-display text-3xl md:text-4xl font-bold leading-tight">
-                Plano Revenda — <span className="text-gradient-brand">10 sites por R$ 297/ano</span>
-              </h3>
-              <div className="mt-3 flex items-end gap-3">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">ou em até</div>
-                  <div className="font-display text-5xl font-bold leading-none">12× R$ 30</div>
-                </div>
-                <div className="text-sm text-muted-foreground mb-1">no cartão</div>
-              </div>
-              <ul className="mt-6 space-y-2 text-sm">
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Crie até <strong>10 sites</strong> para seus clientes</li>
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Cada site com subdomínio próprio <code>cliente.mro.bio</code></li>
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Hospedagem, SSL e edição com I.A inclusos</li>
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Tarja <strong>VIP Revendedor</strong> no painel</li>
-                <li className="flex gap-2"><span className="text-brand font-bold">✓</span> Acesso liberado automaticamente após o pagamento</li>
-              </ul>
-            </div>
-
-            <form onSubmit={onSubmit} className="space-y-3 rounded-2xl border border-border bg-background p-6">
-              <h4 className="font-display text-lg font-bold">Comece em 2 minutos</h4>
-              <p className="text-xs text-muted-foreground">Preencha seus dados. Após o pagamento, enviamos seu acesso por e-mail automaticamente.</p>
-              <input
-                required
-                placeholder="Seu nome completo"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none"
-              />
-              <input
-                required
-                type="email"
-                placeholder="Seu melhor e-mail"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none"
-              />
-              <input
-                required
-                placeholder="WhatsApp com DDD"
-                value={form.whatsapp}
-                onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-md bg-green-600 hover:bg-green-700 px-6 py-4 text-base font-bold text-white shadow-lg transition-transform hover:scale-[1.01] disabled:opacity-60"
-              >
-                {loading ? "Gerando pagamento…" : "Pagar R$ 297 (ou 12× R$ 30) →"}
-              </button>
-              <p className="text-center text-xs text-muted-foreground">
-                Pagamento seguro via <strong>InfinitePay</strong> · Pix, cartão ou boleto
-              </p>
-            </form>
-          </div>
+          <Link
+            to="/rendaextra"
+            className="group mt-10 inline-flex items-center gap-3 rounded-2xl bg-emerald-500 px-10 py-6 text-xl font-bold text-white shadow-[0_24px_60px_-12px_rgba(16,185,129,0.6)] ring-1 ring-emerald-300/40 transition hover:scale-[1.03] hover:bg-emerald-600 md:text-2xl"
+            onClick={() => fbEvent("ViewContent", { content_name: "Saiba como — Revenda" })}
+          >
+            Saiba como
+            <span className="transition-transform group-hover:translate-x-1">→</span>
+          </Link>
         </Reveal>
       </div>
     </section>
   );
 }
+
