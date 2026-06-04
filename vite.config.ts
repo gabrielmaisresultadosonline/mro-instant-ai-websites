@@ -17,7 +17,10 @@ export default defineConfig({
   },
   vite: {
     server: {
-      allowedHosts: ["mro.bio"],
+      allowedHosts: true,
+    },
+    preview: {
+      allowedHosts: true,
     },
   },
 });
