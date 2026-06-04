@@ -494,7 +494,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const globalStartTime = Date.now();
-    const TOTAL_BUDGET = 56000; // 56s total para dar margem ao proxy de 60s
+    const TOTAL_BUDGET = 54000; // Reduzido para 54s para ser ainda mais seguro contra proxy timeout (60s)
     
     console.log(`[PROGRESS] ${new Date().toISOString()} - Iniciando geração para site ${data.id}`);
 
