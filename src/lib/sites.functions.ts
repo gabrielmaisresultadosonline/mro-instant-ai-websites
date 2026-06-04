@@ -574,7 +574,7 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
     return {
       needsCleanup: false as const,
       generationId: genRow.id,
-      provider,
+      provider: actualProvider,
       html,
       brief,
       gensUsed: gens + 1,
