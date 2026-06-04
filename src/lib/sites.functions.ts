@@ -88,12 +88,16 @@ async function generateHtmlWithFallback(
   tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
   prompt: string,
   temperature: number,
-): Promise<{ html: string; providerUsed: Provider }> {
+): Promise<{ html: string; providerUsed: Provider | "lovable-ai" }> {
   const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
-  let lastErr: unknown = null;
+  const errors: string[] = [];
+  
   for (const p of order) {
     const token = tokens[p];
-    if (!token) continue;
+    if (!token) {
+      errors.push(`${p}: sem token configurado`);
+      continue;
+    }
     try {
       const html = p === "deepseek"
         ? await callDeepseek(token, prompt, temperature)
@@ -101,20 +105,27 @@ async function generateHtmlWithFallback(
         ? await callClaude(token, prompt, temperature)
         : await callOpenAI(token, prompt, temperature);
       if (html && html.length > 50) return { html, providerUsed: p };
+      errors.push(`${p}: retorno muito curto ou vazio`);
     } catch (e) {
-      console.error(`[generateHtmlWithFallback] ${p} falhou:`, e);
-      lastErr = e;
+      const msg = String(e instanceof Error ? e.message : e);
+      console.error(`[generateHtmlWithFallback] ${p} falhou:`, msg);
+      errors.push(`${p}: ${msg}`);
     }
   }
-  // Final fallback: Lovable AI Gateway
+
+  // Final fallback: Lovable AI Gateway (Gemini 2.5 Flash)
+  // Only if explicitly allowed or as a last resort to not leave the user with nothing
   try {
     const html = await callLovableAI(prompt);
-    if (html && html.length > 50) return { html, providerUsed: preferred };
+    if (html && html.length > 50) return { html, providerUsed: "lovable-ai" };
+    errors.push(`lovable-ai: retorno muito curto`);
   } catch (e) {
-    console.error("[generateHtmlWithFallback] lovable-ai falhou:", e);
-    lastErr = e;
+    const msg = String(e instanceof Error ? e.message : e);
+    console.error("[generateHtmlWithFallback] lovable-ai falhou:", msg);
+    errors.push(`lovable-ai: ${msg}`);
   }
-  throw new Error(`Falha ao gerar com a I.A MRO. ${String(lastErr ?? "").slice(0, 200)}`);
+
+  throw new Error(`Falha ao gerar com a I.A MRO. Detalhes: ${errors.join(" | ")}`.slice(0, 500));
 }
 
 export const listMySites = createServerFn({ method: "GET" })
