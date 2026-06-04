@@ -95,7 +95,10 @@ cd /opt/mro.bio
 git pull
 cd deploy
 sudo docker compose up -d --build
+bash check-subdomain.sh essenciadoscachos
 ```
+
+O deploy só deve ser considerado pronto quando o teste acima retornar `OK`. Se retornar erro, ele mostra os comandos de logs e variáveis que precisam ser conferidos antes de liberar novos cadastros.
 
 ---
 
@@ -124,6 +127,7 @@ sob demanda depois de validar em `/api/public/cert-check`.
 | `Site não publicado` em `<slug>.mro.bio` | Usuário ainda não clicou em "Publicar" no editor | Esperado |
 | Admin não consegue logar | `ADMIN_EMAIL`/`ADMIN_PASSWORD` errados no `app.env` | Edite e `docker compose restart app` |
 | Imagens privadas dão 404 | `SUPABASE_SERVICE_ROLE_KEY` ausente | Confirme no `app.env` |
+| `Algo deu errado` no subdomínio publicado | Container ainda está com código antigo, Caddy não recarregou ou faltam variáveis públicas do banco | `sudo docker compose up -d --build` e depois `bash check-subdomain.sh <slug>` |
 
 ---
 
