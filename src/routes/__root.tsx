@@ -69,6 +69,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
+      { "http-equiv": "Content-Security-Policy", content: "upgrade-insecure-requests" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "MRO.BIO — Crie seu site com I.A em menos de 5 minutos" },
       { name: "description", content: "Plataforma que cria sites completos com I.A generativa. Sem hospedagem, sem domínio próprio. Apenas um comando." },
