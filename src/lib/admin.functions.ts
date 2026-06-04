@@ -484,6 +484,22 @@ export const adminSendTestEmail = createServerFn({ method: "POST" })
       status: "pending",
     });
     if (error) throw new Error(error.message);
+    
+    // Dispara envio imediato após enfileirar
+    const { data: outboxRow } = await supabaseAdmin.from("email_outbox")
+      .select("id")
+      .eq("to_email", data.to)
+      .eq("template", data.template)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+      
+    if (outboxRow?.id) {
+      const { flushEmailNow } = await import("@/lib/email-flush.server");
+      await flushEmailNow(outboxRow.id);
+    }
+
     return { ok: true };
   });
 
@@ -532,7 +548,7 @@ export const adminCreateManualUser = createServerFn({ method: "POST" })
     if (data.sendEmail) {
       const { renderTemplate } = await import("@/lib/email-templates.server");
       const r = renderTemplate({ name: "credentials", data: { name: data.name, email: data.email, password: data.password } });
-      await supabaseAdmin.from("email_outbox").insert({
+      const { data: outboxRow } = await supabaseAdmin.from("email_outbox").insert({
         to_email: data.email,
         to_name: data.name,
         subject: r.subject,
@@ -540,7 +556,12 @@ export const adminCreateManualUser = createServerFn({ method: "POST" })
         body_text: r.text,
         template: "credentials",
         status: "pending",
-      });
+      }).select("id").single();
+
+      if (outboxRow?.id) {
+        const { flushEmailNow } = await import("@/lib/email-flush.server");
+        await flushEmailNow(outboxRow.id);
+      }
     }
 
     return { ok: true, userId };
