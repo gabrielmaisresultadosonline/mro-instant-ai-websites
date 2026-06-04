@@ -23,6 +23,7 @@ import { Route as ApiPublicCertCheckRouteImport } from './routes/api/public/cert
 import { Route as AuthenticatedSitesNovoRouteImport } from './routes/_authenticated/sites.novo'
 import { Route as AuthenticatedSitesIdRouteImport } from './routes/_authenticated/sites.$id'
 import { Route as ApiPublicWebhooksKiwifyRouteImport } from './routes/api/public/webhooks/kiwify'
+import { Route as ApiPublicWebhooksInfinitepayRouteImport } from './routes/api/public/webhooks/infinitepay'
 import { Route as ApiPublicSiteSlugRouteImport } from './routes/api/public/site/$slug'
 import { Route as ApiPublicImgSplatRouteImport } from './routes/api/public/img/$'
 import { Route as ApiPublicCronSubscriptionsRouteImport } from './routes/api/public/cron/subscriptions'
@@ -97,6 +98,12 @@ const ApiPublicWebhooksKiwifyRoute = ApiPublicWebhooksKiwifyRouteImport.update({
   path: '/api/public/webhooks/kiwify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWebhooksInfinitepayRoute =
+  ApiPublicWebhooksInfinitepayRouteImport.update({
+    id: '/api/public/webhooks/infinitepay',
+    path: '/api/public/webhooks/infinitepay',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicSiteSlugRoute = ApiPublicSiteSlugRouteImport.update({
   id: '/api/public/site/$slug',
   path: '/api/public/site/$slug',
@@ -137,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
+  '/api/public/webhooks/infinitepay': typeof ApiPublicWebhooksInfinitepayRoute
   '/api/public/webhooks/kiwify': typeof ApiPublicWebhooksKiwifyRoute
 }
 export interface FileRoutesByTo {
@@ -156,6 +164,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
+  '/api/public/webhooks/infinitepay': typeof ApiPublicWebhooksInfinitepayRoute
   '/api/public/webhooks/kiwify': typeof ApiPublicWebhooksKiwifyRoute
 }
 export interface FileRoutesById {
@@ -177,6 +186,7 @@ export interface FileRoutesById {
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
+  '/api/public/webhooks/infinitepay': typeof ApiPublicWebhooksInfinitepayRoute
   '/api/public/webhooks/kiwify': typeof ApiPublicWebhooksKiwifyRoute
 }
 export interface FileRouteTypes {
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
+    | '/api/public/webhooks/infinitepay'
     | '/api/public/webhooks/kiwify'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
+    | '/api/public/webhooks/infinitepay'
     | '/api/public/webhooks/kiwify'
   id:
     | '__root__'
@@ -237,6 +249,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
+    | '/api/public/webhooks/infinitepay'
     | '/api/public/webhooks/kiwify'
   fileRoutesById: FileRoutesById
 }
@@ -255,6 +268,7 @@ export interface RootRouteChildren {
   ApiPublicCronSubscriptionsRoute: typeof ApiPublicCronSubscriptionsRoute
   ApiPublicImgSplatRoute: typeof ApiPublicImgSplatRoute
   ApiPublicSiteSlugRoute: typeof ApiPublicSiteSlugRoute
+  ApiPublicWebhooksInfinitepayRoute: typeof ApiPublicWebhooksInfinitepayRoute
   ApiPublicWebhooksKiwifyRoute: typeof ApiPublicWebhooksKiwifyRoute
 }
 
@@ -358,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksKiwifyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/infinitepay': {
+      id: '/api/public/webhooks/infinitepay'
+      path: '/api/public/webhooks/infinitepay'
+      fullPath: '/api/public/webhooks/infinitepay'
+      preLoaderRoute: typeof ApiPublicWebhooksInfinitepayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/site/$slug': {
       id: '/api/public/site/$slug'
       path: '/api/public/site/$slug'
@@ -419,6 +440,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronSubscriptionsRoute: ApiPublicCronSubscriptionsRoute,
   ApiPublicImgSplatRoute: ApiPublicImgSplatRoute,
   ApiPublicSiteSlugRoute: ApiPublicSiteSlugRoute,
+  ApiPublicWebhooksInfinitepayRoute: ApiPublicWebhooksInfinitepayRoute,
   ApiPublicWebhooksKiwifyRoute: ApiPublicWebhooksKiwifyRoute,
 }
 export const routeTree = rootRouteImport

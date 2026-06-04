@@ -232,6 +232,72 @@ export type Database = {
         }
         Relationships: []
       }
+      reseller_orders: {
+        Row: {
+          amount_cents: number
+          checkout_url: string | null
+          created_at: string
+          email: string
+          id: string
+          invoice_slug: string | null
+          last_check_at: string | null
+          last_error: string | null
+          name: string
+          order_nsu: string
+          paid_at: string | null
+          provisioned_at: string | null
+          raw_webhook: Json | null
+          receipt_url: string | null
+          status: string
+          transaction_nsu: string | null
+          updated_at: string
+          user_id: string | null
+          whatsapp: string
+        }
+        Insert: {
+          amount_cents?: number
+          checkout_url?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          invoice_slug?: string | null
+          last_check_at?: string | null
+          last_error?: string | null
+          name: string
+          order_nsu: string
+          paid_at?: string | null
+          provisioned_at?: string | null
+          raw_webhook?: Json | null
+          receipt_url?: string | null
+          status?: string
+          transaction_nsu?: string | null
+          updated_at?: string
+          user_id?: string | null
+          whatsapp?: string
+        }
+        Update: {
+          amount_cents?: number
+          checkout_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          invoice_slug?: string | null
+          last_check_at?: string | null
+          last_error?: string | null
+          name?: string
+          order_nsu?: string
+          paid_at?: string | null
+          provisioned_at?: string | null
+          raw_webhook?: Json | null
+          receipt_url?: string | null
+          status?: string
+          transaction_nsu?: string | null
+          updated_at?: string
+          user_id?: string | null
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       site_generations: {
         Row: {
           brief: string
