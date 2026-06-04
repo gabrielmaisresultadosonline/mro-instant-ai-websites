@@ -37,13 +37,15 @@ function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("subscription_status, subscription_expires_at")
+        .select("subscription_status, subscription_expires_at, max_sites, is_reseller")
         .eq("id", user.id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
+  const isReseller = !!(sub as { is_reseller?: boolean } | null)?.is_reseller;
+  const maxSites = (sub as { max_sites?: number } | null)?.max_sites ?? 1;
 
   const { data: list, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-sites", user.id],
