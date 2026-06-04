@@ -569,7 +569,17 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     
     console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Gerando briefing com ${provider}...`);
 
-    const briefPrompt = `Você é um Diretor de Arte Sênior. O cliente pediu: "${data.prompt}". IMAGENS: ${imagesList}. Responda em português um briefing técnico com: Paleta de cores (HEX), Estrutura de Seções, e Mapeamento de LINKS de imagem reais.`;
+    const briefPrompt = `Você é um Diretor de Arte Sênior de Branding de Luxo.
+O cliente pediu: "${data.prompt}"
+IMAGENS: ${imagesList}
+
+DIRETRIZES:
+1. IMPACTO: Seções com fundos alternados, tipografia elegante, paddings generosos.
+2. MODERNO: Bordas arredondadas (rounded-3xl), sombras suaves, gradientes sutis.
+3. ESTRUTURA: Header, Hero, Sobre, Serviços, Galeria, Footer.
+4. IMAGENS: Use APENAS os links reais acima. NUNCA invente URLs.
+
+Responda em português um briefing técnico com: Paleta HEX, Estrutura de Seções e Mapeamento de links.`;
 
     let brief = "";
     try {
@@ -579,14 +589,24 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Briefing gerado.`);
     } catch (e) { 
       console.warn(`[GenerateSite] Briefing falhou ou demorou demais, seguindo com padrão. Erro: ${e}`); 
-      brief = "Crie um site moderno e luxuoso baseado no pedido do cliente.";
+      brief = "Crie um site moderno e luxuoso com pelo menos 6 seções, usando os links de imagem reais fornecidos.";
     }
 
-    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END DO MUNDO. Crie um site HTML/Tailwind COMPLETO e RESPONSIVO.
-BRIEFING: ${brief}
-PEDIDO: "${data.prompt}"
-IMAGENS: ${imagesList}
-REGRAS: Mínimo 6 seções. Botões de CTA verdes (bg-green-600). Retorne APENAS o código HTML completo.`;
+    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL e RESPONSIVO.
+
+DIRETRIZES PREMIUM:
+1. DESIGN: Use seções com fundos contrastantes, tipografia de luxo (Playfair Display, Inter) e paddings generosos (py-24).
+2. ELEMENTOS: Bordas rounded-3xl, shadow-2xl, backdrop-blur-md no header.
+3. BRIEFING: ${brief}
+4. PEDIDO: "${data.prompt}"
+5. IMAGENS REAIS: ${imagesList}
+
+REGRAS TÉCNICAS:
+- LOGO: Se houver imagem "logo", use no header.
+- CTAs: Botões verdes vibrantes (bg-green-600).
+- ESTRUTURA: Mínimo 6 seções.
+- SAÍDA: Retorne APENAS o código HTML completo.`;
+
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
     console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Gerando código HTML. Orçamento restante: ${remainingBudget}ms`);
