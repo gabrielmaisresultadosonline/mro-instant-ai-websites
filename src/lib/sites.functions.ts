@@ -160,8 +160,9 @@ async function generateHtmlWithFallback(
 
     try {
       // Divide o tempo restante se ainda houver outros provedores para tentar
-      const isLastInOrder = p === order[order.length - 1];
-      const callTimeout = isLastInOrder ? remaining : Math.min(remaining, 25000);
+      // Usa um tempo menor para o primeiro provedor para dar chance ao fallback
+      const isFirstTry = p === order[0];
+      const callTimeout = isFirstTry ? Math.min(remaining, 20000) : remaining;
 
       const html = p === "deepseek"
         ? await callDeepseek(token, prompt, temperature, callTimeout)
