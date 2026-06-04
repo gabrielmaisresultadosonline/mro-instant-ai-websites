@@ -28,6 +28,7 @@ function Landing() {
       <HowItWorks />
       <Showcase />
       <Pricing />
+      <ResellerPlan />
       <FaqCta />
       <Footer />
       <StickyBuyCta />
