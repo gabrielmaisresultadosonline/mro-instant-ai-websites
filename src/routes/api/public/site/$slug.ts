@@ -43,12 +43,13 @@ export const Route = createFileRoute("/api/public/site/$slug")({
 
         if (!site || !site.is_published || !site.html) {
           return new Response(
-            `<!doctype html><meta charset="utf-8"><title>Site não encontrado</title>
-            <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff}</style>
-            <div style="text-align:center;padding:2rem">
-              <h1 style="font-size:2.5rem;margin:0 0 .5rem">404</h1>
-              <p>Esse site ainda não foi publicado em <strong>${slug}.mro.bio</strong>.</p>
-              <p><a href="https://mro.bio" style="color:#FFD600">Crie o seu agora →</a></p>
+            `<!doctype html><meta charset="utf-8"><title>Site não cadastrado - MRO.BIO</title>
+            <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2.5rem;margin:0 0 .5rem;color:#FFD600}.btn{display:inline-block;margin-top:1.5rem;padding:.8rem 1.5rem;background:#FFD600;color:#000;text-decoration:none;border-radius:.5rem;font-weight:700}</style>
+            <div>
+              <h1>⚠ Domínio disponível!</h1>
+              <p>O subdomínio <strong>${slug}.mro.bio</strong> ainda não está sendo usado.</p>
+              <p>Ele pode ser seu agora mesmo!</p>
+              <a href="https://mro.bio" class="btn">Criar meu site agora →</a>
             </div>`,
             { status: 404, headers: { "content-type": "text/html; charset=utf-8" } },
           );
