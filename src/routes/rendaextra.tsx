@@ -24,6 +24,7 @@ function RendaExtraPage() {
       <MarketComparison />
       <ProfitCalc />
       <Benefits />
+      <VideoDemo />
       <HowResellerWorks />
       <Checkout />
       <Faq />
@@ -321,6 +322,37 @@ function Benefits() {
           </Reveal>
         ))}
       </div>
+    </section>
+  );
+}
+
+function VideoDemo() {
+  return (
+    <section className="mx-auto max-w-6xl px-5 py-24">
+      <Reveal>
+        <div className="text-center max-w-3xl mx-auto">
+          <span className="chip">Demonstração</span>
+          <h2 className="mt-4 font-display text-4xl font-bold md:text-5xl">
+            Veja como o <span className="text-gradient-brand">MRO.BIO cria os sites...</span>
+          </h2>
+          <p className="mt-4 text-muted-foreground text-lg">
+            Em poucos minutos, a I.A gera um site profissional completo. Assista e veja o processo do início ao fim.
+          </p>
+        </div>
+      </Reveal>
+      <Reveal delay={60}>
+        <div className="mt-10 max-w-4xl mx-auto">
+          <div className="relative aspect-video w-full overflow-hidden rounded-2xl border-2 border-border shadow-xl bg-black">
+            <iframe
+              src="https://www.youtube.com/embed/AvNxM8QH7Iw?rel=0"
+              title="Veja como o MRO.BIO cria os sites"
+              className="absolute inset-0 h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      </Reveal>
     </section>
   );
 }
