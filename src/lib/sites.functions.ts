@@ -585,7 +585,7 @@ Responda em português um briefing técnico com: Paleta HEX, Estrutura de Seçõ
     let brief = "";
     try {
       // O briefing deve ser rápido. No máximo 12s para sobrar tempo para o código.
-      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 12000);
+      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 8000);
       brief = briefHtml;
       console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Briefing gerado.`);
     } catch (e) { 
