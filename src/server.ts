@@ -39,6 +39,25 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const url = new URL(request.url);
+    const host = request.headers.get("host") || "";
+
+    // Handle subdomains (slug.mro.bio)
+    if (host && host.endsWith(".mro.bio") && !host.startsWith("www.") && host !== "mro.bio") {
+      const slug = host.split(".")[0];
+      if (slug) {
+        // Rewrite the URL internally to the API endpoint
+        url.pathname = `/api/public/site/${slug}`;
+        const newRequest = new Request(url.toString(), request);
+        try {
+          const handler = await getServerEntry();
+          return await handler.fetch(newRequest, env, ctx);
+        } catch (error) {
+          console.error("Subdomain proxy error:", error);
+        }
+      }
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
