@@ -284,11 +284,16 @@ export const adminRetryEmail = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { data: updated } = await supabaseAdmin
       .from("email_outbox")
       .update({ status: "pending", attempts: 0, last_error: null, locked_at: null })
-      .eq("id", data.emailId);
-    if (error) throw new Error(error.message);
+      .eq("id", data.emailId)
+      .select("id")
+      .single();
+    if (updated?.id) {
+      const { flushEmailNow } = await import("@/lib/email-flush.server");
+      await flushEmailNow(updated.id);
+    }
     return { ok: true };
   });
 
