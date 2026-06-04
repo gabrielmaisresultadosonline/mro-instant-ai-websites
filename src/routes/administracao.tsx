@@ -314,36 +314,86 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
 
 
       {tab === "users" && (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="min-w-full text-sm">
-            <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
-              <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">CPF</th><th className="px-4 py-3">Sites</th><th className="px-4 py-3">Cadastro</th><th className="px-4 py-3"></th></tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {users.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-white/50">Nenhum usuário ainda.</td></tr>
-              ) : users.map((u) => (
-                <tr key={u.id}>
-                  <td className="px-4 py-3">{u.name}</td>
-                  <td className="px-4 py-3">{u.email}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{u.whatsapp}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{u.cpf}</td>
-                  <td className="px-4 py-3">{u.site_count}</td>
-                  <td className="px-4 py-3 text-xs text-white/60">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleResetGen(u.id, u.email)}
-                        className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Renovar gerações</button>
-                      <button onClick={() => handleDeleteUser(u.id, u.email)}
-                        className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10">Excluir</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-5">
+          <form onSubmit={handleCreateUser} className="rounded-xl border border-brand/30 bg-brand/5 p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-lg font-bold">Cadastrar usuário manualmente</h2>
+                <p className="text-xs text-white/60">Crie a conta com e-mail e senha. Marque para enviar os dados de acesso por e-mail.</p>
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input required placeholder="Nome" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <input required type="email" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <input required type="text" placeholder="Senha (mín. 6 caracteres)" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm font-mono focus:border-brand focus:outline-none" />
+              <input placeholder="WhatsApp (opcional)" value={newUser.whatsapp} onChange={(e) => setNewUser({ ...newUser, whatsapp: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <input placeholder="CPF (opcional)" value={newUser.cpf} onChange={(e) => setNewUser({ ...newUser, cpf: e.target.value })}
+                className="rounded-md border border-white/20 bg-white/10 p-2.5 text-sm focus:border-brand focus:outline-none" />
+              <label className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 p-2.5 text-sm">
+                <span className="text-white/70">Sites permitidos:</span>
+                <input type="number" min={1} max={100} value={newUser.maxSites} onChange={(e) => setNewUser({ ...newUser, maxSites: Math.max(1, parseInt(e.target.value || "1", 10)) })}
+                  className="w-20 rounded border border-white/20 bg-white/5 px-2 py-1 text-sm" />
+                {newUser.maxSites > 1 && <span className="ml-2 rounded bg-brand/20 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">VIP Revendedor</span>}
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={newUser.sendEmail} onChange={(e) => setNewUser({ ...newUser, sendEmail: e.target.checked })} />
+                Enviar dados de acesso por e-mail
+              </label>
+              <button disabled={creatingUser} type="submit"
+                className="rounded-md btn-brand px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                {creatingUser ? "Criando…" : "Criar usuário"}
+              </button>
+            </div>
+          </form>
+
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
+                <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">CPF</th><th className="px-4 py-3">Sites</th><th className="px-4 py-3">Cota</th><th className="px-4 py-3">Cadastro</th><th className="px-4 py-3"></th></tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {users.length === 0 ? (
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-white/50">Nenhum usuário ainda.</td></tr>
+                ) : users.map((u) => (
+                  <tr key={u.id}>
+                    <td className="px-4 py-3">
+                      {u.name}
+                      {u.is_reseller && <span className="ml-2 rounded bg-brand/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand">VIP</span>}
+                      {u.created_by_admin && <span className="ml-1 text-[9px] uppercase text-white/40">manual</span>}
+                    </td>
+                    <td className="px-4 py-3">{u.email}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{u.whatsapp}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{u.cpf}</td>
+                    <td className="px-4 py-3">{u.site_count}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => handleEditQuota(u.id, u.email, u.max_sites ?? 1)}
+                        className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">
+                        {u.max_sites ?? 1} site{(u.max_sites ?? 1) > 1 ? "s" : ""} ✎
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-white/60">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleResetGen(u.id, u.email)}
+                          className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Renovar gerações</button>
+                        <button onClick={() => handleDeleteUser(u.id, u.email)}
+                          className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10">Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
 
       {tab === "sites" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">
