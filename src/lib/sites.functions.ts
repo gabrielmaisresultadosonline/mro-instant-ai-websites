@@ -457,9 +457,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       deepseek: settings?.deepseek_token,
       claude: settings?.claude_token,
     };
-    if (!tokens[provider]) {
-      throw new Error(`A chave da I.A "${provider}" não foi configurada. Avise o administrador.`);
-    }
+    // Não bloqueia se a chave do provider preferido faltar — temos fallback automático.
 
     // Step 1 — briefing
     // Importante: Pegamos o hostname real para garantir que o link seja público e acessível pela I.A.
