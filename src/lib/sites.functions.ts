@@ -10,7 +10,9 @@ const EDITS_PER_MODEL = 5;
 const HISTORY_LIMIT = 4;
 const HISTORY_TTL_DAYS = 45;
 const PROVIDERS = ["deepseek", "claude", "openai"] as const;
+const ALL_PROVIDERS = [...PROVIDERS, "lovable-ai"] as const;
 type Provider = typeof PROVIDERS[number];
+type ActualProvider = typeof ALL_PROVIDERS[number];
 
 function cleanHtmlOutput(s: string) {
   return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
