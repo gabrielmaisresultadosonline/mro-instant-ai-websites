@@ -132,7 +132,7 @@ export const Route = createFileRoute("/api/public/webhooks/infinitepay")({
             transaction_nsu: p.transaction_nsu ?? null,
             invoice_slug: p.invoice_slug ?? null,
             receipt_url: p.receipt_url ?? null,
-            raw_webhook: body as Record<string, unknown>,
+            raw_webhook: JSON.parse(JSON.stringify(body)),
           })
           .eq("id", order.id);
 
