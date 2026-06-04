@@ -638,8 +638,8 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                 {resellerOrders.length === 0 ? (
                   <tr><td colSpan={7} className="px-4 py-8 text-center text-white/50">Nenhum pedido ainda.</td></tr>
                 ) : resellerOrders.map((o) => {
-                  const statusColor = o.status === "provisioned" ? "text-emerald-400" : o.status === "paid" ? "text-sky-400" : o.status === "failed" ? "text-red-400" : "text-amber-400";
-                  const statusLabel = o.status === "provisioned" ? "Provisionado" : o.status === "paid" ? "Pago" : o.status === "failed" ? "Falha" : "Pendente";
+                  const statusColor = o.status === "provisioned" ? "text-emerald-400" : o.status === "paid" ? "text-sky-400" : o.status === "failed" ? "text-red-400" : o.status === "expired" ? "text-white/50" : "text-amber-400";
+                  const statusLabel = o.status === "provisioned" ? "Provisionado" : o.status === "paid" ? "Pago" : o.status === "failed" ? "Falha" : o.status === "expired" ? "Expirado" : "Pendente";
                   return (
                     <tr key={o.id}>
                       <td className="px-4 py-3 text-xs text-white/60">{new Date(o.created_at).toLocaleString("pt-BR")}</td>
