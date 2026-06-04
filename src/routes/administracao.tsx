@@ -242,8 +242,20 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     { key: "subscriptions", label: "Assinaturas" },
     { key: "outbox", label: "Fila de e-mails" },
     { key: "kiwify", label: "Webhooks Kiwify" },
+    { key: "reseller", label: "Revenda" },
     { key: "settings", label: "Configurações" },
   ];
+
+  async function handleResellerResend(orderId: string, email: string) {
+    if (!confirm(`Reenviar link de acesso para ${email}?`)) return;
+    try { await resellerResendFn({ data: { token, orderId } }); toast.success("E-mail reenfileirado"); void reload(); }
+    catch (e) { toast.error((e as Error).message); }
+  }
+  async function handleResellerMarkPaid(orderId: string, email: string) {
+    if (!confirm(`Marcar pedido de ${email} como pago e provisionar agora?`)) return;
+    try { await resellerMarkPaidFn({ data: { token, orderId } }); toast.success("Pedido marcado como pago"); void reload(); }
+    catch (e) { toast.error((e as Error).message); }
+  }
 
   const TEMPLATES: Array<{ value: string; label: string }> = [
     { value: "activation", label: "Compra aprovada — criar senha (ativação)" },
