@@ -90,7 +90,7 @@ async function generateHtmlWithFallback(
   tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
   prompt: string,
   temperature: number,
-): Promise<{ html: string; providerUsed: Provider | "lovable-ai" }> {
+): Promise<{ html: string; providerUsed: ActualProvider }> {
   const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
   const errors: string[] = [];
   
