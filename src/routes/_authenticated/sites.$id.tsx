@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights,
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
+  editGeneration, getEditQuota,
 } from "@/lib/sites.functions";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
