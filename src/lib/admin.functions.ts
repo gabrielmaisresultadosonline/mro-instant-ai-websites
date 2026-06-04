@@ -401,11 +401,15 @@ export const adminResendResellerAccess = createServerFn({ method: "POST" })
       name: "password_reset",
       data: { name: order.name, resetUrl: `https://mro.bio/redefinir-senha/${token}` },
     });
-    await supabaseAdmin.from("email_outbox").insert({
+    const { data: outboxRow } = await supabaseAdmin.from("email_outbox").insert({
       to_email: email, to_name: order.name,
       subject: r.subject, body_html: r.html, body_text: r.text,
       template: "password_reset", status: "pending",
-    });
+    }).select("id").single();
+    if (outboxRow?.id) {
+      const { flushEmailNow } = await import("@/lib/email-flush.server");
+      await flushEmailNow(outboxRow.id);
+    }
     return { ok: true };
   });
 
