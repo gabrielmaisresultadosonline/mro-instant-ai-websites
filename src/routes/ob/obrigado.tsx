@@ -18,7 +18,7 @@ export const Route = createFileRoute("/ob/obrigado")({
 function ObrigadoPage() {
   const { order } = useSearch({ from: "/ob/obrigado" });
   const checkFn = useServerFn(checkResellerOrder);
-  const [status, setStatus] = useState<"pending" | "paid" | "provisioned" | "unknown" | null>(order ? "pending" : null);
+  const [status, setStatus] = useState<"pending" | "paid" | "provisioned" | "expired" | "unknown" | null>(order ? "pending" : null);
   const [email, setEmail] = useState<string | undefined>();
 
   useEffect(() => {
@@ -32,7 +32,7 @@ function ObrigadoPage() {
         if (!alive) return;
         setStatus(r.status);
         if ("email" in r && r.email) setEmail(r.email);
-        if (r.status !== "provisioned") timer = setTimeout(tick, 8000);
+        if (r.status !== "provisioned" && r.status !== "expired") timer = setTimeout(tick, 8000);
       } catch {
         if (alive) timer = setTimeout(tick, 8000);
       }
@@ -43,6 +43,7 @@ function ObrigadoPage() {
 
   const isProvisioned = status === "provisioned";
   const isPaid = status === "paid";
+  const isExpired = status === "expired";
 
   return (
     <main className="min-h-screen bg-background text-foreground grid place-items-center px-6 py-16">
