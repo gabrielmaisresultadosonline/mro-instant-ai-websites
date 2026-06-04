@@ -124,6 +124,8 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const [testEmailTo, setTestEmailTo] = useState("");
   const [testTemplate, setTestTemplate] = useState("activation");
   const [sendingTest, setSendingTest] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", whatsapp: "", cpf: "", maxSites: 1, sendEmail: true });
+  const [creatingUser, setCreatingUser] = useState(false);
 
   async function reload() {
     try {
