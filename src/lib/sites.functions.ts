@@ -74,7 +74,7 @@ async function callLovableAI(prompt: string): Promise<string> {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.0-pro-exp-02-05", 
+      model: "google/gemini-2.0-flash", 
       messages: [{ role: "user", content: prompt }],
     }),
   });
