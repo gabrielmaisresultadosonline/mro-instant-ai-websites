@@ -327,6 +327,20 @@ export const adminDashboardStats = createServerFn({ method: "POST" })
       .order("subscription_expires_at", { ascending: true })
       .limit(10);
 
+    return {
+      totals: {
+        users: totalUsers ?? 0,
+        active: activeSubs ?? 0,
+        grace: graceSubs ?? 0,
+        canceled: canceledSubs ?? 0,
+        expiringSoon: expiringSoon ?? 0,
+        expiringIn2d: expiringIn2d ?? 0,
+        paymentsLast30: paymentsLast30 ?? (recentPayments?.length ?? 0),
+        cancelsLast30: cancelsLast30 ?? 0,
+      },
+      nextExpirations: nextExpirations ?? [],
+    };
+  });
 
 // ============================================================
 // Reseller orders (InfinitePay)
@@ -399,7 +413,6 @@ export const adminMarkResellerPaid = createServerFn({ method: "POST" })
       .from("reseller_orders")
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("id", data.orderId);
-    // Provision via the public reseller fn module
     const { checkResellerOrder } = await import("@/lib/reseller.functions");
     const { data: row } = await supabaseAdmin.from("reseller_orders").select("order_nsu").eq("id", data.orderId).maybeSingle();
     if (row) {
@@ -408,20 +421,6 @@ export const adminMarkResellerPaid = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-    return {
-      totals: {
-        users: totalUsers ?? 0,
-        active: activeSubs ?? 0,
-        grace: graceSubs ?? 0,
-        canceled: canceledSubs ?? 0,
-        expiringSoon: expiringSoon ?? 0,
-        expiringIn2d: expiringIn2d ?? 0,
-        paymentsLast30: paymentsLast30 ?? (recentPayments?.length ?? 0),
-        cancelsLast30: cancelsLast30 ?? 0,
-      },
-      nextExpirations: nextExpirations ?? [],
-    };
-  });
 
 export const adminGetKiwifyWebhookUrl = createServerFn({ method: "POST" })
   .inputValidator((i: { token: string }) => z.object({ token: z.string() }).parse(i))
