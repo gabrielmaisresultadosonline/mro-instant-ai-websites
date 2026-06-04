@@ -18,11 +18,12 @@ function cleanHtmlOutput(s: string) {
   return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
 }
 
-async function callDeepseek(token: string, prompt: string, temperature: number): Promise<string> {
+async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 50000): Promise<string> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 55000); // Reduzido para 55s para evitar 60s gateway timeout
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
+    console.log(`[AI_CALL] DeepSeek - Timeout: ${timeoutMs}ms`);
     const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -40,13 +41,14 @@ async function callDeepseek(token: string, prompt: string, temperature: number):
   }
 }
 
-async function callClaude(token: string, prompt: string, temperature: number): Promise<string> {
+async function callClaude(token: string, prompt: string, temperature: number, timeoutMs = 50000): Promise<string> {
   const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
   let lastErr = "";
   for (const model of models) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
+      console.log(`[AI_CALL] Claude (${model}) - Timeout: ${timeoutMs}ms`);
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": token, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
@@ -65,8 +67,12 @@ async function callClaude(token: string, prompt: string, temperature: number): P
       if (html) return html;
     } catch (e) {
       clearTimeout(timeoutId);
-      if (e instanceof Error && e.name === "AbortError") lastErr = "timeout";
-      else lastErr = String(e);
+      if (e instanceof Error && e.name === "AbortError") {
+        lastErr = "timeout";
+        console.warn(`[Claude] Timeout with model ${model}`);
+        break; // Se deu timeout em um, provavelmente não vai dar tempo de tentar outros
+      }
+      lastErr = String(e);
       console.error(`[Claude] Exception with model ${model}:`, e);
       continue;
     }
@@ -74,11 +80,12 @@ async function callClaude(token: string, prompt: string, temperature: number): P
   throw new Error(`claude todos falharam: ${lastErr.slice(0, 200)}`);
 }
 
-async function callOpenAI(token: string, prompt: string, temperature: number): Promise<string> {
+async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs = 50000): Promise<string> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
+    console.log(`[AI_CALL] OpenAI - Timeout: ${timeoutMs}ms`);
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -96,13 +103,14 @@ async function callOpenAI(token: string, prompt: string, temperature: number): P
   }
 }
 
-async function callLovableAI(prompt: string): Promise<string> {
+async function callLovableAI(prompt: string, timeoutMs = 30000): Promise<string> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) throw new Error("LOVABLE_API_KEY ausente");
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
+    console.log(`[AI_CALL] LovableAI - Timeout: ${timeoutMs}ms`);
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -128,41 +136,68 @@ async function generateHtmlWithFallback(
   tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
   prompt: string,
   temperature: number,
+  maxTotalTimeoutMs = 50000
 ): Promise<{ html: string; providerUsed: ActualProvider }> {
+  const startTime = Date.now();
   const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
   const errors: string[] = [];
   
   for (const p of order) {
+    const elapsed = Date.now() - startTime;
+    const remaining = maxTotalTimeoutMs - elapsed;
+    
+    if (remaining < 5000) {
+      console.warn(`[Fallback] Tempo insuficiente para tentar ${p}. Restante: ${remaining}ms`);
+      errors.push(`${p}: tempo insuficiente`);
+      continue;
+    }
+
     const token = tokens[p];
     if (!token) {
       errors.push(`${p}: sem token configurado`);
       continue;
     }
+
     try {
+      // Divide o tempo restante se ainda houver outros provedores para tentar
+      const isLastInOrder = p === order[order.length - 1];
+      const callTimeout = isLastInOrder ? remaining : Math.min(remaining, 25000);
+
       const html = p === "deepseek"
-        ? await callDeepseek(token, prompt, temperature)
+        ? await callDeepseek(token, prompt, temperature, callTimeout)
         : p === "claude"
-        ? await callClaude(token, prompt, temperature)
-        : await callOpenAI(token, prompt, temperature);
+        ? await callClaude(token, prompt, temperature, callTimeout)
+        : await callOpenAI(token, prompt, temperature, callTimeout);
+
       if (html && html.length > 50) return { html, providerUsed: p };
       errors.push(`${p}: retorno muito curto ou vazio`);
     } catch (e) {
       const msg = String(e instanceof Error ? e.message : e);
       console.error(`[generateHtmlWithFallback] ${p} falhou:`, msg);
       errors.push(`${p}: ${msg}`);
+      if (msg.includes("timeout")) {
+        // Se deu timeout, pule para o próximo rapidamente
+        continue;
+      }
     }
   }
 
-  // Final fallback: Lovable AI Gateway (Gemini 2.5 Flash)
-  // Only if explicitly allowed or as a last resort to not leave the user with nothing
-  try {
-    const html = await callLovableAI(prompt);
-    if (html && html.length > 50) return { html, providerUsed: "lovable-ai" };
-    errors.push(`lovable-ai: retorno muito curto`);
-  } catch (e) {
-    const msg = String(e instanceof Error ? e.message : e);
-    console.error("[generateHtmlWithFallback] lovable-ai falhou:", msg);
-    errors.push(`lovable-ai: ${msg}`);
+  // Final fallback: Lovable AI Gateway (Gemini 2.5 Flash) - costumamos ser mais rápidos
+  const finalElapsed = Date.now() - startTime;
+  const finalRemaining = maxTotalTimeoutMs - finalElapsed;
+  if (finalRemaining > 5000) {
+    try {
+      console.log(`[Fallback] Usando LovableAI como último recurso. Restante: ${finalRemaining}ms`);
+      const html = await callLovableAI(prompt, finalRemaining);
+      if (html && html.length > 50) return { html, providerUsed: "lovable-ai" };
+      errors.push(`lovable-ai: retorno muito curto`);
+    } catch (e) {
+      const msg = String(e instanceof Error ? e.message : e);
+      console.error("[generateHtmlWithFallback] lovable-ai falhou:", msg);
+      errors.push(`lovable-ai: ${msg}`);
+    }
+  } else {
+    errors.push("lovable-ai: tempo esgotado para fallback");
   }
 
   throw new Error(`Falha ao gerar com a I.A MRO. Detalhes: ${errors.join(" | ")}`.slice(0, 500));
@@ -457,7 +492,11 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const globalStartTime = Date.now();
+    const TOTAL_BUDGET = 56000; // 56s total para dar margem ao proxy de 60s
     
+    console.log(`[PROGRESS] ${new Date().toISOString()} - Iniciando geração para site ${data.id}`);
+
     // Using admin to check site ownership to avoid RLS issues with legacy keys
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: site, error: siteErr } = await supabaseAdmin
@@ -520,89 +559,43 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       deepseek: settings?.deepseek_token,
       claude: settings?.claude_token,
     };
-    // Não bloqueia se a chave do provider preferido faltar — temos fallback automático.
 
     // Step 1 — briefing
-    // Importante: Pegamos o hostname real para garantir que o link seja público e acessível pela I.A.
     const baseUrl = process.env.VITE_SITE_URL || "https://mro.bio";
     const imagesList = (data.images ?? []).map((im, i) => {
       const fullUrl = im.url.startsWith("http") ? im.url : `${baseUrl}${im.url}`;
       return `- ETIQUETA: "${im.label}" | LINK: ${fullUrl}`;
     }).join("\n") || "(Nenhuma imagem enviada)";
     
-    // LOGS INTERNOS PARA DEPURAÇÃO (Visíveis apenas para desenvolvedores)
-    console.log(`[DEBUG_GENERATION] User: ${userId} | SiteId: ${data.id}`);
-    console.log(`[DEBUG_GENERATION] Imagens recebidas no input (${data.images?.length ?? 0}):`, JSON.stringify(data.images, null, 2));
-    console.log(`[DEBUG_GENERATION] ImagesList formatado:\n${imagesList}`);
+    console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Gerando briefing com ${provider}...`);
 
-    const briefPrompt = `Você é um Diretor de Arte Sênior de uma agência de Branding de Luxo.
-O cliente enviou este pedido:
-"${data.prompt}"
-
-IMAGENS DISPONÍVEIS (VOCÊ DEVE USAR ESTES LINKS REAIS PARA GERAR O SITE):
-${imagesList}
-
-DIRETRIZES DE DESIGN DE ALTO NÍVEL (ESTÉTICA PREMIUM):
-1. IMPACTO VISUAL: O site deve ser deslumbrante e profissional. Use seções com fundos alternados, tipografia moderna e elegante, e espaçamentos (paddings e margins) generosos para criar respiro.
-2. ELEMENTOS MODERNOS: Incorpore bordas arredondadas (rounded-2xl ou rounded-3xl), sombras suaves (shadow-lg/xl), gradientes sutis e luxuosos, e padrões de fundo (patterns) discretos.
-3. INTERATIVIDADE: Adicione efeitos de hover refinados em botões e cards. O site deve parecer vivo, não estático.
-4. ESTRUTURA RICA: Mínimo de 6 seções bem definidas:
-   - Header: Navegação limpa com a logo do cliente.
-   - Hero: Título impactante, subtítulo persuasivo e CTA principal.
-   - Sobre Nós: Narrativa envolvente sobre a marca.
-   - Serviços/Produtos: Grid moderno com ícones ou imagens reais.
-   - Prova Social/Galeria: Depoimentos ou fotos reais do trabalho.
-   - Rodapé (Footer): Completo com contatos e links sociais.
-5. REGRAS DE IMAGENS: Proibido placeholders ou imagens externas (Unsplash, etc). Se não houver imagem para uma seção, use gradientes premium ou ícones SVG elegantes que combinem com a marca.
-6. CORES E CTAS: Respeite a paleta solicitada. Botões de CTA (Chamada para Ação) devem ser verdes vibrantes e atraentes (#22c55e ou #16a34a).
-7. RESPONSIVIDADE: O design deve ser impecável em dispositivos móveis e desktop.
-
-Responda em português um briefing técnico com:
-- Paleta de cores completa (HEX)
-- Estrutura de Seções detalhada
-- Mapeamento exato de quais LINKS de imagem reais serão usados em cada local.
-
-Seja autoritário, criativo e focado em converter visitantes em clientes.`;
+    const briefPrompt = `Você é um Diretor de Arte Sênior. O cliente pediu: "${data.prompt}". IMAGENS: ${imagesList}. Responda em português um briefing técnico com: Paleta de cores (HEX), Estrutura de Seções, e Mapeamento de LINKS de imagem reais.`;
 
     let brief = "";
     try {
-      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2);
+      // O briefing deve ser rápido. No máximo 12s para sobrar tempo para o código.
+      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 12000);
       brief = briefHtml;
-      console.log(`[GenerateSite] Brief generated successfully`);
+      console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Briefing gerado.`);
     } catch (e) { 
-      console.error("brief error fallback:", e); 
-      // If brief fails, we continue with empty brief, or a generic one
+      console.warn(`[GenerateSite] Briefing falhou ou demorou demais, seguindo com padrão. Erro: ${e}`); 
       brief = "Crie um site moderno e luxuoso baseado no pedido do cliente.";
     }
 
-    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL, ALTAMENTE ESTILOSO e RESPONSIVO.
+    const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END DO MUNDO. Crie um site HTML/Tailwind COMPLETO e RESPONSIVO.
+BRIEFING: ${brief}
+PEDIDO: "${data.prompt}"
+IMAGENS: ${imagesList}
+REGRAS: Mínimo 6 seções. Botões de CTA verdes (bg-green-600). Retorne APENAS o código HTML completo.`;
 
-DIRETRIZES DE DESIGN PREMIUM:
-1. ARQUITETURA VISUAL: O site deve ser deslumbrante. Use seções com fundos contrastantes (ex: preto puro vs cinza grafite, ou branco vs bege suave), tipografia de luxo via Google Fonts (ex: 'Playfair Display' para títulos e 'Inter' para corpo) e espaçamentos (paddings) muito generosos (py-24 ou py-32).
-2. ELEMENTOS MODERNOS: Incorpore bordas arredondadas amplas (rounded-3xl), sombras suaves e profundas (shadow-2xl), e gradientes lineares sutis. Use "backdrop-blur-md" em elementos flutuantes ou no header.
-3. PADRÕES E TEXTURAS: Adicione padrões de fundo discretos (SVG patterns) ou gradientes de mesh para dar profundidade e sofisticação ao site.
-4. INTERATIVIDADE: Use transições suaves (transition-all duration-500) em todos os botões e cards. Adicione uma barra de navegação (header) fixa e elegante.
+    const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
+    console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Gerando código HTML. Orçamento restante: ${remainingBudget}ms`);
 
-BRIEFING TÉCNICO:
-${brief}
-
-PEDIDO DO CLIENTE:
-"${data.prompt}"
-
-IMAGENS DO CLIENTE (USE EXCLUSIVAMENTE ESTES LINKS):
-${imagesList}
-
-REGRAS TÉCNICAS INVIOLÁVEIS:
-1. LOGOTIPO: Se houver imagem com etiqueta "logo", use-a no <header> com <img src="URL" class="h-16 w-auto object-contain">. Se houver logo, não use texto no nome da marca.
-2. IMAGENS REAIS: Use os links acima em seções de Hero, Galeria e Serviços. NUNCA invente URLs ou use placeholders externos.
-3. CTAs VERDES: Todos os botões de ação principal DEVEM ser verdes vibrantes (bg-green-600, hover:bg-green-700) para máxima conversão.
-4. ESTRUTURA RICA: Mínimo de 6 seções (Header, Hero Impactante, Sobre Nós, Serviços com Cards, Galeria/Social, Contato/Footer).
-5. SAÍDA: Retorne APENAS o código HTML completo.`;
-
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7);
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7, remainingBudget);
     const actualProvider: ActualProvider = providerUsed;
 
     if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
+    console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Código gerado com sucesso via ${actualProvider}.`);
 
     // Save generation
     const { data: genRow, error: genErr } = await supabase.from("site_generations")
@@ -627,6 +620,8 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
       next_provider_idx: (providerIdx + 1) % PROVIDERS.length,
     }).eq("id", data.id).eq("owner_id", userId);
 
+    console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Finalizado.`);
+
     return {
       needsCleanup: false as const,
       generationId: genRow.id,
@@ -636,6 +631,7 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
       gensUsed: gens + 1,
       monthlyLimit: MONTHLY_LIMIT,
     };
+  });
   });
 
 // --- Edit a generated model (keeps same model, applies tweaks) ---
@@ -725,7 +721,7 @@ PEDIDO DE EDIÇÃO:
 HTML ATUAL (BASE — EDITE ESTE):
 ${baseHtml}`;
 
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3);
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 50000);
     const actualProvider: ActualProvider = providerUsed;
 
     if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
