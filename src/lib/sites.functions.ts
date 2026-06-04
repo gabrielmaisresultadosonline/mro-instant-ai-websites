@@ -528,21 +528,14 @@ Seja autoritário, criativo e focado em converter visitantes em clientes.`;
 
     let brief = "";
     try {
-      if (tokens.openai) {
-        const r = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: briefPrompt }], temperature: 0.2 }),
-        });
-        if (r.ok) {
-          const j = await r.json() as { choices: { message: { content: string } }[] };
-          brief = j.choices?.[0]?.message?.content ?? "";
-          console.log(`[GenerateSite] Brief generated successfully`);
-        } else {
-          console.error(`[GenerateSite] Brief generation failed: ${r.status}`);
-        }
-      }
-    } catch (e) { console.error("brief error", e); }
+      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2);
+      brief = briefHtml;
+      console.log(`[GenerateSite] Brief generated successfully`);
+    } catch (e) { 
+      console.error("brief error fallback:", e); 
+      // If brief fails, we continue with empty brief, or a generic one
+      brief = "Crie um site moderno e luxuoso baseado no pedido do cliente.";
+    }
 
     const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL, ALTAMENTE ESTILOSO e RESPONSIVO.
 
