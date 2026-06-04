@@ -490,6 +490,58 @@ function SiteEditor() {
             </div>
           )}
 
+          {tab === "edit" && (
+            <div className="space-y-4 p-5">
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed">
+                <strong>Editar modelo</strong> mantém o mesmo modelo já ativo e aplica só as mudanças que você descrever
+                (trocar textos, cores, ajustar seções, etc.). Você tem <strong>{editsLimit} edições por modelo, por mês</strong>.
+                Cada modelo novo (das suas 3 gerações mensais) ganha o próprio contador de 5 edições.
+              </div>
+
+              {!activeGen ? (
+                <div className="rounded-lg border border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
+                  Você ainda não tem uma versão ativa. Vá em <strong>Pré-visualização</strong>, gere com a I.A e ative uma versão.
+                  Depois, volte aqui para editá-la.
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div>
+                      Modelo ativo: <span className="rounded bg-accent px-1.5 py-0.5 font-bold">{PROVIDER_LABEL[activeGen.provider] ?? activeGen.provider}</span>
+                      <span className="ml-2 text-muted-foreground">criado em {new Date(activeGen.created_at).toLocaleString("pt-BR")}</span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      Edições deste modelo: <strong className="text-foreground">{editsUsed}/{editsLimit}</strong> no mês
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    rows={6}
+                    maxLength={2000}
+                    placeholder="Ex.: Troque o título do hero para 'Bem-vindo à Essência'. Mude a cor dos botões para roxo. Adicione um depoimento da Maria abaixo da seção de serviços. Mantenha o resto igual."
+                    className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none"
+                  />
+
+                  <button
+                    onClick={runEdit}
+                    disabled={editing || editsLeft <= 0 || editPrompt.trim().length < 5}
+                    className="w-full rounded-md btn-brand py-2.5 text-sm font-semibold disabled:opacity-60"
+                  >
+                    {editing ? "Editando modelo…" : editsLeft <= 0 ? "Limite de edições atingido neste mês" : `✨ Aplicar edição (${editsLeft} restantes)`}
+                  </button>
+
+                  <p className="text-[11px] text-muted-foreground">
+                    A edição vai gerar uma <strong>nova versão</strong> baseada no modelo atual (sem recriar do zero). Você poderá
+                    pré-visualizar e clicar em <strong>Ativar</strong> para publicar — ou descartar e tentar de novo.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
+
           {tab === "history" && (
             <div className="space-y-2 p-4">
               <p className="text-xs text-muted-foreground">
