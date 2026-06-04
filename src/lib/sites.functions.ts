@@ -541,48 +541,8 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
 2. IMAGENS REAIS: Use os links acima em seções de Hero, Galeria e Serviços. NUNCA invente URLs ou use placeholders externos.
 3. CTAs VERDES: Todos os botões de ação principal DEVEM ser verdes vibrantes (bg-green-600, hover:bg-green-700) para máxima conversão.
 4. ESTRUTURA RICA: Mínimo de 6 seções (Header, Hero Impactante, Sobre Nós, Serviços com Cards, Galeria/Social, Contato/Footer).
-5. SAÍDA: Retorne APENAS o código HTML completo.`;
-
-    function cleanHtml(s: string) {
-      return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-    }
-
-    let html = "";
-    if (provider === "deepseek") {
-      const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${tokens.deepseek}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: codePrompt }], temperature: 0.6, max_tokens: 8000 }),
-      });
-      if (!r.ok) { console.error("deepseek", r.status, await r.text()); throw new Error("Falha ao gerar com a I.A MRO (v1). Tente novamente."); }
-      const j = await r.json() as { choices: { message: { content: string } }[] };
-      html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
-    } else if (provider === "claude") {
-      const models = ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
-      let lastErr = "";
-      for (const model of models) {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "x-api-key": tokens.claude!, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-          body: JSON.stringify({ model, max_tokens: 8000, temperature: 0.7, messages: [{ role: "user", content: codePrompt }] }),
-        });
-        if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error("Falha ao gerar com a I.A MRO (v2)."); }
-        const j = await r.json() as { content: { type: string; text: string }[] };
-        html = cleanHtml((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
-        if (html) break;
-      }
-      if (!html) throw new Error(`Falha ao gerar com a I.A MRO (v2). ${lastErr}`.slice(0, 300));
-    } else {
-      // openai
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: codePrompt }], temperature: 0.7, max_tokens: 8000 }),
-      });
-      if (!r.ok) { console.error("openai", r.status, await r.text()); throw new Error("Falha ao gerar com a I.A MRO (v3)."); }
-      const j = await r.json() as { choices: { message: { content: string } }[] };
-      html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
-    }
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7);
+    const actualProvider: Provider = providerUsed;
 
     if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
 
