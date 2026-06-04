@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
 import { fbEvent } from "@/lib/facebook-pixel";
+import { createResellerCheckout } from "@/lib/reseller.functions";
+import { toast } from "sonner";
 const sitesShowcase = { url: "/images/sites-showcase.png" };
 
 const KIWIFY_URL = "https://pay.kiwify.com.br/1mMYvVU";
