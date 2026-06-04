@@ -19,14 +19,24 @@ function cleanHtmlOutput(s: string) {
 }
 
 async function callDeepseek(token: string, prompt: string, temperature: number): Promise<string> {
-  const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: prompt }], temperature, max_tokens: 8000 }),
-  });
-  if (!r.ok) throw new Error(`deepseek ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const j = await r.json() as { choices: { message: { content: string } }[] };
-  return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
+  
+  try {
+    const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: prompt }], temperature, max_tokens: 8000 }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!r.ok) throw new Error(`deepseek ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const j = await r.json() as { choices: { message: { content: string } }[] };
+    return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
 }
 
 async function callClaude(token: string, prompt: string, temperature: number): Promise<string> {
@@ -35,11 +45,16 @@ async function callClaude(token: string, prompt: string, temperature: number): P
   let lastErr = "";
   for (const model of models) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s
+      
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": token, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
         body: JSON.stringify({ model, max_tokens: 8000, temperature, messages: [{ role: "user", content: prompt }] }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!r.ok) { 
         lastErr = await r.text(); 
         console.error(`[Claude] Model ${model} failed with status ${r.status}:`, lastErr);
@@ -59,30 +74,50 @@ async function callClaude(token: string, prompt: string, temperature: number): P
 }
 
 async function callOpenAI(token: string, prompt: string, temperature: number): Promise<string> {
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }], temperature, max_tokens: 8000 }),
-  });
-  if (!r.ok) throw new Error(`openai ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const j = await r.json() as { choices: { message: { content: string } }[] };
-  return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s
+  
+  try {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }], temperature, max_tokens: 8000 }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!r.ok) throw new Error(`openai ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const j = await r.json() as { choices: { message: { content: string } }[] };
+    return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
 }
 
 async function callLovableAI(prompt: string): Promise<string> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) throw new Error("LOVABLE_API_KEY ausente");
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash", 
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!r.ok) throw new Error(`lovable-ai ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const j = await r.json() as { choices: { message: { content: string } }[] };
-  return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for gateway
+  
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash", 
+        messages: [{ role: "user", content: prompt }],
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!r.ok) throw new Error(`lovable-ai ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const j = await r.json() as { choices: { message: { content: string } }[] };
+    return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
 }
 
 async function generateHtmlWithFallback(
