@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RendaextraRouteImport } from './routes/rendaextra'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AdministracaoRouteImport } from './routes/administracao'
@@ -29,6 +30,11 @@ import { Route as ApiPublicImgSplatRouteImport } from './routes/api/public/img/$
 import { Route as ApiPublicCronSubscriptionsRouteImport } from './routes/api/public/cron/subscriptions'
 import { Route as ApiPublicCronEmailOutboxRouteImport } from './routes/api/public/cron/email-outbox'
 
+const RendaextraRoute = RendaextraRouteImport.update({
+  id: '/rendaextra',
+  path: '/rendaextra',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/administracao': typeof AdministracaoRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/rendaextra': typeof RendaextraRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/administracao': typeof AdministracaoRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/rendaextra': typeof RendaextraRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/administracao': typeof AdministracaoRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/rendaextra': typeof RendaextraRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/administracao'
     | '/cadastro'
     | '/login'
+    | '/rendaextra'
     | '/dashboard'
     | '/ativar/$token'
     | '/ob/obrigado'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/administracao'
     | '/cadastro'
     | '/login'
+    | '/rendaextra'
     | '/dashboard'
     | '/ativar/$token'
     | '/ob/obrigado'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/administracao'
     | '/cadastro'
     | '/login'
+    | '/rendaextra'
     | '/_authenticated/dashboard'
     | '/ativar/$token'
     | '/ob/obrigado'
@@ -259,6 +271,7 @@ export interface RootRouteChildren {
   AdministracaoRoute: typeof AdministracaoRoute
   CadastroRoute: typeof CadastroRoute
   LoginRoute: typeof LoginRoute
+  RendaextraRoute: typeof RendaextraRoute
   AtivarTokenRoute: typeof AtivarTokenRoute
   ObObrigadoRoute: typeof ObObrigadoRoute
   RedefinirSenhaTokenRoute: typeof RedefinirSenhaTokenRoute
@@ -274,6 +287,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/rendaextra': {
+      id: '/rendaextra'
+      path: '/rendaextra'
+      fullPath: '/rendaextra'
+      preLoaderRoute: typeof RendaextraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -431,6 +451,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdministracaoRoute: AdministracaoRoute,
   CadastroRoute: CadastroRoute,
   LoginRoute: LoginRoute,
+  RendaextraRoute: RendaextraRoute,
   AtivarTokenRoute: AtivarTokenRoute,
   ObObrigadoRoute: ObObrigadoRoute,
   RedefinirSenhaTokenRoute: RedefinirSenhaTokenRoute,
@@ -446,3 +467,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
