@@ -20,7 +20,7 @@ function cleanHtmlOutput(s: string) {
 
 async function callDeepseek(token: string, prompt: string, temperature: number): Promise<string> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 55000); // Reduzido para 55s para evitar 60s gateway timeout
   
   try {
     const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
@@ -35,18 +35,18 @@ async function callDeepseek(token: string, prompt: string, temperature: number):
     return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
   } catch (e) {
     clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === "AbortError") throw new Error("deepseek: timeout");
     throw e;
   }
 }
 
 async function callClaude(token: string, prompt: string, temperature: number): Promise<string> {
-  // Claude specific error logging
   const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
   let lastErr = "";
   for (const model of models) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s
+      const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s
       
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -65,8 +65,10 @@ async function callClaude(token: string, prompt: string, temperature: number): P
       const html = cleanHtmlOutput((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
       if (html) return html;
     } catch (e) {
+      clearTimeout(timeoutId);
+      if (e instanceof Error && e.name === "AbortError") lastErr = "timeout";
+      else lastErr = String(e);
       console.error(`[Claude] Exception with model ${model}:`, e);
-      lastErr = String(e);
       continue;
     }
   }
@@ -75,7 +77,7 @@ async function callClaude(token: string, prompt: string, temperature: number): P
 
 async function callOpenAI(token: string, prompt: string, temperature: number): Promise<string> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s
+  const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s
   
   try {
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -90,6 +92,7 @@ async function callOpenAI(token: string, prompt: string, temperature: number): P
     return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
   } catch (e) {
     clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === "AbortError") throw new Error("openai: timeout");
     throw e;
   }
 }
@@ -98,7 +101,7 @@ async function callLovableAI(prompt: string): Promise<string> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) throw new Error("LOVABLE_API_KEY ausente");
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for gateway
+  const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s
   
   try {
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -116,6 +119,7 @@ async function callLovableAI(prompt: string): Promise<string> {
     return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
   } catch (e) {
     clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === "AbortError") throw new Error("lovable-ai: timeout");
     throw e;
   }
 }
