@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights,
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
+  editGeneration, getEditQuota,
 } from "@/lib/sites.functions";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
@@ -37,6 +38,8 @@ function SiteEditor() {
   const getGenHtmlFn = useServerFn(getGenerationHtml);
   const activateGenFn = useServerFn(activateGeneration);
   const deleteGenFn = useServerFn(deleteGeneration);
+  const editGenFn = useServerFn(editGeneration);
+  const getEditQuotaFn = useServerFn(getEditQuota);
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
@@ -59,14 +62,25 @@ function SiteEditor() {
     queryKey: ["generations", id],
     queryFn: () => listGensFn({ data: { siteId: id } }),
   });
+  const activeGen = (gens?.generations ?? []).find((g) => g.is_active) ?? null;
+  const { data: editQuota } = useQuery({
+    queryKey: ["edit-quota", activeGen?.id],
+    queryFn: () => getEditQuotaFn({ data: { generationId: activeGen!.id } }),
+    enabled: !!activeGen,
+  });
+  const editsUsed = editQuota?.used ?? 0;
+  const editsLimit = editQuota?.limit ?? 5;
+  const editsLeft = Math.max(0, editsLimit - editsUsed);
 
   const [prompt, setPrompt] = useState("");
   const [html, setHtml] = useState("");
   const [pixels, setPixels] = useState<Pixels>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"preview" | "history" | "settings" | "insights">("preview");
+  const [tab, setTab] = useState<"preview" | "edit" | "history" | "settings" | "insights">("preview");
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editing, setEditing] = useState(false);
   const [confirmInfo, setConfirmInfo] = useState(false);   // popup pre-generate (info check)
   const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
   const [rulesSeen, setRulesSeen] = useState(false);
@@ -180,6 +194,26 @@ function SiteEditor() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  async function runEdit() {
+    if (!activeGen) { toast.error("Você precisa ter uma versão ativa para editar."); return; }
+    if (editPrompt.trim().length < 5) { toast.error("Descreva o que deseja editar."); return; }
+    if (editsLeft <= 0) { toast.error(`Você usou as ${editsLimit} edições deste modelo no mês.`); return; }
+    setEditing(true);
+    try {
+      const res = await editGenFn({ data: { generationId: activeGen.id, prompt: editPrompt } });
+      setPreview({ id: res.generationId, provider: res.provider, html: res.html });
+      setEditPrompt("");
+      setTab("preview");
+      qc.invalidateQueries({ queryKey: ["generations", id] });
+      qc.invalidateQueries({ queryKey: ["edit-quota", activeGen.id] });
+      toast.success(`Edição pronta — ${res.editsUsed}/${res.editsLimit} no mês deste modelo.`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEditing(false);
+    }
+  }
 
   async function openHistoryItem(genId: string) {
     try {
@@ -403,10 +437,14 @@ function SiteEditor() {
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
           <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
-            {(["preview", "history", "settings", "insights"] as const).map((t) => (
+            {(["preview", "edit", "history", "settings", "insights"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
-                {t === "preview" ? "Pré-visualização" : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)` : t === "settings" ? "Configurações" : "Insights"}
+                {t === "preview" ? "Pré-visualização"
+                  : t === "edit" ? `✏️ Editar modelo${activeGen ? ` (${editsLeft}/${editsLimit})` : ""}`
+                  : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
+                  : t === "settings" ? "Configurações"
+                  : "Insights"}
               </button>
             ))}
           </div>
@@ -451,6 +489,58 @@ function SiteEditor() {
               )}
             </div>
           )}
+
+          {tab === "edit" && (
+            <div className="space-y-4 p-5">
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed">
+                <strong>Editar modelo</strong> mantém o mesmo modelo já ativo e aplica só as mudanças que você descrever
+                (trocar textos, cores, ajustar seções, etc.). Você tem <strong>{editsLimit} edições por modelo, por mês</strong>.
+                Cada modelo novo (das suas 3 gerações mensais) ganha o próprio contador de 5 edições.
+              </div>
+
+              {!activeGen ? (
+                <div className="rounded-lg border border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
+                  Você ainda não tem uma versão ativa. Vá em <strong>Pré-visualização</strong>, gere com a I.A e ative uma versão.
+                  Depois, volte aqui para editá-la.
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div>
+                      Modelo ativo: <span className="rounded bg-accent px-1.5 py-0.5 font-bold">{PROVIDER_LABEL[activeGen.provider] ?? activeGen.provider}</span>
+                      <span className="ml-2 text-muted-foreground">criado em {new Date(activeGen.created_at).toLocaleString("pt-BR")}</span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      Edições deste modelo: <strong className="text-foreground">{editsUsed}/{editsLimit}</strong> no mês
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    rows={6}
+                    maxLength={2000}
+                    placeholder="Ex.: Troque o título do hero para 'Bem-vindo à Essência'. Mude a cor dos botões para roxo. Adicione um depoimento da Maria abaixo da seção de serviços. Mantenha o resto igual."
+                    className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none"
+                  />
+
+                  <button
+                    onClick={runEdit}
+                    disabled={editing || editsLeft <= 0 || editPrompt.trim().length < 5}
+                    className="w-full rounded-md btn-brand py-2.5 text-sm font-semibold disabled:opacity-60"
+                  >
+                    {editing ? "Editando modelo…" : editsLeft <= 0 ? "Limite de edições atingido neste mês" : `✨ Aplicar edição (${editsLeft} restantes)`}
+                  </button>
+
+                  <p className="text-[11px] text-muted-foreground">
+                    A edição vai gerar uma <strong>nova versão</strong> baseada no modelo atual (sem recriar do zero). Você poderá
+                    pré-visualizar e clicar em <strong>Ativar</strong> para publicar — ou descartar e tentar de novo.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
 
           {tab === "history" && (
             <div className="space-y-2 p-4">
