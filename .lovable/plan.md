@@ -1,96 +1,106 @@
-# MRO.BIO — Plano de construção
 
-## Visão geral
-Plataforma onde o usuário se cadastra, recebe um subdomínio (`nome.mro.bio`) e gera um site completo via comando para uma IA. Inclui landing de vendas, dashboard do usuário, gerador/editor de site com preview ao vivo, biblioteca de imagens, analytics por site, pixels de tracking, e painel administrativo.
+# Plano Revendedor + Integração InfinitePay
 
-## Arquitetura
+## 1. Landing page (`src/routes/index.tsx`)
 
-- **Frontend + Backend**: TanStack Start (já é o template Lovable). Mesmo código roda no Lovable Cloud e no seu VPS Ubuntu.
-- **Banco / Auth / Storage**: Lovable Cloud (Supabase gerenciado). Auth por email/senha + JWT. Storage para uploads de imagens com URL pública.
-- **IA**: Server functions chamando OpenAI (ideias) e DeepSeek (código HTML). Tokens configurados no painel `/administracao` e guardados como secrets no servidor — **nunca expostos ao cliente**. Na UI sempre rotulado como "IA da MRO".
-- **Subdomínios `*.mro.bio`**: rota wildcard no servidor. O middleware lê o `Host`, identifica o slug do site e serve o HTML salvo daquele site. `mro.bio` e `www.mro.bio` servem a landing. `administracao.mro.bio` ou path `/administracao` para admin.
-- **Deploy híbrido**: rodando no Lovable Cloud por padrão. Entrego também um `deploy/` com Dockerfile + docker-compose + Nginx wildcard SSL (Caddy ou certbot) + script `install.sh` para Ubuntu 24 LTS.
+Nova seção **"Plano Revenda — Renda Extra"** logo abaixo dos planos atuais (ou substituindo a seção de planos se você preferir só um bloco extra — vou colocar como bloco adicional).
 
-## Páginas / rotas
+Conteúdo:
+- Título: **"Revenda Sites e Fature mais de R$ 3.000/mês"**
+- Comparativo destacado com o mercado:
+  - Hospedagem tradicional: R$ 40/mês
+  - Domínio próprio: R$ 40/ano
+  - Designer/gestor para site pronto: R$ 700+
+  - Mensalidade recorrente: R$ 40/mês
+  - **Nossa solução:** pagamento único anual, hospedagem + domínio inclusos
+- Caixa de lucro:
+  - Você paga **R$ 36 por site**
+  - Vende a empresa por **R$ 297/ano**
+  - **Lucro líquido R$ 261 por site**
+  - **10 sites = R$ 2.610 líquidos**
+- Preço destacado: **R$ 297** ou **12x de R$ 30**
+- Inclui: 10 contas de cliente, hospedagem, domínio `slug.mro.bio`, suporte
+- Formulário inline: **Nome, Email, WhatsApp** → botão "Pagar e começar agora"
 
-1. `/` — Landing de vendas (pública, SSR, SEO completo)
-2. `/cadastro` — Formulário: nome, email, whatsapp, CPF, senha
-3. `/login`
-4. `/_authenticated/dashboard` — Dashboard do usuário (lista os sites dele)
-5. `/_authenticated/sites/novo` — Criar site (escolher slug `xxx.mro.bio`)
-6. `/_authenticated/sites/$id` — Editor do site: prompt, preview live em iframe, salvar, biblioteca de imagens (upload, copiar link, clicar para inserir no prompt), gerenciar pixels (FB, GA, TikTok), ver analytics
-7. `/administracao` — Login admin separado (`mro@gmail.com` / `Ga145523@`), lista de usuários, sites, analytics globais, excluir/editar usuários, **configurar tokens OpenAI e DeepSeek**
-8. Wildcard `*.mro.bio` — Serve o HTML salvo do site daquele slug, dispara tracking de visita (pixel próprio simples grava `visits` no banco com IP→região via cabeçalho `cf-ipcountry`/`x-forwarded-for` + lookup leve)
+## 2. Fluxo de checkout InfinitePay
 
-## Banco (tabelas principais)
+Endpoint atual: `POST https://api.checkout.infinitepay.io/links` (URL nova).
+Handle: `paguemro`.
 
-- `profiles` (id=auth.users.id, name, whatsapp, cpf, created_at)
-- `user_roles` (user_id, role enum [admin|user]) — RLS via `has_role()` security definer
-- `sites` (id, owner_id, slug UNIQUE, title, html, last_prompt, edits_this_week, week_started_at, pixels jsonb, created_at, updated_at)
-- `site_visits` (id, site_id, ip, country, region, user_agent, referrer, created_at) — para insights
-- `site_images` (id, site_id, owner_id, path, public_url, created_at) — metadados; arquivos no Storage bucket `site-images` (público)
-- `admin_settings` (singleton: openai_token, deepseek_token) — só admin lê/escreve via security-definer RPC; tokens guardados criptografados ou só acessados server-side
+Fluxo:
+1. Usuário preenche nome/email/whatsapp e clica em pagar.
+2. Server fn `createResellerCheckout({ name, email, whatsapp })`:
+   - Valida com Zod.
+   - Cria registro em nova tabela `reseller_orders` com status `pending`, gera `order_nsu` único (uuid).
+   - Chama InfinitePay com:
+     - `handle: "paguemro"`
+     - `items: [{ quantity: 1, price: 29700, description: "Plano Revenda Anual — 10 sites mro.bio" }]`
+     - `order_nsu`
+     - `customer: { name, email, phone_number: whatsapp }`
+     - `redirect_url: https://mro.bio/ob/obrigado?order={order_nsu}`
+     - `webhook_url: https://mro.bio/api/public/webhooks/infinitepay`
+   - Retorna a URL do checkout retornada pela InfinitePay.
+3. Frontend faz `window.location.href = url`.
 
-## Limite de edições
-Coluna `edits_this_week` + `week_started_at` em `sites`. Server function `generateSiteHtml` valida `< 4` e reseta a janela após 7 dias. Mensagem clara quando estoura.
+## 3. Webhook + Polling
 
-## Fluxo de geração
-1. Usuário escreve prompt + clica em imagens da biblioteca (UI insere `[imagem: <url>]` no prompt)
-2. Server fn `generateSiteHtml`:
-   - Carrega tokens de `admin_settings` (server-only)
-   - Chama OpenAI: "expanda este briefing em um plano de site (seções, copy, CTAs)"
-   - Chama DeepSeek: "gere HTML completo, responsivo, sem dependências externas além de Tailwind CDN, usando estas imagens: …"
-   - Retorna HTML
-3. Preview renderiza em `<iframe srcDoc={html}>`
-4. Botão "Salvar" persiste em `sites.html` e incrementa `edits_this_week`
+**Webhook** `src/routes/api/public/webhooks/infinitepay.ts`:
+- Recebe POST, valida payload, busca `reseller_orders` por `order_nsu`.
+- Se aprovado e ainda `pending`: marca `paid`, dispara provisionamento.
 
-## Insights por site
-- Top da dashboard de cada site: total de visitas, última visita (timestamp + país), região com mais acessos (gráfico simples)
-- Query agregada em server fn protegida por `requireSupabaseAuth` + checagem de owner
+**Polling de segurança (8s)** — como você pediu:
+- Componente na página `/ob/obrigado` chama `checkResellerOrder({ order_nsu })` a cada 8s.
+- Server fn faz `POST https://api.checkout.infinitepay.io/payment_check` e, se pago, faz o mesmo provisionamento (idempotente via status).
 
-## Pixels
-- Campo no editor: FB Pixel ID, GA4 Measurement ID, TikTok Pixel ID
-- Servidor injeta os snippets no `<head>` do HTML servido em `*.mro.bio`
+**Provisionamento automático:**
+- Cria user no Supabase Auth via `supabaseAdmin.auth.admin.createUser` com email confirmado e senha aleatória.
+- Atualiza `profiles`: `max_sites=10`, `is_reseller=true`, `created_by_admin=true`, assinatura ativa por 365 dias.
+- Gera token em `activation_tokens` (purpose=`password_reset`) e enfileira email com link `/redefinir-senha/{token}` (template já existe: `password_reset`).
+- Marca `reseller_orders.status='provisioned'`, salva `user_id`.
 
-## Admin `/administracao`
-- Login isolado (não usa o auth normal): valida email + senha hardcoded contra env vars `ADMIN_EMAIL` / `ADMIN_PASSWORD` (defaults pedidos: `mro@gmail.com` / `Ga145523@`). Recomendo trocar depois — eu deixo configurável via secret.
-- Lista usuários (todos), sites, métricas globais
-- Editar/excluir usuário (cascata nos sites)
-- Aba "Configurações": campos para tokens OpenAI e DeepSeek → salvos em `admin_settings`
+## 4. Banco de dados
 
-## Design
-Paleta: branco `#FFFFFF`, amarelo `#FFD600`, preto `#0A0A0A`, cinza `#F4F4F5` / `#71717A`. Tokens em `oklch` no `src/styles.css`. Tipografia: display moderno (Space Grotesk) + body (Inter). Estética: clean, bold, com amarelo como destaque em CTAs. Totalmente responsivo.
+Nova tabela `reseller_orders`:
+- `order_nsu` (text, unique)
+- `name`, `email`, `whatsapp`
+- `amount_cents` (default 29700)
+- `status` (`pending` | `paid` | `provisioned` | `failed`)
+- `checkout_url`, `transaction_nsu`, `invoice_slug`, `receipt_url`
+- `user_id` (uuid nullable)
+- `paid_at`, `provisioned_at`, `last_check_at`
+- `raw_webhook` (jsonb), `last_error` (text)
 
-## Deploy híbrido
+GRANTs apenas para `service_role`; RLS bloqueando acesso direto (acesso via server fn admin).
 
-**Agora (Lovable Cloud):**
-- Ativo Lovable Cloud (Supabase gerenciado)
-- Você conecta `mro.bio` + wildcard `*.mro.bio` em Project Settings → Domains (DNS A record + wildcard)
+## 5. Aba "Pagamentos/Usuários" no `/administracao`
 
-**Depois (seu VPS Ubuntu 24 LTS na Hostinger):**
-Entrego em `deploy/`:
-- `Dockerfile` (Node 20 alpine, build TanStack, runtime)
-- `docker-compose.yml` (app + Caddy com SSL wildcard automático via Let's Encrypt DNS-01)
-- `Caddyfile` com `*.mro.bio` + `mro.bio`
-- `install.sh`: instala Docker, clona, configura `.env`, sobe
-- `README-DEPLOY.md`: passo a passo no terminal Hostinger, incluindo configuração DNS wildcard e variáveis (Supabase URL/keys ou Postgres self-hosted, tokens)
+Nova aba ao lado das existentes:
+- **Tentativas (pending/failed):** quem preencheu mas não pagou.
+- **Pagos (paid):** pagaram mas ainda não foram provisionados (raro, transitório).
+- **Provisionados:** lista com email enviado, link de acesso, data, valor.
+- Filtros simples + busca por email.
+- Ações: reenviar email de acesso (re-enfileira `password_reset`), marcar como pago manualmente, ver payload bruto do webhook.
 
-Observação: para self-host completo sem Lovable Cloud, é viável trocar Supabase por Postgres local + auth próprio, mas isso dobra o trabalho. Recomendo manter Lovable Cloud (ou Supabase self-hosted via Docker) mesmo no VPS — o app aponta para a URL/keys via env vars.
+Server fns no `admin.functions.ts`:
+- `adminListResellerOrders({ token, status? })`
+- `adminResendResellerAccess({ token, orderId })`
+- `adminMarkResellerPaid({ token, orderId })`
 
-## O que NÃO entra nesta versão
-- Pagamento (você decide depois)
-- Editor visual drag-and-drop (só prompt + preview do HTML gerado)
-- Custom domain por site (só subdomínio `*.mro.bio`)
-- A11y avançado, i18n
+## 6. Template de email
 
-## Ordem de execução
-1. Ativar Lovable Cloud + criar schema (tabelas, RLS, roles, storage bucket)
-2. Pedir secrets: `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (após confirmar plano)
-3. Design system + landing pública
-4. Auth (cadastro/login) + dashboard
-5. Editor de site + preview + biblioteca de imagens + geração IA
-6. Wildcard handler para servir sites + tracking de visitas
-7. Painel `/administracao` + configurações de tokens
-8. Pacote `deploy/` para VPS Ubuntu + README
+Adicionar template `reseller_welcome` em `email-templates.server.ts`:
+- Assunto: "Seu acesso ao MRO.BIO — Plano Revenda"
+- Conteúdo: parabéns, 10 sites disponíveis, link para criar senha (`/redefinir-senha/{token}`), dicas de uso.
 
-Aprovar para eu começar?
+## 7. Secrets necessários
+
+Nenhum novo segredo obrigatório — InfinitePay Checkout Integrado é público com `handle`. Caso depois você queira assinar webhook, adicionamos `INFINITEPAY_WEBHOOK_SECRET`.
+
+## Detalhes técnicos
+
+- Server fns em `src/lib/reseller.functions.ts` (público, sem `requireSupabaseAuth`).
+- Server fn de provisionamento dentro do handler para garantir idempotência por `order_nsu`.
+- Página `/ob/obrigado` mostra estado: "Aguardando confirmação", "Pago! Enviando seu acesso…", "Pronto! Enviamos o link para {email}".
+- Tudo em pt-BR, mantendo o design system existente.
+
+Posso seguir com a implementação?
