@@ -695,7 +695,7 @@ ${baseHtml}`;
 
     return {
       generationId: newRow.id,
-      provider,
+      provider: actualProvider,
       html,
       editsUsed: used + 1,
       editsLimit: EDITS_PER_MODEL,
