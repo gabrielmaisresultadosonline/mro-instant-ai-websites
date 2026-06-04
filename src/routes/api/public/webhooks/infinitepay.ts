@@ -81,11 +81,15 @@ async function provisionByOrderId(orderId: string): Promise<void> {
     name: "activation",
     data: { name: order.name, activationUrl: `https://mro.bio/ativar/${token}` },
   });
-  await supabaseAdmin.from("email_outbox").insert({
+  const { data: outboxRow } = await supabaseAdmin.from("email_outbox").insert({
     to_email: email, to_name: order.name,
     subject: r.subject, body_html: r.html, body_text: r.text,
     template: "activation", status: "pending",
-  });
+  }).select("id").single();
+  if (outboxRow?.id) {
+    const { flushEmailNow } = await import("@/lib/email-flush.server");
+    await flushEmailNow(outboxRow.id);
+  }
 
   await supabaseAdmin
     .from("reseller_orders")
