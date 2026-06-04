@@ -24,6 +24,7 @@ function RendaExtraPage() {
       <MarketComparison />
       <ProfitCalc />
       <Benefits />
+      <VideoDemo />
       <HowResellerWorks />
       <Checkout />
       <Faq />
