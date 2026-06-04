@@ -395,3 +395,78 @@ export const adminSendTestEmail = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// Update adminListUsers result to include max_sites/is_reseller via a new function
+export const adminCreateManualUser = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; name: string; email: string; password: string; whatsapp?: string; cpf?: string; maxSites: number; sendEmail: boolean }) =>
+    z.object({
+      token: z.string(),
+      name: z.string().trim().min(1).max(120),
+      email: z.string().trim().toLowerCase().email(),
+      password: z.string().min(6).max(100),
+      whatsapp: z.string().trim().max(40).optional().default(""),
+      cpf: z.string().trim().max(40).optional().default(""),
+      maxSites: z.number().int().min(1).max(100),
+      sendEmail: z.boolean(),
+    }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { name: data.name, whatsapp: data.whatsapp ?? "", cpf: data.cpf ?? "" },
+    });
+    if (error || !created.user) throw new Error(error?.message ?? "Falha ao criar usuário.");
+
+    const userId = created.user.id;
+    const isReseller = data.maxSites > 1;
+
+    // Profile is created by handle_new_user trigger; update extras
+    await supabaseAdmin.from("profiles").update({
+      name: data.name,
+      whatsapp: data.whatsapp ?? "",
+      cpf: data.cpf ?? "",
+      max_sites: data.maxSites,
+      is_reseller: isReseller,
+      created_by_admin: true,
+      subscription_status: "active",
+      subscription_activated_at: new Date().toISOString(),
+      subscription_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+    }).eq("id", userId);
+
+    if (data.sendEmail) {
+      const { renderTemplate } = await import("@/lib/email-templates.server");
+      const r = renderTemplate({ name: "credentials", data: { name: data.name, email: data.email, password: data.password } });
+      await supabaseAdmin.from("email_outbox").insert({
+        to_email: data.email,
+        to_name: data.name,
+        subject: r.subject,
+        body_html: r.html,
+        body_text: r.text,
+        template: "credentials",
+        status: "pending",
+      });
+    }
+
+    return { ok: true, userId };
+  });
+
+export const adminUpdateUserQuota = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; userId: string; maxSites: number }) =>
+    z.object({ token: z.string(), userId: z.string().uuid(), maxSites: z.number().int().min(1).max(100) }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("profiles").update({
+      max_sites: data.maxSites,
+      is_reseller: data.maxSites > 1,
+    }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
