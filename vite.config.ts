@@ -15,4 +15,9 @@ export default defineConfig({
   nitro: {
     preset: process.env.NITRO_PRESET || "cloudflare-module",
   },
+  vite: {
+    server: {
+      allowedHosts: ["mro.bio"],
+    },
+  },
 });
