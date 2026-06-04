@@ -302,10 +302,12 @@ export type Database = {
         Row: {
           brief: string
           created_at: string
+          edit_prompt: string | null
           html: string
           id: string
           is_active: boolean
           owner_id: string
+          parent_generation_id: string | null
           prompt: string
           provider: string
           site_id: string
@@ -313,10 +315,12 @@ export type Database = {
         Insert: {
           brief?: string
           created_at?: string
+          edit_prompt?: string | null
           html?: string
           id?: string
           is_active?: boolean
           owner_id: string
+          parent_generation_id?: string | null
           prompt?: string
           provider: string
           site_id: string
@@ -324,10 +328,12 @@ export type Database = {
         Update: {
           brief?: string
           created_at?: string
+          edit_prompt?: string | null
           html?: string
           id?: string
           is_active?: boolean
           owner_id?: string
+          parent_generation_id?: string | null
           prompt?: string
           provider?: string
           site_id?: string
