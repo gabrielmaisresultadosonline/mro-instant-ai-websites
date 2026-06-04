@@ -10,7 +10,9 @@ const EDITS_PER_MODEL = 5;
 const HISTORY_LIMIT = 4;
 const HISTORY_TTL_DAYS = 45;
 const PROVIDERS = ["deepseek", "claude", "openai"] as const;
+const ALL_PROVIDERS = [...PROVIDERS, "lovable-ai"] as const;
 type Provider = typeof PROVIDERS[number];
+type ActualProvider = typeof ALL_PROVIDERS[number];
 
 function cleanHtmlOutput(s: string) {
   return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
@@ -74,7 +76,7 @@ async function callLovableAI(prompt: string): Promise<string> {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.0-flash", 
+      model: "google/gemini-2.5-flash", 
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -88,12 +90,16 @@ async function generateHtmlWithFallback(
   tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
   prompt: string,
   temperature: number,
-): Promise<{ html: string; providerUsed: Provider }> {
+): Promise<{ html: string; providerUsed: ActualProvider }> {
   const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
-  let lastErr: unknown = null;
+  const errors: string[] = [];
+  
   for (const p of order) {
     const token = tokens[p];
-    if (!token) continue;
+    if (!token) {
+      errors.push(`${p}: sem token configurado`);
+      continue;
+    }
     try {
       const html = p === "deepseek"
         ? await callDeepseek(token, prompt, temperature)
@@ -101,20 +107,27 @@ async function generateHtmlWithFallback(
         ? await callClaude(token, prompt, temperature)
         : await callOpenAI(token, prompt, temperature);
       if (html && html.length > 50) return { html, providerUsed: p };
+      errors.push(`${p}: retorno muito curto ou vazio`);
     } catch (e) {
-      console.error(`[generateHtmlWithFallback] ${p} falhou:`, e);
-      lastErr = e;
+      const msg = String(e instanceof Error ? e.message : e);
+      console.error(`[generateHtmlWithFallback] ${p} falhou:`, msg);
+      errors.push(`${p}: ${msg}`);
     }
   }
-  // Final fallback: Lovable AI Gateway
+
+  // Final fallback: Lovable AI Gateway (Gemini 2.5 Flash)
+  // Only if explicitly allowed or as a last resort to not leave the user with nothing
   try {
     const html = await callLovableAI(prompt);
-    if (html && html.length > 50) return { html, providerUsed: preferred };
+    if (html && html.length > 50) return { html, providerUsed: "lovable-ai" };
+    errors.push(`lovable-ai: retorno muito curto`);
   } catch (e) {
-    console.error("[generateHtmlWithFallback] lovable-ai falhou:", e);
-    lastErr = e;
+    const msg = String(e instanceof Error ? e.message : e);
+    console.error("[generateHtmlWithFallback] lovable-ai falhou:", msg);
+    errors.push(`lovable-ai: ${msg}`);
   }
-  throw new Error(`Falha ao gerar com a I.A MRO. ${String(lastErr ?? "").slice(0, 200)}`);
+
+  throw new Error(`Falha ao gerar com a I.A MRO. Detalhes: ${errors.join(" | ")}`.slice(0, 500));
 }
 
 export const listMySites = createServerFn({ method: "GET" })
@@ -515,21 +528,14 @@ Seja autoritário, criativo e focado em converter visitantes em clientes.`;
 
     let brief = "";
     try {
-      if (tokens.openai) {
-        const r = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: briefPrompt }], temperature: 0.2 }),
-        });
-        if (r.ok) {
-          const j = await r.json() as { choices: { message: { content: string } }[] };
-          brief = j.choices?.[0]?.message?.content ?? "";
-          console.log(`[GenerateSite] Brief generated successfully`);
-        } else {
-          console.error(`[GenerateSite] Brief generation failed: ${r.status}`);
-        }
-      }
-    } catch (e) { console.error("brief error", e); }
+      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2);
+      brief = briefHtml;
+      console.log(`[GenerateSite] Brief generated successfully`);
+    } catch (e) { 
+      console.error("brief error fallback:", e); 
+      // If brief fails, we continue with empty brief, or a generic one
+      brief = "Crie um site moderno e luxuoso baseado no pedido do cliente.";
+    }
 
     const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL, ALTAMENTE ESTILOSO e RESPONSIVO.
 
@@ -556,7 +562,7 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
 5. SAÍDA: Retorne APENAS o código HTML completo.`;
 
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7);
-    const actualProvider: Provider = providerUsed;
+    const actualProvider: ActualProvider = providerUsed;
 
     if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
 
@@ -682,7 +688,7 @@ HTML ATUAL (BASE — EDITE ESTE):
 ${baseHtml}`;
 
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3);
-    const actualProvider: Provider = providerUsed;
+    const actualProvider: ActualProvider = providerUsed;
 
     if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
 
