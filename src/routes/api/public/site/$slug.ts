@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
 
 function buildPixelSnippets(pixels: Record<string, string>): string {
   const out: string[] = [];
@@ -34,14 +35,29 @@ export const Route = createFileRoute("/api/public/site/$slug")({
     handlers: {
       GET: async ({ params, request }) => {
         const slug = String(params.slug).trim().toLowerCase();
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: site } = await supabaseAdmin
-          .from("sites")
-          .select("id, slug, html, pixels, is_published, owner_id")
+        const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim().replace(/\/$/, "");
+        const supabaseKey = (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "").trim();
+        if (!supabaseUrl || !supabaseKey) {
+          console.error("[Public site] Missing public database env vars");
+          return new Response("Site indisponível", { status: 503 });
+        }
+
+        const publicDb = createClient(supabaseUrl, supabaseKey, {
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+        });
+
+        const { data: site, error: siteError } = await publicDb
+          .from("published_sites_public")
+          .select("id, slug, html, pixels, is_blocked")
           .eq("slug", slug)
           .maybeSingle();
 
-        if (!site || !site.is_published || !site.html) {
+        if (siteError) {
+          console.error("[Public site] load failed:", siteError);
+          return new Response("Site indisponível", { status: 503 });
+        }
+
+        if (!site || !site.html) {
           return new Response(
             `<!doctype html><meta charset="utf-8"><title>Site não cadastrado - MRO.BIO</title>
             <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2.5rem;margin:0 0 .5rem;color:#FFD600}.btn{display:inline-block;margin-top:1.5rem;padding:.8rem 1.5rem;background:#FFD600;color:#000;text-decoration:none;border-radius:.5rem;font-weight:700}</style>
@@ -56,12 +72,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         }
 
         // Block published site if owner's subscription is not active
-        const { data: owner } = await supabaseAdmin
-          .from("profiles")
-          .select("subscription_status")
-          .eq("id", site.owner_id)
-          .maybeSingle();
-        if (owner && owner.subscription_status !== "active") {
+        if (site.is_blocked) {
           return new Response(
             `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
             <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
@@ -86,7 +97,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           const userAgent = cf.get("user-agent") ?? null;
           const referrer = cf.get("referer") ?? null;
           // do not await
-          void supabaseAdmin.from("site_visits").insert({
+          void publicDb.from("site_visits").insert({
             site_id: site.id,
             ip, country, region, city,
             user_agent: userAgent,
