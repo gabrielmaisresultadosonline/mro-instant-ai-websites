@@ -139,6 +139,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
       else if (tab === "subscriptions") { const r = await subsFn({ data: { token } }); setSubs(r.rows); }
       else if (tab === "outbox") { const r = await outboxFn({ data: { token, status: "all" } }); setOutbox(r.rows); }
       else if (tab === "kiwify") { const r = await kiwifyFn({ data: { token } }); setKiwify(r.rows); }
+      else if (tab === "reseller") { const r = await resellerListFn({ data: { token, status: "all" } }); setResellerOrders(r.rows as typeof resellerOrders); }
       else {
         const r = await getSettingsFn({ data: { token } }); setSettings(r);
         const k = await kiwifyUrlFn({ data: { token } }); setKiwifyUrl(k);
