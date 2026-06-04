@@ -160,8 +160,9 @@ async function generateHtmlWithFallback(
 
     try {
       // Divide o tempo restante se ainda houver outros provedores para tentar
-      const isLastInOrder = p === order[order.length - 1];
-      const callTimeout = isLastInOrder ? remaining : Math.min(remaining, 25000);
+      // Usa um tempo menor para o primeiro provedor para dar chance ao fallback
+      const isFirstTry = p === order[0];
+      const callTimeout = isFirstTry ? Math.min(remaining, 20000) : remaining;
 
       const html = p === "deepseek"
         ? await callDeepseek(token, prompt, temperature, callTimeout)
@@ -493,7 +494,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const globalStartTime = Date.now();
-    const TOTAL_BUDGET = 56000; // 56s total para dar margem ao proxy de 60s
+    const TOTAL_BUDGET = 54000; // Reduzido para 54s para ser ainda mais seguro contra proxy timeout (60s)
     
     console.log(`[PROGRESS] ${new Date().toISOString()} - Iniciando geração para site ${data.id}`);
 
@@ -584,7 +585,7 @@ Responda em português um briefing técnico com: Paleta HEX, Estrutura de Seçõ
     let brief = "";
     try {
       // O briefing deve ser rápido. No máximo 12s para sobrar tempo para o código.
-      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 12000);
+      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 8000);
       brief = briefHtml;
       console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Briefing gerado.`);
     } catch (e) { 
@@ -605,7 +606,7 @@ REGRAS TÉCNICAS:
 - LOGO: Se houver imagem "logo", use no header.
 - CTAs: Botões verdes vibrantes (bg-green-600).
 - ESTRUTURA: Mínimo 6 seções.
-- SAÍDA: Retorne APENAS o código HTML completo.`;
+- SAÍDA: Retorne APENAS o código HTML completo. SEJA CONCISO E EFICIENTE NO CÓDIGO.`;
 
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
