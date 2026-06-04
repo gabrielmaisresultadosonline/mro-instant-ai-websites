@@ -159,6 +159,29 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     finally { setSendingTest(false); }
   }
 
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (newUser.password.length < 6) { toast.error("Senha mínima de 6 caracteres"); return; }
+    setCreatingUser(true);
+    try {
+      await createUserFn({ data: { token, ...newUser } });
+      toast.success(`Usuário ${newUser.email} criado${newUser.sendEmail ? " e e-mail enfileirado" : ""}`);
+      setNewUser({ name: "", email: "", password: "", whatsapp: "", cpf: "", maxSites: 1, sendEmail: true });
+      void reload();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setCreatingUser(false); }
+  }
+
+  async function handleEditQuota(uid: string, email: string, current: number) {
+    const v = prompt(`Quantos sites ${email} pode criar?`, String(current));
+    if (!v) return;
+    const n = parseInt(v, 10);
+    if (!n || n < 1 || n > 100) return toast.error("Número inválido (1-100).");
+    try { await updateQuotaFn({ data: { token, userId: uid, maxSites: n } }); toast.success("Cota atualizada"); void reload(); }
+    catch (e) { toast.error((e as Error).message); }
+  }
+
+
 
   async function handleDeleteUser(uid: string, email: string) {
     if (!confirm(`Excluir o usuário ${email}? Essa ação não pode ser desfeita.`)) return;
