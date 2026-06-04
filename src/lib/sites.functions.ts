@@ -28,20 +28,32 @@ async function callDeepseek(token: string, prompt: string, temperature: number):
 }
 
 async function callClaude(token: string, prompt: string, temperature: number): Promise<string> {
-  const models = ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
+  // Claude specific error logging
+  const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
   let lastErr = "";
   for (const model of models) {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": token, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({ model, max_tokens: 8000, temperature, messages: [{ role: "user", content: prompt }] }),
-    });
-    if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error(`claude ${r.status}: ${lastErr.slice(0, 200)}`); }
-    const j = await r.json() as { content: { type: string; text: string }[] };
-    const html = cleanHtmlOutput((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
-    if (html) return html;
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": token, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+        body: JSON.stringify({ model, max_tokens: 8000, temperature, messages: [{ role: "user", content: prompt }] }),
+      });
+      if (!r.ok) { 
+        lastErr = await r.text(); 
+        console.error(`[Claude] Model ${model} failed with status ${r.status}:`, lastErr);
+        if (r.status === 404 || r.status === 410 || r.status === 400) continue; 
+        throw new Error(`claude ${r.status}: ${lastErr.slice(0, 200)}`); 
+      }
+      const j = await r.json() as { content: { type: string; text: string }[] };
+      const html = cleanHtmlOutput((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
+      if (html) return html;
+    } catch (e) {
+      console.error(`[Claude] Exception with model ${model}:`, e);
+      lastErr = String(e);
+      continue;
+    }
   }
-  throw new Error(`claude vazio: ${lastErr.slice(0, 200)}`);
+  throw new Error(`claude todos falharam: ${lastErr.slice(0, 200)}`);
 }
 
 async function callOpenAI(token: string, prompt: string, temperature: number): Promise<string> {
@@ -62,7 +74,7 @@ async function callLovableAI(prompt: string): Promise<string> {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model: "google/gemini-2.0-pro-exp-02-05", 
       messages: [{ role: "user", content: prompt }],
     }),
   });
