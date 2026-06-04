@@ -553,7 +553,7 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
       .insert({
         site_id: data.id,
         owner_id: userId,
-        provider,
+        provider: actualProvider,
         prompt: data.prompt,
         brief,
         html,
