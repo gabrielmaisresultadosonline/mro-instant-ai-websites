@@ -30,6 +30,7 @@ mro.bio, www.mro.bio {
 	@sub header_regexp slug Host ^([a-z0-9][a-z0-9-]{1,28}[a-z0-9])\.mro\.bio$
 
 	handle @sub {
+		rewrite / /api/public/site/{re.slug.1}
 		rewrite * /api/public/site/{re.slug.1}{uri}
 		reverse_proxy app:3000
 	}
