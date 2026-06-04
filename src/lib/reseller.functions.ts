@@ -208,16 +208,28 @@ export const checkResellerOrder = createServerFn({ method: "POST" })
 
     const { data: order } = await supabaseAdmin
       .from("reseller_orders")
-      .select("id, status, email, transaction_nsu, invoice_slug")
+      .select("id, status, email, transaction_nsu, invoice_slug, created_at")
       .eq("order_nsu", data.orderNsu)
       .maybeSingle();
     if (!order) return { status: "unknown" as const };
 
     if (order.status === "provisioned") return { status: "provisioned" as const, email: order.email };
+    if (order.status === "expired") return { status: "expired" as const, email: order.email };
     if (order.status === "paid") {
       try { await provisionOrder(order.id); return { status: "provisioned" as const, email: order.email }; }
       catch { return { status: "paid" as const, email: order.email }; }
     }
+
+    // Expira tentativa após 15 minutos sem pagamento
+    const ageMs = Date.now() - new Date(order.created_at).getTime();
+    if (order.status === "pending" && ageMs > 15 * 60 * 1000) {
+      await supabaseAdmin
+        .from("reseller_orders")
+        .update({ status: "expired", last_error: "Tempo de pagamento expirado (15 min)" })
+        .eq("id", order.id);
+      return { status: "expired" as const, email: order.email };
+    }
+
 
     // Poll InfinitePay
     try {

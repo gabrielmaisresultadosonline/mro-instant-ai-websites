@@ -18,7 +18,7 @@ export const Route = createFileRoute("/ob/obrigado")({
 function ObrigadoPage() {
   const { order } = useSearch({ from: "/ob/obrigado" });
   const checkFn = useServerFn(checkResellerOrder);
-  const [status, setStatus] = useState<"pending" | "paid" | "provisioned" | "unknown" | null>(order ? "pending" : null);
+  const [status, setStatus] = useState<"pending" | "paid" | "provisioned" | "expired" | "unknown" | null>(order ? "pending" : null);
   const [email, setEmail] = useState<string | undefined>();
 
   useEffect(() => {
@@ -32,7 +32,7 @@ function ObrigadoPage() {
         if (!alive) return;
         setStatus(r.status);
         if ("email" in r && r.email) setEmail(r.email);
-        if (r.status !== "provisioned") timer = setTimeout(tick, 8000);
+        if (r.status !== "provisioned" && r.status !== "expired") timer = setTimeout(tick, 8000);
       } catch {
         if (alive) timer = setTimeout(tick, 8000);
       }
@@ -43,21 +43,24 @@ function ObrigadoPage() {
 
   const isProvisioned = status === "provisioned";
   const isPaid = status === "paid";
+  const isExpired = status === "expired";
 
   return (
     <main className="min-h-screen bg-background text-foreground grid place-items-center px-6 py-16">
       <div className="max-w-xl w-full text-center space-y-8">
-        <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full text-4xl font-bold shadow-lg ${isProvisioned ? "bg-green-600 text-white" : "bg-brand text-brand-foreground"}`}>
-          {isProvisioned ? "✓" : isPaid ? "⚙" : "⏳"}
+        <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full text-4xl font-bold shadow-lg ${isProvisioned ? "bg-green-600 text-white" : isExpired ? "bg-red-600 text-white" : "bg-brand text-brand-foreground"}`}>
+          {isProvisioned ? "✓" : isExpired ? "✕" : isPaid ? "⚙" : "⏳"}
         </div>
 
         <div className="space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-            {isProvisioned ? "Acesso enviado!" : isPaid ? "Pagamento confirmado!" : order ? "Aguardando confirmação…" : "Parabéns, tudo certo!"}
+            {isProvisioned ? "Acesso enviado!" : isExpired ? "Pagamento não recebido" : isPaid ? "Pagamento confirmado!" : order ? "Aguardando confirmação…" : "Parabéns, tudo certo!"}
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
             {isProvisioned ? (
               <>Enviamos o link de acesso para <strong className="text-foreground">{email}</strong>. Verifique sua caixa de entrada (e o spam).</>
+            ) : isExpired ? (
+              <>Não recebemos a confirmação do pagamento em até 15 minutos. Se você já pagou, entre em contato com o suporte. Caso contrário, é só refazer o pedido na página inicial.</>
             ) : isPaid ? (
               <>Pagamento aprovado. Estamos criando seu acesso e enviando para o seu e-mail…</>
             ) : order ? (

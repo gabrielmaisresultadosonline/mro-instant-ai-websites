@@ -638,8 +638,8 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                 {resellerOrders.length === 0 ? (
                   <tr><td colSpan={7} className="px-4 py-8 text-center text-white/50">Nenhum pedido ainda.</td></tr>
                 ) : resellerOrders.map((o) => {
-                  const statusColor = o.status === "provisioned" ? "text-emerald-400" : o.status === "paid" ? "text-sky-400" : o.status === "failed" ? "text-red-400" : "text-amber-400";
-                  const statusLabel = o.status === "provisioned" ? "Provisionado" : o.status === "paid" ? "Pago" : o.status === "failed" ? "Falha" : "Pendente";
+                  const statusColor = o.status === "provisioned" ? "text-emerald-400" : o.status === "paid" ? "text-sky-400" : o.status === "failed" ? "text-red-400" : o.status === "expired" ? "text-white/50" : "text-amber-400";
+                  const statusLabel = o.status === "provisioned" ? "Provisionado" : o.status === "paid" ? "Pago" : o.status === "failed" ? "Falha" : o.status === "expired" ? "Expirado" : "Pendente";
                   return (
                     <tr key={o.id}>
                       <td className="px-4 py-3 text-xs text-white/60">{new Date(o.created_at).toLocaleString("pt-BR")}</td>
@@ -663,7 +663,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                           {o.status === "provisioned" && (
                             <button onClick={() => handleResellerResend(o.id, o.email)} className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Reenviar acesso</button>
                           )}
-                          {(o.status === "pending" || o.status === "failed") && (
+                          {(o.status === "pending" || o.status === "failed" || o.status === "expired") && (
                             <button onClick={() => handleResellerMarkPaid(o.id, o.email)} className="rounded-md border border-emerald-400/40 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-400/10">Marcar como pago</button>
                           )}
                         </div>

@@ -350,12 +350,19 @@ export const adminListResellerOrders = createServerFn({ method: "POST" })
   .inputValidator((i: { token: string; status?: string }) =>
     z.object({
       token: z.string(),
-      status: z.enum(["pending", "paid", "provisioned", "failed", "all"]).default("all"),
+      status: z.enum(["pending", "paid", "provisioned", "failed", "expired", "all"]).default("all"),
     }).parse(i),
   )
   .handler(async ({ data }) => {
     if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Auto-expira tentativas pendentes com mais de 15 min sem pagamento
+    const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    await supabaseAdmin
+      .from("reseller_orders")
+      .update({ status: "expired", last_error: "Tempo de pagamento expirado (15 min)" })
+      .eq("status", "pending")
+      .lt("created_at", cutoff);
     let q = supabaseAdmin
       .from("reseller_orders")
       .select("id, order_nsu, name, email, whatsapp, amount_cents, status, checkout_url, transaction_nsu, invoice_slug, receipt_url, user_id, paid_at, provisioned_at, last_check_at, last_error, created_at")
