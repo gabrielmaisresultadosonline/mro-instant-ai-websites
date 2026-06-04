@@ -612,6 +612,70 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           </table>
         </div>
       )}
+
+      {tab === "reseller" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="font-semibold text-sm">Plano Revenda — InfinitePay</div>
+            <p className="mt-1 text-xs text-white/60">
+              Pedidos gerados pelo formulário da landing page. Provisionamento (10 sites, VIP, 365 dias) acontece automaticamente após confirmação de pagamento. Webhook: <code>/api/public/webhooks/infinitepay</code>.
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-white/60">
+                <tr>
+                  <th className="px-4 py-3">Criado</th>
+                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">Contato</th>
+                  <th className="px-4 py-3">Valor</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Pedido</th>
+                  <th className="px-4 py-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {resellerOrders.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-white/50">Nenhum pedido ainda.</td></tr>
+                ) : resellerOrders.map((o) => {
+                  const statusColor = o.status === "provisioned" ? "text-emerald-400" : o.status === "paid" ? "text-sky-400" : o.status === "failed" ? "text-red-400" : "text-amber-400";
+                  const statusLabel = o.status === "provisioned" ? "Provisionado" : o.status === "paid" ? "Pago" : o.status === "failed" ? "Falha" : "Pendente";
+                  return (
+                    <tr key={o.id}>
+                      <td className="px-4 py-3 text-xs text-white/60">{new Date(o.created_at).toLocaleString("pt-BR")}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{o.name}</div>
+                        <div className="text-xs text-white/60">{o.email}</div>
+                      </td>
+                      <td className="px-4 py-3 text-xs">{o.whatsapp}</td>
+                      <td className="px-4 py-3 text-xs">R$ {(o.amount_cents / 100).toFixed(2).replace(".", ",")}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold ${statusColor}`}>{statusLabel}</span>
+                        {o.last_error && <div className="text-xs text-red-300">{o.last_error}</div>}
+                        {o.provisioned_at && <div className="text-xs text-white/50">em {new Date(o.provisioned_at).toLocaleString("pt-BR")}</div>}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-white/60">{o.order_nsu}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex flex-wrap justify-end gap-1">
+                          {o.checkout_url && (
+                            <a href={o.checkout_url} target="_blank" rel="noreferrer" className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">Checkout</a>
+                          )}
+                          {o.status === "provisioned" && (
+                            <button onClick={() => handleResellerResend(o.id, o.email)} className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Reenviar acesso</button>
+                          )}
+                          {(o.status === "pending" || o.status === "failed") && (
+                            <button onClick={() => handleResellerMarkPaid(o.id, o.email)} className="rounded-md border border-emerald-400/40 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-400/10">Marcar como pago</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </main>
 
   );
