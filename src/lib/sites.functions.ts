@@ -569,7 +569,7 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
 5. SAÍDA: Retorne APENAS o código HTML completo.`;
 
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7);
-    const actualProvider: Provider = providerUsed;
+    const actualProvider: ActualProvider = providerUsed;
 
     if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
 
