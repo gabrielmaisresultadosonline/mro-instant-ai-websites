@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { adminLogin, adminListUsers, adminListSites, adminDeleteSite, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail, adminDashboardStats, adminGetKiwifyWebhookUrl, adminSendTestEmail } from "@/lib/admin.functions";
+import { adminLogin, adminListUsers, adminListSites, adminDeleteSite, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail, adminDashboardStats, adminGetKiwifyWebhookUrl, adminSendTestEmail, adminCreateManualUser, adminUpdateUserQuota } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/administracao")({
   ssr: false,
@@ -105,10 +105,12 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const statsFn = useServerFn(adminDashboardStats);
   const kiwifyUrlFn = useServerFn(adminGetKiwifyWebhookUrl);
   const sendTestFn = useServerFn(adminSendTestEmail);
+  const createUserFn = useServerFn(adminCreateManualUser);
+  const updateQuotaFn = useServerFn(adminUpdateUserQuota);
 
   type Tab = "dashboard" | "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "settings";
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number }>>([]);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number; max_sites?: number; is_reseller?: boolean; created_by_admin?: boolean }>>([]);
   const [sites, setSites] = useState<Array<{ id: string; slug: string; title: string; owner_id: string; is_published: boolean; updated_at: string; visits: number }>>([]);
   const [subs, setSubs] = useState<Array<{ id: string; name: string; email: string; subscription_status: string; subscription_expires_at: string | null; grace_period_ends_at: string | null; kiwify_order_id: string | null; last_payment_at: string | null }>>([]);
   const [outbox, setOutbox] = useState<Array<{ id: string; to_email: string; subject: string; template: string; status: string; attempts: number; last_error: string | null; created_at: string; sent_at: string | null }>>([]);
