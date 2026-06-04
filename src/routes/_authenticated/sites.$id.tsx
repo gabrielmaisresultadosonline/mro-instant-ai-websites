@@ -62,6 +62,15 @@ function SiteEditor() {
     queryKey: ["generations", id],
     queryFn: () => listGensFn({ data: { siteId: id } }),
   });
+  const activeGen = (gens?.generations ?? []).find((g) => g.is_active) ?? null;
+  const { data: editQuota } = useQuery({
+    queryKey: ["edit-quota", activeGen?.id],
+    queryFn: () => getEditQuotaFn({ data: { generationId: activeGen!.id } }),
+    enabled: !!activeGen,
+  });
+  const editsUsed = editQuota?.used ?? 0;
+  const editsLimit = editQuota?.limit ?? 5;
+  const editsLeft = Math.max(0, editsLimit - editsUsed);
 
   const [prompt, setPrompt] = useState("");
   const [html, setHtml] = useState("");
