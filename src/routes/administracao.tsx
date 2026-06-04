@@ -663,7 +663,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                           {o.status === "provisioned" && (
                             <button onClick={() => handleResellerResend(o.id, o.email)} className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Reenviar acesso</button>
                           )}
-                          {(o.status === "pending" || o.status === "failed") && (
+                          {(o.status === "pending" || o.status === "failed" || o.status === "expired") && (
                             <button onClick={() => handleResellerMarkPaid(o.id, o.email)} className="rounded-md border border-emerald-400/40 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-400/10">Marcar como pago</button>
                           )}
                         </div>
