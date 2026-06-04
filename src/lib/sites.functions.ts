@@ -6,6 +6,7 @@ const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
 const RESERVED = new Set(["www", "app", "admin", "administracao", "api", "mail", "blog", "dashboard", "login", "cadastro"]);
 
 const MONTHLY_LIMIT = 3;
+const EDITS_PER_MODEL = 5;
 const HISTORY_LIMIT = 4;
 const HISTORY_TTL_DAYS = 45;
 const PROVIDERS = ["deepseek", "claude", "openai"] as const;
