@@ -12,6 +12,99 @@ const HISTORY_TTL_DAYS = 45;
 const PROVIDERS = ["deepseek", "claude", "openai"] as const;
 type Provider = typeof PROVIDERS[number];
 
+function cleanHtmlOutput(s: string) {
+  return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+}
+
+async function callDeepseek(token: string, prompt: string, temperature: number): Promise<string> {
+  const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: prompt }], temperature, max_tokens: 8000 }),
+  });
+  if (!r.ok) throw new Error(`deepseek ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const j = await r.json() as { choices: { message: { content: string } }[] };
+  return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+}
+
+async function callClaude(token: string, prompt: string, temperature: number): Promise<string> {
+  const models = ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
+  let lastErr = "";
+  for (const model of models) {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": token, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      body: JSON.stringify({ model, max_tokens: 8000, temperature, messages: [{ role: "user", content: prompt }] }),
+    });
+    if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error(`claude ${r.status}: ${lastErr.slice(0, 200)}`); }
+    const j = await r.json() as { content: { type: string; text: string }[] };
+    const html = cleanHtmlOutput((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
+    if (html) return html;
+  }
+  throw new Error(`claude vazio: ${lastErr.slice(0, 200)}`);
+}
+
+async function callOpenAI(token: string, prompt: string, temperature: number): Promise<string> {
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }], temperature, max_tokens: 8000 }),
+  });
+  if (!r.ok) throw new Error(`openai ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const j = await r.json() as { choices: { message: { content: string } }[] };
+  return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+}
+
+async function callLovableAI(prompt: string): Promise<string> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) throw new Error("LOVABLE_API_KEY ausente");
+  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-pro",
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!r.ok) throw new Error(`lovable-ai ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const j = await r.json() as { choices: { message: { content: string } }[] };
+  return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
+}
+
+async function generateHtmlWithFallback(
+  preferred: Provider,
+  tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
+  prompt: string,
+  temperature: number,
+): Promise<{ html: string; providerUsed: Provider }> {
+  const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
+  let lastErr: unknown = null;
+  for (const p of order) {
+    const token = tokens[p];
+    if (!token) continue;
+    try {
+      const html = p === "deepseek"
+        ? await callDeepseek(token, prompt, temperature)
+        : p === "claude"
+        ? await callClaude(token, prompt, temperature)
+        : await callOpenAI(token, prompt, temperature);
+      if (html && html.length > 50) return { html, providerUsed: p };
+    } catch (e) {
+      console.error(`[generateHtmlWithFallback] ${p} falhou:`, e);
+      lastErr = e;
+    }
+  }
+  // Final fallback: Lovable AI Gateway
+  try {
+    const html = await callLovableAI(prompt);
+    if (html && html.length > 50) return { html, providerUsed: preferred };
+  } catch (e) {
+    console.error("[generateHtmlWithFallback] lovable-ai falhou:", e);
+    lastErr = e;
+  }
+  throw new Error(`Falha ao gerar com a I.A MRO. ${String(lastErr ?? "").slice(0, 200)}`);
+}
+
 export const listMySites = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -364,9 +457,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       deepseek: settings?.deepseek_token,
       claude: settings?.claude_token,
     };
-    if (!tokens[provider]) {
-      throw new Error(`A chave da I.A "${provider}" não foi configurada. Avise o administrador.`);
-    }
+    // Não bloqueia se a chave do provider preferido faltar — temos fallback automático.
 
     // Step 1 — briefing
     // Importante: Pegamos o hostname real para garantir que o link seja público e acessível pela I.A.
@@ -452,46 +543,8 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
 4. ESTRUTURA RICA: Mínimo de 6 seções (Header, Hero Impactante, Sobre Nós, Serviços com Cards, Galeria/Social, Contato/Footer).
 5. SAÍDA: Retorne APENAS o código HTML completo.`;
 
-    function cleanHtml(s: string) {
-      return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-    }
-
-    let html = "";
-    if (provider === "deepseek") {
-      const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${tokens.deepseek}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: codePrompt }], temperature: 0.6, max_tokens: 8000 }),
-      });
-      if (!r.ok) { console.error("deepseek", r.status, await r.text()); throw new Error("Falha ao gerar com a I.A MRO (v1). Tente novamente."); }
-      const j = await r.json() as { choices: { message: { content: string } }[] };
-      html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
-    } else if (provider === "claude") {
-      const models = ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
-      let lastErr = "";
-      for (const model of models) {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "x-api-key": tokens.claude!, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-          body: JSON.stringify({ model, max_tokens: 8000, temperature: 0.7, messages: [{ role: "user", content: codePrompt }] }),
-        });
-        if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error("Falha ao gerar com a I.A MRO (v2)."); }
-        const j = await r.json() as { content: { type: string; text: string }[] };
-        html = cleanHtml((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
-        if (html) break;
-      }
-      if (!html) throw new Error(`Falha ao gerar com a I.A MRO (v2). ${lastErr}`.slice(0, 300));
-    } else {
-      // openai
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: codePrompt }], temperature: 0.7, max_tokens: 8000 }),
-      });
-      if (!r.ok) { console.error("openai", r.status, await r.text()); throw new Error("Falha ao gerar com a I.A MRO (v3)."); }
-      const j = await r.json() as { choices: { message: { content: string } }[] };
-      html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
-    }
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7);
+    const actualProvider: Provider = providerUsed;
 
     if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
 
@@ -500,7 +553,7 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
       .insert({
         site_id: data.id,
         owner_id: userId,
-        provider,
+        provider: actualProvider,
         prompt: data.prompt,
         brief,
         html,
@@ -521,7 +574,7 @@ REGRAS TÉCNICAS INVIOLÁVEIS:
     return {
       needsCleanup: false as const,
       generationId: genRow.id,
-      provider,
+      provider: actualProvider,
       html,
       brief,
       gensUsed: gens + 1,
@@ -601,12 +654,7 @@ export const editGeneration = createServerFn({ method: "POST" })
       deepseek: settings?.deepseek_token,
       claude: settings?.claude_token,
     };
-    let provider: Provider = gen.provider as Provider;
-    if (!tokens[provider]) {
-      const fallback = (["claude", "openai", "deepseek"] as const).find((p) => !!tokens[p]);
-      if (!fallback) throw new Error("Nenhuma chave de I.A configurada. Avise o administrador.");
-      provider = fallback;
-    }
+    const provider: Provider = (gen.provider as Provider) ?? "deepseek";
 
     const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e um PEDIDO DE EDIÇÃO do cliente.
 REGRAS:
@@ -621,45 +669,8 @@ PEDIDO DE EDIÇÃO:
 HTML ATUAL (BASE — EDITE ESTE):
 ${baseHtml}`;
 
-    function cleanHtml(s: string) {
-      return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-    }
-
-    let html = "";
-    if (provider === "deepseek") {
-      const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${tokens.deepseek}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: editPrompt }], temperature: 0.3, max_tokens: 8000 }),
-      });
-      if (!r.ok) { console.error("deepseek edit", r.status, await r.text()); throw new Error("Falha ao editar com a I.A MRO (v1)."); }
-      const j = await r.json() as { choices: { message: { content: string } }[] };
-      html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
-    } else if (provider === "claude") {
-      const models = ["claude-sonnet-4-5", "claude-sonnet-4-20250514", "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"];
-      let lastErr = "";
-      for (const model of models) {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "x-api-key": tokens.claude!, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-          body: JSON.stringify({ model, max_tokens: 8000, temperature: 0.3, messages: [{ role: "user", content: editPrompt }] }),
-        });
-        if (!r.ok) { lastErr = await r.text(); if (r.status === 404 || r.status === 410) continue; throw new Error("Falha ao editar com a I.A MRO (v2)."); }
-        const j = await r.json() as { content: { type: string; text: string }[] };
-        html = cleanHtml((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
-        if (html) break;
-      }
-      if (!html) throw new Error(`Falha ao editar com a I.A MRO (v2). ${lastErr}`.slice(0, 300));
-    } else {
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${tokens.openai}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: editPrompt }], temperature: 0.3, max_tokens: 8000 }),
-      });
-      if (!r.ok) { console.error("openai edit", r.status, await r.text()); throw new Error("Falha ao editar com a I.A MRO (v3)."); }
-      const j = await r.json() as { choices: { message: { content: string } }[] };
-      html = cleanHtml(j.choices?.[0]?.message?.content ?? "");
-    }
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3);
+    const actualProvider: Provider = providerUsed;
 
     if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
 
@@ -667,7 +678,7 @@ ${baseHtml}`;
       .insert({
         site_id: gen.site_id,
         owner_id: userId,
-        provider,
+        provider: actualProvider,
         prompt: gen.prompt ?? "",
         edit_prompt: data.prompt,
         parent_generation_id: rootId,
@@ -681,7 +692,7 @@ ${baseHtml}`;
 
     return {
       generationId: newRow.id,
-      provider,
+      provider: actualProvider,
       html,
       editsUsed: used + 1,
       editsLimit: EDITS_PER_MODEL,
