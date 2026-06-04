@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteSite } from "@/lib/sites.functions";
+import { TutorialButton } from "@/components/TutorialButton";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Meu site — MRO.BIO" }] }),
@@ -281,6 +282,7 @@ function Dashboard() {
             </button>
           </form>
         </div>
+        <TutorialButton />
       </main>
     );
   }
@@ -533,6 +535,7 @@ function Dashboard() {
           </ul>
         )}
       </section>
+      <TutorialButton />
     </main>
   );
 }
