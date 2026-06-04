@@ -44,10 +44,9 @@ async function callClaude(token: string, prompt: string, temperature: number): P
   const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
   let lastErr = "";
   for (const model of models) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s
-      
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": token, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
