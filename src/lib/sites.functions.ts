@@ -695,7 +695,7 @@ HTML ATUAL (BASE — EDITE ESTE):
 ${baseHtml}`;
 
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3);
-    const actualProvider: Provider = providerUsed;
+    const actualProvider: ActualProvider = providerUsed;
 
     if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
 
