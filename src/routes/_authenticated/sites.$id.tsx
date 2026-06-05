@@ -197,12 +197,13 @@ function SiteEditor() {
   });
 
   async function runEdit() {
-    if (!activeGen) { toast.error("Você precisa ter uma versão ativa para editar."); return; }
+    const finalTarget = targetGenId || activeGen?.id;
+    if (!finalTarget) { toast.error("Você precisa escolher uma versão para editar."); return; }
     if (editPrompt.trim().length < 5) { toast.error("Descreva o que deseja editar."); return; }
     if (editsLeft <= 0) { toast.error(`Você usou as ${editsLimit} edições deste modelo no mês.`); return; }
     setEditing(true);
     try {
-      const res = await editGenFn({ data: { generationId: activeGen.id, prompt: editPrompt } });
+      const res = await editGenFn({ data: { generationId: finalTarget, prompt: editPrompt } });
       setPreview({ id: res.generationId, provider: res.provider, html: res.html });
       setEditPrompt("");
       setTab("preview");
