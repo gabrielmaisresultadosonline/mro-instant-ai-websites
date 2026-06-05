@@ -513,10 +513,9 @@ function SiteEditor() {
                 Cada modelo novo (das suas 3 gerações mensais) ganha o próprio contador de 5 edições.
               </div>
 
-              {!activeGen ? (
+              {(gens?.generations.length ?? 0) === 0 ? (
                 <div className="rounded-lg border border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
-                  Você ainda não tem uma versão ativa. Vá em <strong>Pré-visualização</strong>, gere com a I.A e ative uma versão.
-                  Depois, volte aqui para editá-la.
+                  Você ainda não tem nenhuma geração. Vá em <strong>Pré-visualização</strong> e gere seu site com a I.A primeiro.
                 </div>
               ) : (
                 <>
