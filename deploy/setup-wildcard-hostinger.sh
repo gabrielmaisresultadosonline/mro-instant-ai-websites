@@ -37,16 +37,17 @@ echo "Solicitando/Atualizando certificado para incluir Wildcard..."
 sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
 
 
-# 3. Verificar se o certificado foi criado e atualizar Nginx
+# 3. Verificar qual é o certificado mais recente (Certbot costuma criar pastas -0001, -0002)
+# Vamos procurar a pasta de certificado que contenha o mro.bio e seja a mais recente
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 
-# Se o certbot criou com sufixo -0001, usamos ele
-if [ ! -f "$CERT_PATH" ] && [ -f "/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem" ]; then
+if [ -f "/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem" ]; then
     CERT_PATH="/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem"
     KEY_PATH="/etc/letsencrypt/live/$DOMAIN-0001/privkey.pem"
-    echo "Ajustando caminhos para $DOMAIN-0001..."
-else
-    KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+    echo "Usando certificado wildcard encontrado em $DOMAIN-0001"
+elif [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    echo "Usando certificado base em $DOMAIN"
 fi
 
 if [ -f "$CERT_PATH" ]; then
