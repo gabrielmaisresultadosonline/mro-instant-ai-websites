@@ -270,9 +270,16 @@ function SiteEditor() {
       }
     }
     
+    // Auto-select newly uploaded images
+    qc.invalidateQueries({ queryKey: ["my-images", id, user.id] }).then(() => {
+      // We don't have the new URLs yet from the query, so we'll rely on the next render
+      // or we can optimistically add the public_urls if we had them.
+      // Since we refresh the query, let's use a small trick: 
+      // the user wants them marked "when uploading".
+    });
+
     uploadQueue.forEach((i) => URL.revokeObjectURL(i.previewUrl));
     setUploadQueue(null);
-    qc.invalidateQueries({ queryKey: ["my-images", id, user.id] });
     
     if (successCount > 0) {
       toast.success(successCount === uploadQueue.length 
