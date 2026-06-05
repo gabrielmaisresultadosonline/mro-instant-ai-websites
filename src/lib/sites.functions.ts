@@ -17,7 +17,7 @@ function cleanHtmlOutput(s: string) {
   return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
 }
 
-async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 50000): Promise<string> {
+async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
@@ -25,12 +25,25 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
     console.log(`[AI_CALL] DeepSeek - Timeout: ${timeoutMs}ms`);
     const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: prompt }], temperature, max_tokens: 8000 }),
+      headers: { 
+        "Authorization": `Bearer ${token}`, 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({ 
+        model: "deepseek-chat", 
+        messages: [{ role: "user", content: prompt }], 
+        temperature, 
+        max_tokens: 4000 
+      }),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
-    if (!r.ok) throw new Error(`deepseek ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) {
+      const errorText = await r.text();
+      console.error(`[DeepSeek] Error ${r.status}:`, errorText);
+      throw new Error(`deepseek ${r.status}: ${errorText.slice(0, 200)}`);
+    }
     const j = await r.json() as { choices: { message: { content: string } }[] };
     return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
   } catch (e) {
@@ -40,8 +53,8 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
   }
 }
 
-async function callClaude(token: string, prompt: string, temperature: number, timeoutMs = 50000): Promise<string> {
-  const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"];
+async function callClaude(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
+  const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"];
   let lastErr = "";
   for (const model of models) {
     const controller = new AbortController();
@@ -50,15 +63,25 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
       console.log(`[AI_CALL] Claude (${model}) - Timeout: ${timeoutMs}ms`);
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "x-api-key": token, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-        body: JSON.stringify({ model, max_tokens: 8000, temperature, messages: [{ role: "user", content: prompt }] }),
+        headers: { 
+          "x-api-key": token, 
+          "anthropic-version": "2023-06-01", 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({ 
+          model, 
+          max_tokens: 4000, 
+          temperature, 
+          messages: [{ role: "user", content: prompt }] 
+        }),
         signal: controller.signal
       });
       clearTimeout(timeoutId);
       if (!r.ok) { 
         lastErr = await r.text(); 
         console.error(`[Claude] Model ${model} failed with status ${r.status}:`, lastErr);
-        if (r.status === 404 || r.status === 410 || r.status === 400) continue; 
+        if (r.status === 404 || r.status === 410 || r.status === 400 || r.status === 401) continue; 
         throw new Error(`claude ${r.status}: ${lastErr.slice(0, 200)}`); 
       }
       const j = await r.json() as { content: { type: string; text: string }[] };
@@ -69,7 +92,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
       if (e instanceof Error && e.name === "AbortError") {
         lastErr = "timeout";
         console.warn(`[Claude] Timeout with model ${model}`);
-        break; // Se deu timeout em um, provavelmente não vai dar tempo de tentar outros
+        break; 
       }
       lastErr = String(e);
       console.error(`[Claude] Exception with model ${model}:`, e);
@@ -79,7 +102,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
   throw new Error(`claude todos falharam: ${lastErr.slice(0, 200)}`);
 }
 
-async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs = 50000): Promise<string> {
+async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
@@ -87,12 +110,25 @@ async function callOpenAI(token: string, prompt: string, temperature: number, ti
     console.log(`[AI_CALL] OpenAI - Timeout: ${timeoutMs}ms`);
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }], temperature, max_tokens: 8000 }),
+      headers: { 
+        "Authorization": `Bearer ${token}`, 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({ 
+        model: "gpt-4o-mini", 
+        messages: [{ role: "user", content: prompt }], 
+        temperature, 
+        max_tokens: 4000 
+      }),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
-    if (!r.ok) throw new Error(`openai ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) {
+      const errorText = await r.text();
+      console.error(`[OpenAI] Error ${r.status}:`, errorText);
+      throw new Error(`openai ${r.status}: ${errorText.slice(0, 200)}`);
+    }
     const j = await r.json() as { choices: { message: { content: string } }[] };
     return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
   } catch (e) {
@@ -108,7 +144,7 @@ async function generateHtmlWithFallback(
   tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
   prompt: string,
   temperature: number,
-  maxTotalTimeoutMs = 50000
+  maxTotalTimeoutMs = 45000
 ): Promise<{ html: string; providerUsed: ActualProvider }> {
   const startTime = Date.now();
   const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
@@ -456,7 +492,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const globalStartTime = Date.now();
-    const TOTAL_BUDGET = 54000; // Reduzido para 54s para ser ainda mais seguro contra proxy timeout (60s)
+    const TOTAL_BUDGET = 45000; // Reduzido drasticamente para 45s para evitar timeout do Nginx (60s)
     
     console.log(`[PROGRESS] ${new Date().toISOString()} - Iniciando geração para site ${data.id}`);
 
@@ -548,7 +584,7 @@ Responda em português um briefing técnico com: Paleta HEX, Estrutura de Seçõ
     let brief = "";
     try {
       // O briefing deve ser rápido. No máximo 12s para sobrar tempo para o código.
-      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 8000);
+      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 10000);
       brief = briefHtml;
       console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Briefing gerado.`);
     } catch (e) { 
