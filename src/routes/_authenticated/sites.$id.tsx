@@ -82,7 +82,6 @@ function SiteEditor() {
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [editing, setEditing] = useState(false);
-  const [targetGenId, setTargetGenId] = useState<string | null>(null);
   const [confirmInfo, setConfirmInfo] = useState(false);   // popup pre-generate (info check)
   const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
   const [rulesSeen, setRulesSeen] = useState(false);
