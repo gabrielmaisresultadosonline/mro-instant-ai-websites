@@ -28,6 +28,7 @@ function SiteEditor() {
   const { id } = Route.useParams();
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
+  const [targetGenId, setTargetGenId] = useState<string | null>(null);
 
   const getSiteFn = useServerFn(getSite);
   const saveFn = useServerFn(saveSite);
@@ -64,9 +65,9 @@ function SiteEditor() {
   });
   const activeGen = (gens?.generations ?? []).find((g) => g.is_active) ?? null;
   const { data: editQuota } = useQuery({
-    queryKey: ["edit-quota", activeGen?.id],
-    queryFn: () => getEditQuotaFn({ data: { generationId: activeGen!.id } }),
-    enabled: !!activeGen,
+    queryKey: ["edit-quota", targetGenId || activeGen?.id],
+    queryFn: () => getEditQuotaFn({ data: { generationId: (targetGenId || activeGen?.id)! } }),
+    enabled: !!(targetGenId || activeGen?.id),
   });
   const editsUsed = editQuota?.used ?? 0;
   const editsLimit = editQuota?.limit ?? 5;
@@ -97,6 +98,12 @@ function SiteEditor() {
       setPixels((site.pixels ?? {}) as Pixels);
     }
   }, [site]);
+
+  useEffect(() => {
+    if (activeGen && !targetGenId) {
+      setTargetGenId(activeGen.id);
+    }
+  }, [activeGen, targetGenId]);
 
   const monthlyUsed = (site?.gens_this_month as number | undefined) ?? 0;
   const monthlyLimit = 3;
@@ -156,6 +163,7 @@ function SiteEditor() {
         return;
       }
       setPreview({ id: res.generationId, provider: res.provider, html: res.html });
+      setTargetGenId(res.generationId);
       setTab("preview");
       qc.invalidateQueries({ queryKey: ["site", id] });
       qc.invalidateQueries({ queryKey: ["generations", id] });
@@ -196,17 +204,18 @@ function SiteEditor() {
   });
 
   async function runEdit() {
-    if (!activeGen) { toast.error("Você precisa ter uma versão ativa para editar."); return; }
+    const finalTarget = targetGenId || activeGen?.id;
+    if (!finalTarget) { toast.error("Você precisa escolher uma versão para editar."); return; }
     if (editPrompt.trim().length < 5) { toast.error("Descreva o que deseja editar."); return; }
     if (editsLeft <= 0) { toast.error(`Você usou as ${editsLimit} edições deste modelo no mês.`); return; }
     setEditing(true);
     try {
-      const res = await editGenFn({ data: { generationId: activeGen.id, prompt: editPrompt } });
+      const res = await editGenFn({ data: { generationId: finalTarget, prompt: editPrompt } });
       setPreview({ id: res.generationId, provider: res.provider, html: res.html });
       setEditPrompt("");
       setTab("preview");
       qc.invalidateQueries({ queryKey: ["generations", id] });
-      qc.invalidateQueries({ queryKey: ["edit-quota", activeGen.id] });
+      qc.invalidateQueries({ queryKey: ["edit-quota", finalTarget] });
       toast.success(`Edição pronta — ${res.editsUsed}/${res.editsLimit} no mês deste modelo.`);
     } catch (e) {
       toast.error((e as Error).message);
@@ -320,6 +329,9 @@ function SiteEditor() {
 
   return (
     <main className="mx-auto max-w-7xl px-5 py-8">
+      {generating && <LoadingOverlay message="Gerando com I.A..." />}
+      {editing && <LoadingOverlay message="Editando modelo..." />}
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link
@@ -441,7 +453,7 @@ function SiteEditor() {
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização"
-                  : t === "edit" ? `✏️ Editar modelo${activeGen ? ` (${editsLeft}/${editsLimit})` : ""}`
+                  : t === "edit" ? `✏️ Editar modelo${(targetGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
                   : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
                   : t === "settings" ? "Configurações"
                   : "Insights"}
@@ -469,6 +481,10 @@ function SiteEditor() {
                       <button onClick={openGenerateFlow} disabled={generating || monthlyLeft <= 0}
                         className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40 disabled:opacity-60">
                         🔄 Gerar outra ({monthlyLeft} restantes)
+                      </button>
+                      <button onClick={() => { setTargetGenId(preview.id); setTab("edit"); }}
+                        className="rounded-md border border-brand/50 bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand/20">
+                        ✏️ Editar
                       </button>
                       <button onClick={() => activateMut.mutate(preview.id)} disabled={activateMut.isPending}
                         className="rounded-md btn-brand px-3 py-1.5 text-xs font-semibold">
@@ -498,21 +514,31 @@ function SiteEditor() {
                 Cada modelo novo (das suas 3 gerações mensais) ganha o próprio contador de 5 edições.
               </div>
 
-              {!activeGen ? (
+              {(gens?.generations.length ?? 0) === 0 ? (
                 <div className="rounded-lg border border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
-                  Você ainda não tem uma versão ativa. Vá em <strong>Pré-visualização</strong>, gere com a I.A e ative uma versão.
-                  Depois, volte aqui para editá-la.
+                  Você ainda não tem nenhuma geração. Vá em <strong>Pré-visualização</strong> e gere seu site com a I.A primeiro.
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div>
-                      Modelo ativo: <span className="rounded bg-accent px-1.5 py-0.5 font-bold">{PROVIDER_LABEL[activeGen.provider] ?? activeGen.provider}</span>
-                      <span className="ml-2 text-muted-foreground">criado em {new Date(activeGen.created_at).toLocaleString("pt-BR")}</span>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="font-semibold text-muted-foreground uppercase tracking-wider">Escolha a versão para editar:</div>
+                      <div className="text-muted-foreground">
+                        Edições deste modelo: <strong className="text-foreground">{editsUsed}/{editsLimit}</strong> no mês
+                      </div>
                     </div>
-                    <div className="text-muted-foreground">
-                      Edições deste modelo: <strong className="text-foreground">{editsUsed}/{editsLimit}</strong> no mês
-                    </div>
+                    
+                    <select 
+                      value={targetGenId || ""} 
+                      onChange={(e) => setTargetGenId(e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                    >
+                      {gens?.generations.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {PROVIDER_LABEL[g.provider] || g.provider} — {new Date(g.created_at).toLocaleString("pt-BR")} {g.is_active ? "(Ativa)" : ""}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <textarea
@@ -834,6 +860,35 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
       <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
+    </div>
+  );
+}
+
+function LoadingOverlay({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white p-6 text-center">
+      <div className="relative h-24 w-24 mb-6">
+        <div className="absolute inset-0 rounded-full border-4 border-white/20"></div>
+        <div className="absolute inset-0 rounded-full border-4 border-brand border-t-transparent animate-spin"></div>
+        <div className="absolute inset-2 rounded-full border-4 border-white/10"></div>
+        <div className="absolute inset-2 rounded-full border-4 border-brand/50 border-b-transparent animate-spin-slow"></div>
+        <div className="absolute inset-0 flex items-center justify-center text-3xl">
+          ✨
+        </div>
+      </div>
+      <h2 className="text-2xl font-bold font-display mb-2 animate-pulse">{message}</h2>
+      <p className="text-white/60 text-sm max-w-xs leading-relaxed">
+        Nossa I.A está construindo cada detalhe do seu site.<br />Isso pode levar alguns segundos...
+      </p>
+      <style>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(-360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 3s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
