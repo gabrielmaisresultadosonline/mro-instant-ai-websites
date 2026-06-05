@@ -34,15 +34,16 @@ read -p "Pronto para gerar o código? Pressione [Enter]..."
 # 2. Solicitar o certificado (Manual DNS)
 # Forçamos a solicitação para garantir que o Wildcard (*.mro.bio) seja incluído
 echo "Solicitando/Atualizando certificado para incluir Wildcard..."
-sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email --force-renewal
+# Tenta obter o certificado. Se já existir e for válido, o Certbot perguntará o que fazer.
+sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
 
 
 # 3. Localizar o certificado correto usando o próprio Certbot
 echo "Localizando certificado para $DOMAIN..."
 # Pegamos o certificado que contém explicitamente o wildcard e as linhas seguintes
 CERT_INFO=$(sudo certbot certificates | grep -A 5 "Domains:.*\*.$DOMAIN")
-CERT_PATH=$(echo "$CERT_INFO" | grep "Certificate Path:" | head -n 1 | awk '{print $3}')
-KEY_PATH=$(echo "$CERT_INFO" | grep "Private Key Path:" | head -n 1 | awk '{print $3}')
+CERT_PATH=$(echo "$CERT_INFO" | grep "Certificate Path:" | head -n 1 | sed 's/.*Certificate Path: //')
+KEY_PATH=$(echo "$CERT_INFO" | grep "Private Key Path:" | head -n 1 | sed 's/.*Private Key Path: //')
 
 # Fallback manual se o certbot certificates falhar ou não encontrar
 if [ -z "$CERT_PATH" ]; then
@@ -66,9 +67,10 @@ if [ -f "$CERT_PATH" ]; then
     # Atualiza o arquivo de configuração no servidor
     NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
     if [ -f "$NGINX_CONF" ]; then
-        # Remove qualquer caminho antigo e coloca o novo (inclusive se for -0001)
-        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN[^/]*/fullchain.pem|$CERT_PATH|g" "$NGINX_CONF"
-        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN[^/]*/privkey.pem|$KEY_PATH|g" "$NGINX_CONF"
+        echo "Limpando e atualizando $NGINX_CONF..."
+        # Forçamos a substituição das linhas de SSL para garantir que o caminho esteja certo
+        sudo sed -i "s|^[[:space:]]*ssl_certificate[[:space:]].*|    ssl_certificate     $CERT_PATH;|g" "$NGINX_CONF"
+        sudo sed -i "s|^[[:space:]]*ssl_certificate_key[[:space:]].*|    ssl_certificate_key $KEY_PATH;|g" "$NGINX_CONF"
     fi
     
     sudo nginx -t && sudo systemctl reload nginx
