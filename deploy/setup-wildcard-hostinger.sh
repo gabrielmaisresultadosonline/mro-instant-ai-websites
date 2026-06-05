@@ -37,29 +37,37 @@ echo "Solicitando/Atualizando certificado para incluir Wildcard..."
 sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
 
 
-# 3. Verificar qual é o certificado mais recente (Certbot costuma criar pastas -0001, -0002)
-# Vamos procurar a pasta de certificado que contenha o mro.bio e seja a mais recente
-CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
-KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+# 3. Localizar o certificado correto usando o próprio Certbot
+echo "Localizando certificado para $DOMAIN..."
+CERT_INFO=$(sudo certbot certificates -d "$DOMAIN" 2>/dev/null)
+CERT_PATH=$(echo "$CERT_INFO" | grep "Certificate Path:" | awk '{print $3}')
+KEY_PATH=$(echo "$CERT_INFO" | grep "Private Key Path:" | awk '{print $3}')
 
-if [ -f "/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem" ]; then
-    CERT_PATH="/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem"
-    KEY_PATH="/etc/letsencrypt/live/$DOMAIN-0001/privkey.pem"
-    echo "Usando certificado wildcard encontrado em $DOMAIN-0001"
-elif [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
-    echo "Usando certificado base em $DOMAIN"
+# Fallback manual se o certbot certificates falhar ou não encontrar
+if [ -z "$CERT_PATH" ]; then
+    CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+    KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+    
+    if [ -f "/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem" ]; then
+        CERT_PATH="/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem"
+        KEY_PATH="/etc/letsencrypt/live/$DOMAIN-0001/privkey.pem"
+        echo "Usando fallback: certificado wildcard encontrado em $DOMAIN-0001"
+    fi
+else
+    echo "Certbot confirmou o certificado em: $CERT_PATH"
 fi
 
 if [ -f "$CERT_PATH" ]; then
     echo "--------------------------------------------------------"
-    echo "Sucesso! Certificado localizado em $CERT_PATH"
+    echo "Sucesso! Certificado localizado."
     echo "Atualizando configuração do Nginx..."
     
     # Atualiza o arquivo de configuração no servidor
     NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
     if [ -f "$NGINX_CONF" ]; then
-        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|$CERT_PATH|g" "$NGINX_CONF"
-        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN/privkey.pem|$KEY_PATH|g" "$NGINX_CONF"
+        # Remove qualquer caminho antigo e coloca o novo (inclusive se for -0001)
+        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN[^/]*/fullchain.pem|$CERT_PATH|g" "$NGINX_CONF"
+        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN[^/]*/privkey.pem|$KEY_PATH|g" "$NGINX_CONF"
     fi
     
     sudo nginx -t && sudo systemctl reload nginx
