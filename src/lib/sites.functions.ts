@@ -21,21 +21,34 @@ function cleanHtmlOutput(s: string) {
                .trim();
   
   // If the AI included conversational text before the code block, try to find the actual start of HTML
-  const htmlStart = clean.toLowerCase().indexOf("<html");
-  if (htmlStart !== -1) {
-    clean = clean.substring(htmlStart);
+  // We check for DOCTYPE or <html> or just any tag start
+  const doctypeStart = clean.toLowerCase().indexOf("<!doctype");
+  const htmlStartTag = clean.toLowerCase().indexOf("<html");
+  
+  let startIdx = -1;
+  if (doctypeStart !== -1 && (htmlStartTag === -1 || doctypeStart < htmlStartTag)) {
+    startIdx = doctypeStart;
+  } else if (htmlStartTag !== -1) {
+    startIdx = htmlStartTag;
   } else {
     // Fallback: if no <html> tag, try to find the first tag
-    const firstTag = clean.indexOf("<");
-    if (firstTag !== -1) {
-      clean = clean.substring(firstTag);
-    }
+    startIdx = clean.indexOf("<");
+  }
+
+  if (startIdx !== -1) {
+    clean = clean.substring(startIdx);
   }
 
   // Also handle text AFTER the code block (like "### Descrição do Código")
-  const htmlEnd = clean.toLowerCase().lastIndexOf("</html>");
-  if (htmlEnd !== -1) {
-    clean = clean.substring(0, htmlEnd + 7);
+  const htmlEndTag = clean.toLowerCase().lastIndexOf("</html>");
+  if (htmlEndTag !== -1) {
+    clean = clean.substring(0, htmlEndTag + 7);
+  } else {
+    // If no closing </html>, try to find the last closing tag
+    const lastTag = clean.lastIndexOf(">");
+    if (lastTag !== -1) {
+      clean = clean.substring(0, lastTag + 1);
+    }
   }
 
   return clean.trim();
