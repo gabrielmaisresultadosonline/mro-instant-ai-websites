@@ -208,7 +208,7 @@ function SiteEditor() {
       setEditPrompt("");
       setTab("preview");
       qc.invalidateQueries({ queryKey: ["generations", id] });
-      qc.invalidateQueries({ queryKey: ["edit-quota", activeGen.id] });
+      qc.invalidateQueries({ queryKey: ["edit-quota", finalTarget] });
       toast.success(`Edição pronta — ${res.editsUsed}/${res.editsLimit} no mês deste modelo.`);
     } catch (e) {
       toast.error((e as Error).message);
