@@ -520,14 +520,25 @@ function SiteEditor() {
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div>
-                      Modelo ativo: <span className="rounded bg-accent px-1.5 py-0.5 font-bold">{PROVIDER_LABEL[activeGen.provider] ?? activeGen.provider}</span>
-                      <span className="ml-2 text-muted-foreground">criado em {new Date(activeGen.created_at).toLocaleString("pt-BR")}</span>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="font-semibold text-muted-foreground uppercase tracking-wider">Escolha a versão para editar:</div>
+                      <div className="text-muted-foreground">
+                        Edições deste modelo: <strong className="text-foreground">{editsUsed}/{editsLimit}</strong> no mês
+                      </div>
                     </div>
-                    <div className="text-muted-foreground">
-                      Edições deste modelo: <strong className="text-foreground">{editsUsed}/{editsLimit}</strong> no mês
-                    </div>
+                    
+                    <select 
+                      value={targetGenId || ""} 
+                      onChange={(e) => setTargetGenId(e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                    >
+                      {gens?.generations.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {PROVIDER_LABEL[g.provider] || g.provider} — {new Date(g.created_at).toLocaleString("pt-BR")} {g.is_active ? "(Ativa)" : ""}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <textarea
