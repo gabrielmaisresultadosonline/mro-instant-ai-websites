@@ -158,6 +158,8 @@ async function generateHtmlWithFallback(
       errors.push(`${p}: sem token configurado`);
       continue;
     }
+    console.log(`[Fallback] Tentando ${p} com token terminando em: ${token.slice(-4)}`);
+
 
 
     try {
