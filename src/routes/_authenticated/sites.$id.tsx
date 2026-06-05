@@ -28,6 +28,7 @@ function SiteEditor() {
   const { id } = Route.useParams();
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
+  const [targetGenId, setTargetGenId] = useState<string | null>(null);
 
   const getSiteFn = useServerFn(getSite);
   const saveFn = useServerFn(saveSite);
