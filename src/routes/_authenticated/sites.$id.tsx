@@ -90,6 +90,23 @@ function SiteEditor() {
   const [renameTarget, setRenameTarget] = useState<null | { id: string; label: string }>(null);
   const [viewer, setViewer] = useState<null | { url: string; label: string }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const prevImgsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (imgs?.images) {
+      const currentIds = imgs.images.map(im => im.id);
+      const newImgs = imgs.images.filter(im => !prevImgsRef.current.includes(im.id));
+      
+      if (newImgs.length > 0) {
+        setSelected(prev => {
+          const next = new Set(prev);
+          newImgs.forEach(im => next.add(im.public_url));
+          return next;
+        });
+      }
+      prevImgsRef.current = currentIds;
+    }
+  }, [imgs?.images]);
 
   useEffect(() => {
     if (site) {
