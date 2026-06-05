@@ -328,6 +328,9 @@ function SiteEditor() {
 
   return (
     <main className="mx-auto max-w-7xl px-5 py-8">
+      {generating && <LoadingOverlay message="Gerando com I.A..." />}
+      {editing && <LoadingOverlay message="Editando modelo..." />}
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link
