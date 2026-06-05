@@ -32,17 +32,37 @@ echo ""
 read -p "Pronto para gerar o código? Pressione [Enter]..."
 
 # 2. Solicitar o certificado (Manual DNS)
-# Nota: Solicitamos para o domínio pai e para o wildcard
-sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
+# Verifica se já temos um certificado wildcard válido para evitar pedir DNS de novo
+if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && [ ! -f "/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem" ]; then
+    echo "Solicitando novo certificado..."
+    sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
+else
+    echo "Certificado já existe no servidor. Pulando etapa de DNS."
+fi
 
 # 3. Verificar se o certificado foi criado e atualizar Nginx
-if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+
+# Se o certbot criou com sufixo -0001, usamos ele
+if [ ! -f "$CERT_PATH" ] && [ -f "/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem" ]; then
+    CERT_PATH="/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem"
+    KEY_PATH="/etc/letsencrypt/live/$DOMAIN-0001/privkey.pem"
+    echo "Ajustando caminhos para $DOMAIN-0001..."
+else
+    KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+fi
+
+if [ -f "$CERT_PATH" ]; then
     echo "--------------------------------------------------------"
-    echo "Sucesso! Certificado gerado."
-    echo "Configurando Nginx..."
+    echo "Sucesso! Certificado localizado em $CERT_PATH"
+    echo "Atualizando configuração do Nginx..."
     
-    # Garante que o arquivo de config do nginx aponta para os caminhos certos
-    # (O arquivo deploy/nginx/mro.bio.conf já deve estar em /etc/nginx/sites-enabled/)
+    # Atualiza o arquivo de configuração no servidor
+    NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
+    if [ -f "$NGINX_CONF" ]; then
+        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|$CERT_PATH|g" "$NGINX_CONF"
+        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN/privkey.pem|$KEY_PATH|g" "$NGINX_CONF"
+    fi
     
     sudo nginx -t && sudo systemctl reload nginx
     echo "SSL Ativado! Agora todos os novos sites em *.mro.bio estarão seguros."
