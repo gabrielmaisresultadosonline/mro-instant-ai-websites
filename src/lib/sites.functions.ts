@@ -125,10 +125,10 @@ async function generateHtmlWithFallback(
     }
 
     const rawToken = (tokens[p] || "").trim();
-    // Limpeza rigorosa: remove prefixos, aspas e espaços extras
+    // Limpeza rigorosa: remove prefixos (incluindo Bearer), aspas e espaços extras
     const token = rawToken
       .replace(/^['"]|['"]$/g, "")
-      .replace(/^(token|key|api[ _]key):\s*/i, "")
+      .replace(/^(token|key|api[ _]key|bearer):\s*/i, "")
       .trim();
 
     if (!token) {
@@ -136,7 +136,7 @@ async function generateHtmlWithFallback(
       errors.push(`${p}: sem token configurado`);
       continue;
     }
-    console.log(`[Fallback] Tentando ${p} com token final (limpo) terminando em: ${token.slice(-4)}`);
+    console.log(`[Fallback] Tentando ${p} com token (limpo) final: ${token.slice(0, 7)}...${token.slice(-4)} (tamanho: ${token.length})`);
 
     try {
       // Divide o tempo restante de forma inteligente. 
