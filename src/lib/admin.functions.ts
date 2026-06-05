@@ -144,9 +144,10 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
     if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const update: { updated_at: string; openai_token?: string; deepseek_token?: string; claude_token?: string } = { updated_at: new Date().toISOString() };
-    if (data.openai_token) update.openai_token = data.openai_token;
-    if (data.deepseek_token) update.deepseek_token = data.deepseek_token;
-    if (data.claude_token) update.claude_token = data.claude_token;
+    if (data.openai_token) update.openai_token = data.openai_token.trim();
+    if (data.deepseek_token) update.deepseek_token = data.deepseek_token.trim();
+    if (data.claude_token) update.claude_token = data.claude_token.trim();
+
     const { error } = await supabaseAdmin.from("admin_settings").update(update).eq("id", true);
     if (error) throw new Error(error.message);
     return { ok: true };

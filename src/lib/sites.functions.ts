@@ -152,11 +152,15 @@ async function generateHtmlWithFallback(
       continue;
     }
 
-    const token = tokens[p];
+    const token = (tokens[p] || "").trim();
     if (!token) {
+      console.warn(`[Fallback] ${p} ignorado: Sem token configurado.`);
       errors.push(`${p}: sem token configurado`);
       continue;
     }
+    console.log(`[Fallback] Tentando ${p} com token terminando em: ${token.slice(-4)}`);
+
+
 
     try {
       // Divide o tempo restante se ainda houver outros provedores para tentar
@@ -201,7 +205,7 @@ async function generateHtmlWithFallback(
     errors.push("lovable-ai: tempo esgotado para fallback");
   }
 
-  throw new Error(`Falha ao gerar com a I.A MRO. Detalhes: ${errors.join(" | ")}`.slice(0, 500));
+  throw new Error(`Falha ao gerar com a I.A MRO. Detalhes: ${errors.join(" | ")}`.slice(0, 1000));
 }
 
 export const listMySites = createServerFn({ method: "GET" })
@@ -556,10 +560,11 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       .eq("id", true)
       .single();
     const tokens = {
-      openai: settings?.openai_token,
-      deepseek: settings?.deepseek_token,
-      claude: settings?.claude_token,
+      openai: settings?.openai_token?.trim() || null,
+      deepseek: settings?.deepseek_token?.trim() || null,
+      claude: settings?.claude_token?.trim() || null,
     };
+
 
     // Step 1 — briefing
     const baseUrl = process.env.VITE_SITE_URL || "https://mro.bio";
@@ -723,10 +728,11 @@ export const editGeneration = createServerFn({ method: "POST" })
     const { data: settings } = await supabaseAdmin
       .from("admin_settings").select("openai_token, deepseek_token, claude_token").eq("id", true).single();
     const tokens: Record<Provider, string | null | undefined> = {
-      openai: settings?.openai_token,
-      deepseek: settings?.deepseek_token,
-      claude: settings?.claude_token,
+      openai: settings?.openai_token?.trim() || null,
+      deepseek: settings?.deepseek_token?.trim() || null,
+      claude: settings?.claude_token?.trim() || null,
     };
+
     const provider: Provider = (gen.provider as Provider) ?? "deepseek";
 
     const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e um PEDIDO DE EDIÇÃO do cliente.
