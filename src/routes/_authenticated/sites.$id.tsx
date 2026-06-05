@@ -163,6 +163,7 @@ function SiteEditor() {
         return;
       }
       setPreview({ id: res.generationId, provider: res.provider, html: res.html });
+      setTargetGenId(res.generationId);
       setTab("preview");
       qc.invalidateQueries({ queryKey: ["site", id] });
       qc.invalidateQueries({ queryKey: ["generations", id] });
