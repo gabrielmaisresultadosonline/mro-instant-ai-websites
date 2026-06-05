@@ -66,9 +66,10 @@ if [ -f "$CERT_PATH" ]; then
     # Atualiza o arquivo de configuração no servidor
     NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
     if [ -f "$NGINX_CONF" ]; then
-        # Remove qualquer caminho antigo e coloca o novo (inclusive se for -0001)
-        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN[^/]*/fullchain.pem|$CERT_PATH|g" "$NGINX_CONF"
-        sudo sed -i "s|/etc/letsencrypt/live/$DOMAIN[^/]*/privkey.pem|$KEY_PATH|g" "$NGINX_CONF"
+        echo "Limpando e atualizando $NGINX_CONF..."
+        # Forçamos a substituição das linhas de SSL para garantir que o caminho esteja certo
+        sudo sed -i "s|^[[:space:]]*ssl_certificate[[:space:]].*|    ssl_certificate     $CERT_PATH;|g" "$NGINX_CONF"
+        sudo sed -i "s|^[[:space:]]*ssl_certificate_key[[:space:]].*|    ssl_certificate_key $KEY_PATH;|g" "$NGINX_CONF"
     fi
     
     sudo nginx -t && sudo systemctl reload nginx
