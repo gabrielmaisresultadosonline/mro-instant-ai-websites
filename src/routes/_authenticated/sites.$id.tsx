@@ -99,6 +99,12 @@ function SiteEditor() {
     }
   }, [site]);
 
+  useEffect(() => {
+    if (activeGen && !targetGenId) {
+      setTargetGenId(activeGen.id);
+    }
+  }, [activeGen, targetGenId]);
+
   const monthlyUsed = (site?.gens_this_month as number | undefined) ?? 0;
   const monthlyLimit = 3;
   const monthlyLeft = Math.max(0, monthlyLimit - monthlyUsed);
