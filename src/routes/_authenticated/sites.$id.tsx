@@ -28,7 +28,7 @@ function SiteEditor() {
   const { id } = Route.useParams();
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
-  const [targetGenId, setTargetGenId] = useState<string | null>(null);
+  const [selectedGenId, setSelectedGenId] = useState<string | null>(null);
 
   const getSiteFn = useServerFn(getSite);
   const saveFn = useServerFn(saveSite);
@@ -65,9 +65,9 @@ function SiteEditor() {
   });
   const activeGen = (gens?.generations ?? []).find((g) => g.is_active) ?? null;
   const { data: editQuota } = useQuery({
-    queryKey: ["edit-quota", targetGenId || activeGen?.id],
-    queryFn: () => getEditQuotaFn({ data: { generationId: (targetGenId || activeGen?.id)! } }),
-    enabled: !!(targetGenId || activeGen?.id),
+    queryKey: ["edit-quota", selectedGenId || activeGen?.id],
+    queryFn: () => getEditQuotaFn({ data: { generationId: (selectedGenId || activeGen?.id)! } }),
+    enabled: !!(selectedGenId || activeGen?.id),
   });
   const editsUsed = editQuota?.used ?? 0;
   const editsLimit = editQuota?.limit ?? 5;
@@ -100,10 +100,10 @@ function SiteEditor() {
   }, [site]);
 
   useEffect(() => {
-    if (activeGen && !targetGenId) {
-      setTargetGenId(activeGen.id);
+    if (activeGen && !selectedGenId) {
+      setSelectedGenId(activeGen.id);
     }
-  }, [activeGen, targetGenId]);
+  }, [activeGen, selectedGenId]);
 
   const monthlyUsed = (site?.gens_this_month as number | undefined) ?? 0;
   const monthlyLimit = 3;
@@ -163,7 +163,7 @@ function SiteEditor() {
         return;
       }
       setPreview({ id: res.generationId, provider: res.provider, html: res.html });
-      setTargetGenId(res.generationId);
+      setSelectedGenId(res.generationId);
       setTab("preview");
       qc.invalidateQueries({ queryKey: ["site", id] });
       qc.invalidateQueries({ queryKey: ["generations", id] });
@@ -204,7 +204,7 @@ function SiteEditor() {
   });
 
   async function runEdit() {
-    const finalTarget = targetGenId || activeGen?.id;
+    const finalTarget = selectedGenId || activeGen?.id;
     if (!finalTarget) { toast.error("Você precisa escolher uma versão para editar."); return; }
     if (editPrompt.trim().length < 5) { toast.error("Descreva o que deseja editar."); return; }
     if (editsLeft <= 0) { toast.error(`Você usou as ${editsLimit} edições deste modelo no mês.`); return; }
@@ -453,7 +453,7 @@ function SiteEditor() {
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização"
-                  : t === "edit" ? `✏️ Editar modelo${(targetGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
+                  : t === "edit" ? `✏️ Editar modelo${(selectedGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
                   : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
                   : t === "settings" ? "Configurações"
                   : "Insights"}
@@ -482,7 +482,7 @@ function SiteEditor() {
                         className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40 disabled:opacity-60">
                         🔄 Gerar outra ({monthlyLeft} restantes)
                       </button>
-                      <button onClick={() => { setTargetGenId(preview.id); setTab("edit"); }}
+                      <button onClick={() => { setSelectedGenId(preview.id); setTab("edit"); }}
                         className="rounded-md border border-brand/50 bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand/20">
                         ✏️ Editar
                       </button>
@@ -529,8 +529,8 @@ function SiteEditor() {
                     </div>
                     
                     <select 
-                      value={targetGenId || ""} 
-                      onChange={(e) => setTargetGenId(e.target.value)}
+                      value={selectedGenId || ""} 
+                      onChange={(e) => setSelectedGenId(e.target.value)}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-brand focus:outline-none"
                     >
                       {gens?.generations.map((g) => (
