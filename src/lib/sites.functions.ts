@@ -10,9 +10,8 @@ const EDITS_PER_MODEL = 5;
 const HISTORY_LIMIT = 4;
 const HISTORY_TTL_DAYS = 45;
 const PROVIDERS = ["deepseek", "claude", "openai"] as const;
-const ALL_PROVIDERS = [...PROVIDERS, "lovable-ai"] as const;
 type Provider = typeof PROVIDERS[number];
-type ActualProvider = typeof ALL_PROVIDERS[number];
+type ActualProvider = Provider;
 
 function cleanHtmlOutput(s: string) {
   return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
@@ -103,33 +102,6 @@ async function callOpenAI(token: string, prompt: string, temperature: number, ti
   }
 }
 
-async function callLovableAI(prompt: string, timeoutMs = 30000): Promise<string> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY ausente");
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    console.log(`[AI_CALL] LovableAI - Timeout: ${timeoutMs}ms`);
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.0-flash", 
-        messages: [{ role: "user", content: prompt }],
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    if (!r.ok) throw new Error(`lovable-ai ${r.status}: ${(await r.text()).slice(0, 200)}`);
-    const j = await r.json() as { choices: { message: { content: string } }[] };
-    return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e instanceof Error && e.name === "AbortError") throw new Error("lovable-ai: timeout");
-    throw e;
-  }
-}
 
 async function generateHtmlWithFallback(
   preferred: Provider,
@@ -153,7 +125,7 @@ async function generateHtmlWithFallback(
     }
 
     const rawToken = (tokens[p] || "").trim();
-    // Remove aspas simples, duplas e prefixos comuns como "Token: " ou "sk-..." se repetidos
+    // Limpeza rigorosa: remove prefixos, aspas e espaços extras
     const token = rawToken
       .replace(/^['"]|['"]$/g, "")
       .replace(/^(token|key|api[ _]key):\s*/i, "")
@@ -166,13 +138,11 @@ async function generateHtmlWithFallback(
     }
     console.log(`[Fallback] Tentando ${p} com token final (limpo) terminando em: ${token.slice(-4)}`);
 
-
-
     try {
-      // Divide o tempo restante se ainda houver outros provedores para tentar
-      // Usa um tempo menor para o primeiro provedor para dar chance ao fallback
-      const isFirstTry = p === order[0];
-      const callTimeout = isFirstTry ? Math.min(remaining, 20000) : remaining;
+      // Divide o tempo restante de forma inteligente. 
+      // Se for o primeiro, não deixa ele gastar tudo para permitir o fallback.
+      const isLastOption = p === order[order.length - 1];
+      const callTimeout = isLastOption ? remaining : Math.min(remaining, 25000);
 
       const html = p === "deepseek"
         ? await callDeepseek(token, prompt, temperature, callTimeout)
@@ -186,32 +156,14 @@ async function generateHtmlWithFallback(
       const msg = String(e instanceof Error ? e.message : e);
       console.error(`[generateHtmlWithFallback] ${p} falhou:`, msg);
       errors.push(`${p}: ${msg}`);
-      if (msg.includes("timeout")) {
-        // Se deu timeout, pule para o próximo rapidamente
+      if (msg.includes("timeout") || msg.includes("401") || msg.includes("Authentication")) {
+        // Se deu timeout ou erro de autenticação, tenta o próximo imediatamente
         continue;
       }
     }
   }
 
-  // Final fallback: Lovable AI Gateway (Gemini 2.5 Flash) - costumamos ser mais rápidos
-  const finalElapsed = Date.now() - startTime;
-  const finalRemaining = maxTotalTimeoutMs - finalElapsed;
-  if (finalRemaining > 5000) {
-    try {
-      console.log(`[Fallback] Usando LovableAI como último recurso. Restante: ${finalRemaining}ms`);
-      const html = await callLovableAI(prompt, finalRemaining);
-      if (html && html.length > 50) return { html, providerUsed: "lovable-ai" };
-      errors.push(`lovable-ai: retorno muito curto`);
-    } catch (e) {
-      const msg = String(e instanceof Error ? e.message : e);
-      console.error("[generateHtmlWithFallback] lovable-ai falhou:", msg);
-      errors.push(`lovable-ai: ${msg}`);
-    }
-  } else {
-    errors.push("lovable-ai: tempo esgotado para fallback");
-  }
-
-  throw new Error(`Falha ao gerar com a I.A MRO. Detalhes: ${errors.join(" | ")}`.slice(0, 1000));
+  throw new Error(`Falha ao gerar com as I.As configuradas. Detalhes: ${errors.join(" | ")}`.slice(0, 1000));
 }
 
 export const listMySites = createServerFn({ method: "GET" })
