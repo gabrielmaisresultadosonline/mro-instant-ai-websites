@@ -481,6 +481,10 @@ function SiteEditor() {
                         className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40 disabled:opacity-60">
                         🔄 Gerar outra ({monthlyLeft} restantes)
                       </button>
+                      <button onClick={() => { setTargetGenId(preview.id); setTab("edit"); }}
+                        className="rounded-md border border-brand/50 bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand/20">
+                        ✏️ Editar
+                      </button>
                       <button onClick={() => activateMut.mutate(preview.id)} disabled={activateMut.isPending}
                         className="rounded-md btn-brand px-3 py-1.5 text-xs font-semibold">
                         ✓ Ativar esta versão
