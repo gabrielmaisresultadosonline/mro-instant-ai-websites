@@ -19,9 +19,9 @@ type Pixels = { ga4?: string; gtm?: string; meta?: string; tiktok?: string };
 type LocalImage = { id: string; public_url: string; label: string | null; created_at?: string };
 
 const PROVIDER_LABEL: Record<string, string> = {
-  deepseek: "Modelo 1 (DeepSeek)",
-  claude: "Modelo 2 (Claude)",
-  openai: "Modelo 3 (ChatGPT)",
+  deepseek: "Modelo 1",
+  claude: "Modelo 2",
+  openai: "Modelo 3",
 };
 
 function SiteEditor() {
