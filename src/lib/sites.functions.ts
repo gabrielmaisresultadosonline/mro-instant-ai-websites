@@ -115,7 +115,7 @@ async function callLovableAI(prompt: string, timeoutMs = 30000): Promise<string>
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash", 
+        model: "google/gemini-2.0-flash", 
         messages: [{ role: "user", content: prompt }],
       }),
       signal: controller.signal
@@ -152,13 +152,19 @@ async function generateHtmlWithFallback(
       continue;
     }
 
-    const token = (tokens[p] || "").trim();
+    const rawToken = (tokens[p] || "").trim();
+    // Remove aspas simples, duplas e prefixos comuns como "Token: " ou "sk-..." se repetidos
+    const token = rawToken
+      .replace(/^['"]|['"]$/g, "")
+      .replace(/^(token|key|api[ _]key):\s*/i, "")
+      .trim();
+
     if (!token) {
       console.warn(`[Fallback] ${p} ignorado: Sem token configurado.`);
       errors.push(`${p}: sem token configurado`);
       continue;
     }
-    console.log(`[Fallback] Tentando ${p} com token terminando em: ${token.slice(-4)}`);
+    console.log(`[Fallback] Tentando ${p} com token final (limpo) terminando em: ${token.slice(-4)}`);
 
 
 
