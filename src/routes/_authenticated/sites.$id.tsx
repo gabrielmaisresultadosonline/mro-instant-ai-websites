@@ -845,3 +845,32 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
     </div>
   );
 }
+
+function LoadingOverlay({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white p-6 text-center">
+      <div className="relative h-24 w-24 mb-6">
+        <div className="absolute inset-0 rounded-full border-4 border-white/20"></div>
+        <div className="absolute inset-0 rounded-full border-4 border-brand border-t-transparent animate-spin"></div>
+        <div className="absolute inset-2 rounded-full border-4 border-white/10"></div>
+        <div className="absolute inset-2 rounded-full border-4 border-brand/50 border-b-transparent animate-spin-slow"></div>
+        <div className="absolute inset-0 flex items-center justify-center text-3xl">
+          ✨
+        </div>
+      </div>
+      <h2 className="text-2xl font-bold font-display mb-2 animate-pulse">{message}</h2>
+      <p className="text-white/60 text-sm max-w-xs leading-relaxed">
+        Nossa I.A está construindo cada detalhe do seu site.<br />Isso pode levar alguns segundos...
+      </p>
+      <style>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(-360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 3s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
