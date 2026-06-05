@@ -205,7 +205,7 @@ async function generateHtmlWithFallback(
     errors.push("lovable-ai: tempo esgotado para fallback");
   }
 
-  throw new Error(`Falha ao gerar com a I.A MRO. Detalhes: ${errors.join(" | ")}`.slice(0, 500));
+  throw new Error(`Falha ao gerar com a I.A MRO. Detalhes: ${errors.join(" | ")}`.slice(0, 1000));
 }
 
 export const listMySites = createServerFn({ method: "GET" })
