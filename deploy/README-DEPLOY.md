@@ -1,16 +1,14 @@
 # Deploy MRO.BIO no Hostinger VPS (Ubuntu 24.04 LTS)
 
-Este pacote roda o app **MRO.BIO** em uma VPS Ubuntu, com **Caddy** servindo o domínio
-`mro.bio`, `www.mro.bio` e **todos os subdomínios** `*.mro.bio` (cada usuário ganha o seu).
+Este pacote roda o app **MRO.BIO** em uma VPS Ubuntu. A configuração utiliza o **Nginx do Host** com um **Certificado SSL Wildcard (`*.mro.bio`)**, garantindo que o domínio principal e TODOS os subdomínios dos usuários tenham HTTPS instantâneo e automático.
 
 ---
 
 ## 1. Pré-requisitos
 
-- VPS Ubuntu 24.04 LTS (Hostinger ou qualquer outro).
+- VPS Ubuntu 24.04 LTS.
 - Domínio `mro.bio` apontando para o IP da VPS.
-- O Caddy emite certificados HTTPS sob demanda para `mro.bio`, `www.mro.bio` e subdomínios publicados.
-- O backend (banco/auth) já está provisionado pelo **Lovable Cloud** — você só precisa das chaves.
+- **Nginx instalado no host** (permite coexistir com outros sites no mesmo servidor).
 
 Configure no seu DNS/registrador:
 
@@ -22,116 +20,61 @@ Configure no seu DNS/registrador:
 
 ---
 
-## 2. Instalação automática
+## 2. Instalação Automática (Rápida)
 
-Acesse o VPS via SSH (terminal da Hostinger) e rode:
+Acesse o VPS via SSH e execute os comandos abaixo para instalar o app e o SSL Wildcard:
 
 ```bash
-# Clone o projeto
-sudo mkdir -p /opt/mro.bio && sudo chown $USER /opt/mro.bio
-git clone https://github.com/SEU_USUARIO/SEU_REPO.git /opt/mro.bio
-cd /opt/mro.bio
+# 1. Clone o projeto
+sudo mkdir -p /var/www/mro.bio && sudo chown $USER /var/www/mro.bio
+git clone https://github.com/SEU_USUARIO/SEU_REPO.git /var/www/mro.bio
+cd /var/www/mro.bio
 
-# Instala Docker + dependências + firewall
+# 2. Instala Docker + Dependências + Firewall
 sudo bash deploy/install.sh
-```
 
-O script:
-- Instala Docker Engine + Compose plugin
-- Habilita o firewall UFW liberando portas 22/80/443
-- Cria `deploy/app.env` e `deploy/caddy.env` a partir dos templates
+# 3. ATIVAÇÃO AUTOMÁTICA DE SSL (WILDCARD)
+# Este script resolve o erro de "Conexão Insegura" para sempre.
+sudo bash deploy/setup-wildcard-ssl.sh
+```
 
 ---
 
-## 3. Configurar variáveis
+## 3. Configurar Variáveis de Ambiente
+
+Edite o arquivo de ambiente para conectar ao backend:
 
 ```bash
-sudo nano /opt/mro.bio/deploy/app.env
+sudo nano /var/www/mro.bio/deploy/app.env
 ```
 
-Cole as chaves do Lovable Cloud → **Connectors → Supabase**:
-
-- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`
-- `ADMIN_EMAIL=admin@mro.bio`
-- `ADMIN_PASSWORD=` (use uma senha forte e exclusiva)
-- `ADMIN_JWT_SECRET=` (gere com `openssl rand -hex 32`)
-
-E o Caddy:
-
-```bash
-sudo nano /opt/mro.bio/deploy/caddy.env
-```
-
-- `ADMIN_EMAIL_CERT` — seu email (Let's Encrypt usa para notificações)
+Cole as chaves do seu projeto Lovable Cloud (Connectors -> Supabase).
 
 ---
 
-## 4. Subir o serviço
+## 4. Por que o SSL agora é automático?
 
-```bash
-cd /opt/mro.bio/deploy
-sudo docker compose up -d --build
-```
-
-Acompanhe a emissão do certificado:
-
-```bash
-sudo docker compose logs -f caddy
-```
-
-Quando o Caddy iniciar sem erro e responder em HTTPS, está no ar:
-
-- `https://mro.bio` — landing + cadastro + login + dashboard
-- `https://mro.bio/administracao` — painel admin
-- `https://qualquerusuario.mro.bio` — site publicado pelo usuário
+Diferente da configuração anterior que dependia do Caddy gerar certificados individuais, nossa nova arquitetura usa um **Certificado Wildcard**:
+- O script `setup-wildcard-ssl.sh` gera um certificado único que cobre `*.mro.bio`.
+- Qualquer novo site (`novo-cliente.mro.bio`) já nasce com HTTPS funcionando.
+- Não há conflitos com `belezalisoperfeito.online` ou outros domínios na mesma VPS, pois o Nginx do host gerencia tudo.
 
 ---
 
-## 5. Atualizar (deploy de nova versão)
+## 5. Atualizar o sistema
+
+Para subir novas versões do código:
 
 ```bash
-cd /opt/mro.bio
+cd /var/www/mro.bio
 git pull
 cd deploy
 sudo docker compose up -d --build
-bash check-subdomain.sh essenciadoscachos
 ```
-
-O deploy só deve ser considerado pronto quando o teste acima retornar `OK`. Se retornar erro, ele mostra os comandos de logs e variáveis que precisam ser conferidos antes de liberar novos cadastros.
 
 ---
 
-## 6. Como o roteamento funciona
+## 6. Backup e Segurança
 
-```
-*.mro.bio           ─▶ Caddy (TLS on-demand via HTTP-01)
-                       └─▶ rewrite p/ /api/public/site/<slug>
-                           └─▶ container "app" (TanStack Start)
-                               └─▶ HTML salvo do usuário (com pixels injetados)
-
-mro.bio / www       ─▶ Caddy ─▶ container "app" (landing, cadastro, dashboard, admin)
-```
-
-A primeira vez que cada subdomínio é acessado, o Caddy emite o certificado
-sob demanda depois de validar em `/api/public/cert-check`.
-
----
-
-## 7. Troubleshooting
-
-| Sintoma | Causa provável | Solução |
-|---|---|---|
-| `module not registered: http.matchers.host_regexp` | Caddyfile antigo usando matcher indisponível na imagem `caddy:2-alpine` | Atualize o projeto e reinicie o Caddy |
-| Site abre mas sem CSS/imagens | Build não rodou | `docker compose up -d --build` |
-| `Site não publicado` em `<slug>.mro.bio` | Usuário ainda não clicou em "Publicar" no editor | Esperado |
-| Admin não consegue logar | `ADMIN_EMAIL`/`ADMIN_PASSWORD` errados no `app.env` | Edite e `docker compose restart app` |
-| Imagens privadas dão 404 | `SUPABASE_SERVICE_ROLE_KEY` ausente | Confirme no `app.env` |
-| `Algo deu errado` no subdomínio publicado | Container ainda está com código antigo, Caddy não recarregou ou faltam variáveis públicas do banco | `sudo docker compose up -d --build` e depois `bash check-subdomain.sh <slug>` |
-
----
-
-## 8. Backup
-
-Todos os dados (usuários, sites, imagens, visitas) ficam no **Lovable Cloud**, não na VPS.
-O VPS só roda o app e o reverse proxy — pode ser destruído e recriado sem perda.
+- Os dados (usuários, sites, imagens) estão seguros no **Lovable Cloud**.
+- O VPS é apenas a camada de exibição; se precisar trocar de servidor, basta rodar os comandos do item 2 novamente.
