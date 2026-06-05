@@ -1,8 +1,9 @@
 #!/bin/bash
 # Script para configurar SSL Wildcard (*.mro.bio) manualmente no Hostinger VPS
+# Use este script se você NÃO usa Cloudflare e tem outros sites no mesmo VPS.
 
 DOMAIN="mro.bio"
-EMAIL="contato@mro.bio" # Altere se desejar
+EMAIL="contato@mro.bio"
 
 echo "--------------------------------------------------------"
 echo "Configurando SSL Wildcard para $DOMAIN e *.$DOMAIN"
@@ -15,31 +16,39 @@ if ! command -v certbot &> /dev/null; then
 fi
 
 echo ""
-echo "!!! ATENÇÃO !!!"
-echo "O Certbot vai pedir para você criar um registro TXT no seu DNS da Hostinger."
-echo "1. Ele vai mostrar um valor longo (ex: Gv0HZ16...)"
-echo "2. Você deve ir no painel da Hostinger -> Gerenciar DNS."
-echo "3. Adicione um registro tipo TXT."
-echo "4. Nome/Host: _acme-challenge"
-echo "5. Valor: (cole o código que o certbot mostrar)"
-echo "6. AGUARDE 2 minutos antes de apertar ENTER no terminal para o DNS propagar."
+echo "!!! AÇÃO NECESSÁRIA NO PAINEL DA HOSTINGER !!!"
+echo "Para que o SSL funcione em TODOS os subdomínios automaticamente,"
+echo "o Let's Encrypt precisa confirmar que você é o dono do domínio."
 echo ""
-read -p "Pressione [Enter] para começar o processo..."
+echo "1. O comando abaixo vai gerar um código de verificação."
+echo "2. Você deverá copiar esse código."
+echo "3. Vá no painel da Hostinger -> DNS -> Gerenciar Registros."
+echo "4. Crie um novo registro:"
+echo "   - Tipo: TXT"
+echo "   - Nome: _acme-challenge"
+echo "   - Conteúdo: (o código que aparecerá no terminal)"
+echo "   - TTL: Deixe o padrão (3600 ou 14400)"
+echo ""
+read -p "Pronto para gerar o código? Pressione [Enter]..."
 
 # 2. Solicitar o certificado (Manual DNS)
 # Nota: Solicitamos para o domínio pai e para o wildcard
 sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
 
-# 3. Verificar se o certificado foi criado
-if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+# 3. Verificar se o certificado foi criado e atualizar Nginx
+if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
     echo "--------------------------------------------------------"
-    echo "Sucesso! Certificado gerado em /etc/letsencrypt/live/$DOMAIN/"
-    echo "Reiniciando Nginx..."
-    sudo nginx -t && sudo systemctl restart nginx
-    echo "SSL Ativado para todos os subdomínios!"
+    echo "Sucesso! Certificado gerado."
+    echo "Configurando Nginx..."
+    
+    # Garante que o arquivo de config do nginx aponta para os caminhos certos
+    # (O arquivo deploy/nginx/mro.bio.conf já deve estar em /etc/nginx/sites-enabled/)
+    
+    sudo nginx -t && sudo systemctl reload nginx
+    echo "SSL Ativado! Agora todos os novos sites em *.mro.bio estarão seguros."
     echo "--------------------------------------------------------"
 else
     echo "--------------------------------------------------------"
-    echo "Erro: O certificado não foi gerado. Verifique se você criou o registro TXT corretamente."
+    echo "O certificado não foi gerado. Tente novamente garantindo que o registro TXT foi salvo no painel da Hostinger."
     echo "--------------------------------------------------------"
 fi
