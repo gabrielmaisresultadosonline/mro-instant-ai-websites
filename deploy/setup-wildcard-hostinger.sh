@@ -41,8 +41,8 @@ sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DO
 echo "Localizando certificado para $DOMAIN..."
 # Pegamos o certificado que contém explicitamente o wildcard e as linhas seguintes
 CERT_INFO=$(sudo certbot certificates | grep -A 5 "Domains:.*\*.$DOMAIN")
-CERT_PATH=$(echo "$CERT_INFO" | grep "Certificate Path:" | head -n 1 | awk '{print $3}')
-KEY_PATH=$(echo "$CERT_INFO" | grep "Private Key Path:" | head -n 1 | awk '{print $3}')
+CERT_PATH=$(echo "$CERT_INFO" | grep "Certificate Path:" | head -n 1 | sed 's/.*Certificate Path: //')
+KEY_PATH=$(echo "$CERT_INFO" | grep "Private Key Path:" | head -n 1 | sed 's/.*Private Key Path: //')
 
 # Fallback manual se o certbot certificates falhar ou não encontrar
 if [ -z "$CERT_PATH" ]; then
