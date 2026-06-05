@@ -88,6 +88,10 @@ log "Build + up do container"
 cd deploy
 docker compose up -d --build
 
+log "Configuração de SSL"
+warn "Para ativar SSL Wildcard (*.mro.bio) automaticamente, execute após o término:"
+warn "sudo bash deploy/setup-wildcard-ssl.sh"
+
 ok "Tudo pronto."
 echo ""
 echo "============================================================"
