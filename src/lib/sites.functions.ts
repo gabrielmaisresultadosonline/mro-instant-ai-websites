@@ -14,7 +14,31 @@ type Provider = typeof PROVIDERS[number];
 type ActualProvider = Provider;
 
 function cleanHtmlOutput(s: string) {
-  return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+  // Remove markdown code blocks and any leading/trailing whitespace
+  let clean = s.replace(/^```html\s*/i, "")
+               .replace(/^```\s*/i, "")
+               .replace(/```\s*$/i, "")
+               .trim();
+  
+  // If the AI included conversational text before the code block, try to find the actual start of HTML
+  const htmlStart = clean.toLowerCase().indexOf("<html");
+  if (htmlStart !== -1) {
+    clean = clean.substring(htmlStart);
+  } else {
+    // Fallback: if no <html> tag, try to find the first tag
+    const firstTag = clean.indexOf("<");
+    if (firstTag !== -1) {
+      clean = clean.substring(firstTag);
+    }
+  }
+
+  // Also handle text AFTER the code block (like "### Descrição do Código")
+  const htmlEnd = clean.toLowerCase().lastIndexOf("</html>");
+  if (htmlEnd !== -1) {
+    clean = clean.substring(0, htmlEnd + 7);
+  }
+
+  return clean.trim();
 }
 
 async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
