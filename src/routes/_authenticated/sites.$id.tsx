@@ -19,9 +19,9 @@ type Pixels = { ga4?: string; gtm?: string; meta?: string; tiktok?: string };
 type LocalImage = { id: string; public_url: string; label: string | null; created_at?: string };
 
 const PROVIDER_LABEL: Record<string, string> = {
-  deepseek: "Modelo 1 (DeepSeek)",
-  claude: "Modelo 2 (Claude)",
-  openai: "Modelo 3 (ChatGPT)",
+  deepseek: "Modelo 1",
+  claude: "Modelo 2",
+  openai: "Modelo 3",
 };
 
 function SiteEditor() {
@@ -184,7 +184,7 @@ function SiteEditor() {
       setTab("preview");
       qc.invalidateQueries({ queryKey: ["site", id] });
       qc.invalidateQueries({ queryKey: ["generations", id] });
-      toast.success(`Gerado com ${PROVIDER_LABEL[res.provider]} — ${res.gensUsed}/${res.monthlyLimit} no mês`);
+      toast.success(`${PROVIDER_LABEL[res.provider]} pronta — ${res.gensUsed}/${res.monthlyLimit} no mês`);
     } catch (e) {
       const msg = (e as Error).message;
       toast.error(msg);
@@ -495,7 +495,7 @@ function SiteEditor() {
                       <span className="rounded-md bg-foreground px-2 py-1 font-semibold text-background">
                         I.A: {PROVIDER_LABEL[preview.provider] ?? preview.provider}
                       </span>
-                      <span className="ml-2 text-muted-foreground">Gostou? Ative para usar como seu site. Quer outra ideia? Gere de novo (usa outra I.A).</span>
+                      <span className="ml-2 text-muted-foreground">Gostou? Ative para usar como seu site. Quer outra ideia? Gere de novo (usa outro modelo).</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => setPreview(null)}
