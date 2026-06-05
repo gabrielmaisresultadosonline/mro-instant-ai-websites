@@ -34,7 +34,8 @@ read -p "Pronto para gerar o código? Pressione [Enter]..."
 # 2. Solicitar o certificado (Manual DNS)
 # Forçamos a solicitação para garantir que o Wildcard (*.mro.bio) seja incluído
 echo "Solicitando/Atualizando certificado para incluir Wildcard..."
-sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email --force-renewal
+# Tenta obter o certificado. Se já existir e for válido, o Certbot perguntará o que fazer.
+sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
 
 
 # 3. Localizar o certificado correto usando o próprio Certbot
