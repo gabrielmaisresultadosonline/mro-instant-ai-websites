@@ -14,7 +14,44 @@ type Provider = typeof PROVIDERS[number];
 type ActualProvider = Provider;
 
 function cleanHtmlOutput(s: string) {
-  return s.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+  // Remove markdown code blocks and any leading/trailing whitespace
+  let clean = s.replace(/^```html\s*/i, "")
+               .replace(/^```\s*/i, "")
+               .replace(/```\s*$/i, "")
+               .trim();
+  
+  // If the AI included conversational text before the code block, try to find the actual start of HTML
+  // We check for DOCTYPE or <html> or just any tag start
+  const doctypeStart = clean.toLowerCase().indexOf("<!doctype");
+  const htmlStartTag = clean.toLowerCase().indexOf("<html");
+  
+  let startIdx = -1;
+  if (doctypeStart !== -1 && (htmlStartTag === -1 || doctypeStart < htmlStartTag)) {
+    startIdx = doctypeStart;
+  } else if (htmlStartTag !== -1) {
+    startIdx = htmlStartTag;
+  } else {
+    // Fallback: if no <html> tag, try to find the first tag
+    startIdx = clean.indexOf("<");
+  }
+
+  if (startIdx !== -1) {
+    clean = clean.substring(startIdx);
+  }
+
+  // Also handle text AFTER the code block (like "### Descrição do Código")
+  const htmlEndTag = clean.toLowerCase().lastIndexOf("</html>");
+  if (htmlEndTag !== -1) {
+    clean = clean.substring(0, htmlEndTag + 7);
+  } else {
+    // If no closing </html>, try to find the last closing tag
+    const lastTag = clean.lastIndexOf(">");
+    if (lastTag !== -1) {
+      clean = clean.substring(0, lastTag + 1);
+    }
+  }
+
+  return clean.trim();
 }
 
 async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
