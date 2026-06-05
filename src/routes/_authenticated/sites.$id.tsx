@@ -90,6 +90,23 @@ function SiteEditor() {
   const [renameTarget, setRenameTarget] = useState<null | { id: string; label: string }>(null);
   const [viewer, setViewer] = useState<null | { url: string; label: string }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const prevImgsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (imgs?.images) {
+      const currentIds = imgs.images.map(im => im.id);
+      const newImgs = imgs.images.filter(im => !prevImgsRef.current.includes(im.id));
+      
+      if (newImgs.length > 0) {
+        setSelected(prev => {
+          const next = new Set(prev);
+          newImgs.forEach(im => next.add(im.public_url));
+          return next;
+        });
+      }
+      prevImgsRef.current = currentIds;
+    }
+  }, [imgs?.images]);
 
   useEffect(() => {
     if (site) {
@@ -270,9 +287,16 @@ function SiteEditor() {
       }
     }
     
+    // Auto-select newly uploaded images
+    qc.invalidateQueries({ queryKey: ["my-images", id, user.id] }).then(() => {
+      // We don't have the new URLs yet from the query, so we'll rely on the next render
+      // or we can optimistically add the public_urls if we had them.
+      // Since we refresh the query, let's use a small trick: 
+      // the user wants them marked "when uploading".
+    });
+
     uploadQueue.forEach((i) => URL.revokeObjectURL(i.previewUrl));
     setUploadQueue(null);
-    qc.invalidateQueries({ queryKey: ["my-images", id, user.id] });
     
     if (successCount > 0) {
       toast.success(successCount === uploadQueue.length 
