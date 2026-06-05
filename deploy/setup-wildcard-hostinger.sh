@@ -32,8 +32,13 @@ echo ""
 read -p "Pronto para gerar o código? Pressione [Enter]..."
 
 # 2. Solicitar o certificado (Manual DNS)
-# Nota: Solicitamos para o domínio pai e para o wildcard
-sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
+# Verifica se já temos um certificado wildcard válido para evitar pedir DNS de novo
+if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && [ ! -f "/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem" ]; then
+    echo "Solicitando novo certificado..."
+    sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
+else
+    echo "Certificado já existe no servidor. Pulando etapa de DNS."
+fi
 
 # 3. Verificar se o certificado foi criado e atualizar Nginx
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
