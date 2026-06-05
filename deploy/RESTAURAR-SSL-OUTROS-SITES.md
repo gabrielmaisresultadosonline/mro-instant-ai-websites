@@ -1,14 +1,24 @@
-# Restaurar SSL dos outros sites + colocar mro.bio atrás do nginx do host
+# Automação de SSL Wildcard (*.mro.bio)
 
-O Caddy do nosso compose tinha ocupado as portas 80/443 da VPS inteira,
-quebrando o SSL de `belezalisoperfeito.online` e outros sites do mesmo servidor.
-A solução abaixo:
+Este guia e o script anexo resolvem o erro de "Conexão Insegura" em novos sites, garantindo que o domínio principal e TODOS os subdomínios futuros tenham SSL automaticamente.
 
-- devolve 80/443 ao **nginx do host** (que já servia seus outros sites);
-- coloca o app `mro.bio` rodando numa porta interna (`127.0.0.1:3001`);
-- adiciona um server block de nginx só para `mro.bio` e `*.mro.bio`;
-- usa um **certificado wildcard `*.mro.bio` via DNS-01**, então qualquer
-  cliente novo já entra sem pedir certificado individual.
+## 🚀 Solução Rápida (Recomendado)
+
+Para ativar tudo automaticamente via terminal, rode:
+
+```bash
+sudo bash /var/www/mro.bio/deploy/setup-wildcard-ssl.sh
+```
+*(Substitua `/var/www/mro.bio` pelo caminho real onde o projeto está instalado no seu VPS)*
+
+---
+
+## O que este script faz:
+1.  **Instala o Certbot** e os plugins necessários.
+2.  **Gera um Certificado Wildcard (`*.mro.bio`)**: Isso cobre qualquer subdomínio (`novo-site.mro.bio`) instantaneamente.
+3.  **Configura o Nginx do Host**: Repassa as requisições para o app sem derrubar outros sites do servidor.
+4.  **Ativa a Renovação Automática**: Você nunca mais precisará gerar certificados manualmente.
+
 
 ---
 
