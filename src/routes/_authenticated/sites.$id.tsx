@@ -452,7 +452,7 @@ function SiteEditor() {
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização"
-                  : t === "edit" ? `✏️ Editar modelo${activeGen ? ` (${editsLeft}/${editsLimit})` : ""}`
+                  : t === "edit" ? `✏️ Editar modelo${(targetGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
                   : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
                   : t === "settings" ? "Configurações"
                   : "Insights"}
