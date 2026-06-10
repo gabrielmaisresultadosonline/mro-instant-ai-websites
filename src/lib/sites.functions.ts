@@ -789,26 +789,32 @@ export const editGeneration = createServerFn({ method: "POST" })
       return `- ETIQUETA: "${im.label}" | LINK: ${fullUrl}`;
     }).join("\n");
 
-    const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e um PEDIDO DE EDIÇÃO do cliente.
+    const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e PRECISA APLICAR um PEDIDO DE EDIÇÃO do cliente.
 
-REGRAS CRÍTICAS — LEIA COM ATENÇÃO:
-1. NUNCA RETORNE UM SITE PELA METADE. Devolva SEMPRE o HTML COMPLETO, do <!doctype html> até o </html>, incluindo <head>, <body>, todas as seções, scripts e o fechamento de todas as tags. Se faltar qualquer parte é erro grave.
-2. MANTENHA 100% do conteúdo existente: TODOS os textos, títulos, parágrafos, listas, depoimentos, telefones, endereços, e-mails, links, botões, ícones, imagens, seções e classes. NÃO apague, NÃO resuma, NÃO simplifique nada que o cliente não pediu para mudar.
-3. Aplique APENAS as alterações pedidas. Tudo que não foi citado permanece IDÊNTICO ao original (mesmo texto, mesma ordem, mesmas cores, mesmas fontes, mesmas seções).
-4. Mantenha o MESMO MODELO/ESTRUTURA/ESTILO. Não recrie do zero, não troque o design, não reordene seções sem pedido.
-5. RESPONSIVIDADE OBRIGATÓRIA: o site precisa continuar 100% responsivo em mobile, tablet e desktop (use as classes responsivas do Tailwind já presentes — sm:, md:, lg:).
-6. HTML VÁLIDO: todas as tags abertas precisam ser fechadas. Não corte no meio. Não use "..." nem comentários de "resto igual".
-7. IMAGENS: Você pode usar as imagens já presentes no HTML E TAMBÉM as imagens adicionais listadas abaixo (se houver). Nunca invente URLs.
-8. SAÍDA: retorne APENAS o código HTML completo final, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
-
-${imagesList ? `IMAGENS ADICIONAIS DISPONÍVEIS PARA USAR NESTA EDIÇÃO:\n${imagesList}\n` : ""}
-PEDIDO DE EDIÇÃO DO CLIENTE:
+>>> PEDIDO DE EDIÇÃO DO CLIENTE (APLIQUE OBRIGATORIAMENTE — isto é o que mudou, NÃO devolva o HTML idêntico ao original) <<<:
 "${data.prompt}"
 
-HTML ATUAL COMPLETO (BASE — EDITE ESTE PRESERVANDO TUDO):
+${imagesList ? `IMAGENS ADICIONAIS DISPONÍVEIS PARA USAR NESTA EDIÇÃO:\n${imagesList}\n` : ""}
+ARQUITETURA DO SITE (NÃO MUDAR):
+- É UMA ÚNICA PÁGINA com TODO o conteúdo no MESMO arquivo HTML, em SEÇÕES e CONTAINERS.
+- NÃO crie outras páginas, NÃO use banco de dados, NÃO use roteamento.
+- Cada seção tem id único (#inicio, #sobre, #servicos, #galeria, #contato etc).
+- O MENU usa links âncora (<a href="#secao">) que rolam suavemente até a seção. Mantenha/garanta scroll-smooth e que CADA botão do menu vá para a seção correspondente.
+- Mantenha menu hamburguer mobile funcional.
+
+REGRAS CRÍTICAS:
+1. APLIQUE O PEDIDO DE EDIÇÃO — é OBRIGATÓRIO que o HTML retornado contenha as mudanças pedidas. Se devolver igual ao original é ERRO.
+2. PRESERVE 100% do resto: textos, títulos, telefones, endereços, e-mails, links, depoimentos, imagens, seções e classes que NÃO foram citados no pedido permanecem IDÊNTICOS.
+3. SITE COMPLETO: devolva SEMPRE o HTML inteiro, do <!doctype html> até </html>, com <head>, <body>, todas as seções e o fechamento de todas as tags. NUNCA pela metade, NUNCA "...", NUNCA "resto igual".
+4. MESMO MODELO/ESTRUTURA/ESTILO. Não recrie do zero, não troque o design, não reordene seções sem pedido.
+5. RESPONSIVIDADE OBRIGATÓRIA em mobile, tablet e desktop (Tailwind sm:, md:, lg:).
+6. HTML VÁLIDO: toda tag fechada. Saída APENAS HTML, sem markdown, sem \`\`\`html, sem comentários.
+7. IMAGENS: pode usar as já presentes no HTML E as adicionais listadas acima. Nunca invente URLs.
+
+HTML ATUAL COMPLETO (BASE — APLIQUE A EDIÇÃO AQUI PRESERVANDO O RESTO):
 ${baseHtml}
 
-LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO com todas as informações originais preservadas + as alterações pedidas. Nada de site pela metade.`;
+LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + tudo o resto preservado. Se devolver igual ao original, falhou.`;
 
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 50000);
     const actualProvider: ActualProvider = providerUsed;
