@@ -194,8 +194,8 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     catch (e) { toast.error((e as Error).message); }
   }
   async function handleResetGen(uid: string, email: string) {
-    if (!confirm(`Renovar as gerações da semana de ${email}? Ele poderá gerar mais 3 versões.`)) return;
-    try { await resetGenFn({ data: { token, userId: uid } }); toast.success("Gerações renovadas"); }
+    if (!confirm(`Renovar gerações E edições de ${email}? Ele poderá gerar novas versões e editar novamente.`)) return;
+    try { await resetGenFn({ data: { token, userId: uid } }); toast.success("Gerações e edições renovadas"); }
     catch (e) { toast.error((e as Error).message); }
   }
   async function handleDeleteSite(sid: string, slug: string) {
@@ -398,7 +398,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button onClick={() => handleResetGen(u.id, u.email)}
-                          className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Renovar gerações</button>
+                          className="rounded-md border border-brand/40 px-2 py-1 text-xs text-brand hover:bg-brand/10">Renovar gerações + edições</button>
                         <button onClick={() => handleDeleteUser(u.id, u.email)}
                           className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10">Excluir</button>
                       </div>
