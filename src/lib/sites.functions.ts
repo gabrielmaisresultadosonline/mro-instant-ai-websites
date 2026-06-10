@@ -71,7 +71,7 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
         model: "deepseek-chat", 
         messages: [{ role: "user", content: prompt }], 
         temperature, 
-        max_tokens: 4000 
+        max_tokens: 8000 
       }),
       signal: controller.signal
     });
