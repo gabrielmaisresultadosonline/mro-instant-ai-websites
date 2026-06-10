@@ -753,8 +753,11 @@ export const editGeneration = createServerFn({ method: "POST" })
 
     const rootId = (gen as any).parent_generation_id ?? gen.id;
 
-    // Count edits of this root model in last 30 days
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    // Count edits of this root model in last 30 days (respeitando reset administrativo)
+    const sinceMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const { data: prof } = await supabaseAdmin.from("profiles").select("edits_reset_at").eq("id", userId).maybeSingle();
+    const resetMs = (prof as any)?.edits_reset_at ? new Date((prof as any).edits_reset_at).getTime() : 0;
+    const since = new Date(Math.max(sinceMs, resetMs)).toISOString();
     const { count } = await supabaseAdmin.from("site_generations")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", userId)
