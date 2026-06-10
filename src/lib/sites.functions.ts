@@ -181,7 +181,7 @@ async function generateHtmlWithFallback(
   tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
   prompt: string,
   temperature: number,
-  maxTotalTimeoutMs = 45000
+  maxTotalTimeoutMs = 180000
 ): Promise<{ html: string; providerUsed: ActualProvider }> {
   const startTime = Date.now();
   const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
