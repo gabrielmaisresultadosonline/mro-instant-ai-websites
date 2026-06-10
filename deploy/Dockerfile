@@ -13,7 +13,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
-COPY --from=build /app/dist ./dist
+COPY --from=build /app/.output ./.output
 COPY --from=build /app/package.json ./package.json
 EXPOSE 3000
-CMD ["bun", "dist/server/index.mjs"]
+CMD ["bun", ".output/server/index.mjs"]
