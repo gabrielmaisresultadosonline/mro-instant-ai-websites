@@ -631,24 +631,31 @@ Responda em português um briefing técnico com: Paleta HEX, Estrutura de Seçõ
 
     const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL e RESPONSIVO.
 
+ARQUITETURA OBRIGATÓRIA — LEIA PRIMEIRO:
+- É UMA ÚNICA PÁGINA (single page) com TODO o conteúdo dentro do MESMO arquivo HTML, organizado em SEÇÕES e CONTAINERS.
+- NÃO existem outras páginas, NÃO existe banco de dados, NÃO existe roteamento, NÃO existe login. Apenas um único HTML autocontido.
+- Cada seção precisa de um id único (ex.: <section id="inicio">, <section id="sobre">, <section id="servicos">, <section id="galeria">, <section id="depoimentos">, <section id="contato">).
+- O MENU/NAVEGAÇÃO precisa ter links âncora apontando para essas seções (ex.: <a href="#sobre">Sobre</a>). Cada botão do menu DEVE rolar suavemente até a seção correspondente (use classe scroll-smooth no <html> ou html { scroll-behavior: smooth } no <style>).
+- Tudo precisa estar FUNCIONAL: menu rolando para a seção certa, botões de WhatsApp abrindo wa.me, links de redes sociais válidos, menu hamburguer mobile abrindo/fechando com JS inline.
+
 REGRAS CRÍTICAS — OBRIGATÓRIAS:
-1. SITE COMPLETO: devolva SEMPRE o HTML inteiro do <!doctype html> até </html>, com <head> (meta viewport, título, Tailwind CDN, fontes), <body> e TODAS as seções fechadas. NUNCA entregue site pela metade, nunca corte no meio, nunca use "..." ou comentários de "resto igual".
-2. PRESERVE TODAS AS INFORMAÇÕES DO CLIENTE: use TUDO que ele descreveu no pedido (nome do negócio, telefones, endereço, e-mail, redes sociais, horários, serviços, depoimentos, diferenciais). Não esqueça nenhum dado. Não invente concorrentes nem omita o que foi passado.
-3. RESPONSIVIDADE 100%: o site precisa ficar perfeito em mobile, tablet e desktop. Use classes responsivas do Tailwind (sm:, md:, lg:) em TODAS as seções, fontes, paddings e grids.
-4. HTML VÁLIDO: toda tag aberta precisa ser fechada. Saída deve ser apenas o código HTML, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
+1. SITE COMPLETO: devolva SEMPRE o HTML inteiro do <!doctype html> até </html>, com <head> (meta viewport, título, Tailwind CDN, fontes), <body> e TODAS as seções fechadas. NUNCA entregue site pela metade.
+2. PRESERVE TODAS AS INFORMAÇÕES DO CLIENTE: use TUDO que ele descreveu (nome, telefones, endereço, e-mail, redes sociais, horários, serviços, depoimentos, diferenciais). Não esqueça nada.
+3. RESPONSIVIDADE 100%: mobile, tablet e desktop. Classes sm:, md:, lg: em TODAS as seções.
+4. HTML VÁLIDO: toda tag fechada. Saída apenas o HTML, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
 
 DIRETRIZES PREMIUM:
-1. DESIGN: Use seções com fundos contrastantes, tipografia de luxo (Playfair Display, Inter) e paddings generosos (py-24).
-2. ELEMENTOS: Bordas rounded-3xl, shadow-2xl, backdrop-blur-md no header.
+1. DESIGN: Seções com fundos contrastantes, tipografia de luxo (Playfair Display, Inter), paddings py-24.
+2. ELEMENTOS: rounded-3xl, shadow-2xl, backdrop-blur-md no header.
 3. BRIEFING: ${brief}
-4. PEDIDO DO CLIENTE (use TUDO, não omita nada): "${data.prompt}"
+4. PEDIDO DO CLIENTE (use TUDO): "${data.prompt}"
 5. IMAGENS REAIS: ${imagesList}
 
 REGRAS TÉCNICAS:
 - LOGO: Se houver imagem "logo", use no header.
-- CTAs: Botões verdes vibrantes (bg-green-600) com link para WhatsApp se houver telefone.
-- ESTRUTURA: Mínimo 6 seções (Header, Hero, Sobre, Serviços, Galeria/Depoimentos, Contato, Footer).
-- SAÍDA: Retorne APENAS o código HTML COMPLETO E FECHADO. Nada de site pela metade.`;
+- CTAs: Botões verdes (bg-green-600) com link wa.me se houver telefone.
+- ESTRUTURA: Mínimo 6 seções (Header com menu âncora, Hero #inicio, Sobre #sobre, Serviços #servicos, Galeria/Depoimentos #galeria, Contato #contato, Footer) — TODAS na MESMA página, ligadas pelo menu por âncoras.
+- SAÍDA: APENAS o código HTML COMPLETO E FECHADO.`;
 
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
