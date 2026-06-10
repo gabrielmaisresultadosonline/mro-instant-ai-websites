@@ -712,10 +712,14 @@ export const getEditQuota = createServerFn({ method: "GET" })
 
 export const editGeneration = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { generationId: string; prompt: string }) =>
+  .inputValidator((i: { generationId: string; prompt: string; images?: { url: string; label: string }[] }) =>
     z.object({
       generationId: z.string().uuid(),
       prompt: z.string().trim().min(5).max(2000),
+      images: z.array(z.object({
+        url: z.string().min(1).max(2000),
+        label: z.string().trim().min(1).max(80),
+      })).max(20).optional(),
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
