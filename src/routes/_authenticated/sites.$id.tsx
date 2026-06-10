@@ -228,7 +228,11 @@ function SiteEditor() {
     if (editsLeft <= 0) { toast.error(`Você usou as ${editsLimit} edições deste modelo no mês.`); return; }
     setEditing(true);
     try {
-      const res = await editGenFn({ data: { generationId: finalTarget, prompt: editPrompt } });
+      const chosenEdit = (imgs?.images ?? []).filter((im) => editSelected.has(im.public_url));
+      const missingEdit = chosenEdit.filter((im) => !im.label || !im.label.trim());
+      if (missingEdit.length > 0) { toast.error("Defina uma etiqueta para cada imagem selecionada."); setEditing(false); return; }
+      const editImages = chosenEdit.map((im) => ({ url: im.public_url, label: im.label!.trim() }));
+      const res = await editGenFn({ data: { generationId: finalTarget, prompt: editPrompt, images: editImages } });
       setPreview({ id: res.generationId, provider: res.provider, html: res.html });
       setEditPrompt("");
       setTab("preview");
