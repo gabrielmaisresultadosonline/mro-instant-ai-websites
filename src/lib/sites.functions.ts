@@ -770,13 +770,21 @@ export const editGeneration = createServerFn({ method: "POST" })
 
     const provider: Provider = (gen.provider as Provider) ?? "deepseek";
 
+    const baseUrl = process.env.VITE_SITE_URL || "https://mro.bio";
+    const imagesList = (data.images ?? []).map((im) => {
+      const fullUrl = im.url.startsWith("http") ? im.url : `${baseUrl}${im.url}`;
+      return `- ETIQUETA: "${im.label}" | LINK: ${fullUrl}`;
+    }).join("\n");
+
     const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e um PEDIDO DE EDIÇÃO do cliente.
 REGRAS:
 1. Mantenha o MESMO MODELO/ESTRUTURA/ESTILO do site original. Não recrie do zero.
 2. Aplique APENAS as alterações pedidas pelo cliente, preservando todo o resto (cores, fontes, seções, imagens, textos não citados).
-3. Mantenha o HTML válido e responsivo. Não invente novas imagens — use só as que já estavam no HTML.
-4. Retorne APENAS o HTML completo final, sem comentários, sem markdown.
+3. Mantenha o HTML válido e responsivo.
+4. IMAGENS: Você pode usar as imagens já presentes no HTML E TAMBÉM as imagens adicionais listadas abaixo (se houver), inserindo-as conforme o pedido do cliente. Nunca invente URLs.
+5. Retorne APENAS o HTML completo final, sem comentários, sem markdown.
 
+${imagesList ? `IMAGENS ADICIONAIS DISPONÍVEIS PARA USAR NESTA EDIÇÃO:\n${imagesList}\n` : ""}
 PEDIDO DE EDIÇÃO:
 "${data.prompt}"
 
