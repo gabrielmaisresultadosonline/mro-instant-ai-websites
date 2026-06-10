@@ -631,24 +631,31 @@ Responda em português um briefing técnico com: Paleta HEX, Estrutura de Seçõ
 
     const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL e RESPONSIVO.
 
+ARQUITETURA OBRIGATÓRIA — LEIA PRIMEIRO:
+- É UMA ÚNICA PÁGINA (single page) com TODO o conteúdo dentro do MESMO arquivo HTML, organizado em SEÇÕES e CONTAINERS.
+- NÃO existem outras páginas, NÃO existe banco de dados, NÃO existe roteamento, NÃO existe login. Apenas um único HTML autocontido.
+- Cada seção precisa de um id único (ex.: <section id="inicio">, <section id="sobre">, <section id="servicos">, <section id="galeria">, <section id="depoimentos">, <section id="contato">).
+- O MENU/NAVEGAÇÃO precisa ter links âncora apontando para essas seções (ex.: <a href="#sobre">Sobre</a>). Cada botão do menu DEVE rolar suavemente até a seção correspondente (use classe scroll-smooth no <html> ou html { scroll-behavior: smooth } no <style>).
+- Tudo precisa estar FUNCIONAL: menu rolando para a seção certa, botões de WhatsApp abrindo wa.me, links de redes sociais válidos, menu hamburguer mobile abrindo/fechando com JS inline.
+
 REGRAS CRÍTICAS — OBRIGATÓRIAS:
-1. SITE COMPLETO: devolva SEMPRE o HTML inteiro do <!doctype html> até </html>, com <head> (meta viewport, título, Tailwind CDN, fontes), <body> e TODAS as seções fechadas. NUNCA entregue site pela metade, nunca corte no meio, nunca use "..." ou comentários de "resto igual".
-2. PRESERVE TODAS AS INFORMAÇÕES DO CLIENTE: use TUDO que ele descreveu no pedido (nome do negócio, telefones, endereço, e-mail, redes sociais, horários, serviços, depoimentos, diferenciais). Não esqueça nenhum dado. Não invente concorrentes nem omita o que foi passado.
-3. RESPONSIVIDADE 100%: o site precisa ficar perfeito em mobile, tablet e desktop. Use classes responsivas do Tailwind (sm:, md:, lg:) em TODAS as seções, fontes, paddings e grids.
-4. HTML VÁLIDO: toda tag aberta precisa ser fechada. Saída deve ser apenas o código HTML, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
+1. SITE COMPLETO: devolva SEMPRE o HTML inteiro do <!doctype html> até </html>, com <head> (meta viewport, título, Tailwind CDN, fontes), <body> e TODAS as seções fechadas. NUNCA entregue site pela metade.
+2. PRESERVE TODAS AS INFORMAÇÕES DO CLIENTE: use TUDO que ele descreveu (nome, telefones, endereço, e-mail, redes sociais, horários, serviços, depoimentos, diferenciais). Não esqueça nada.
+3. RESPONSIVIDADE 100%: mobile, tablet e desktop. Classes sm:, md:, lg: em TODAS as seções.
+4. HTML VÁLIDO: toda tag fechada. Saída apenas o HTML, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
 
 DIRETRIZES PREMIUM:
-1. DESIGN: Use seções com fundos contrastantes, tipografia de luxo (Playfair Display, Inter) e paddings generosos (py-24).
-2. ELEMENTOS: Bordas rounded-3xl, shadow-2xl, backdrop-blur-md no header.
+1. DESIGN: Seções com fundos contrastantes, tipografia de luxo (Playfair Display, Inter), paddings py-24.
+2. ELEMENTOS: rounded-3xl, shadow-2xl, backdrop-blur-md no header.
 3. BRIEFING: ${brief}
-4. PEDIDO DO CLIENTE (use TUDO, não omita nada): "${data.prompt}"
+4. PEDIDO DO CLIENTE (use TUDO): "${data.prompt}"
 5. IMAGENS REAIS: ${imagesList}
 
 REGRAS TÉCNICAS:
 - LOGO: Se houver imagem "logo", use no header.
-- CTAs: Botões verdes vibrantes (bg-green-600) com link para WhatsApp se houver telefone.
-- ESTRUTURA: Mínimo 6 seções (Header, Hero, Sobre, Serviços, Galeria/Depoimentos, Contato, Footer).
-- SAÍDA: Retorne APENAS o código HTML COMPLETO E FECHADO. Nada de site pela metade.`;
+- CTAs: Botões verdes (bg-green-600) com link wa.me se houver telefone.
+- ESTRUTURA: Mínimo 6 seções (Header com menu âncora, Hero #inicio, Sobre #sobre, Serviços #servicos, Galeria/Depoimentos #galeria, Contato #contato, Footer) — TODAS na MESMA página, ligadas pelo menu por âncoras.
+- SAÍDA: APENAS o código HTML COMPLETO E FECHADO.`;
 
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
@@ -782,26 +789,32 @@ export const editGeneration = createServerFn({ method: "POST" })
       return `- ETIQUETA: "${im.label}" | LINK: ${fullUrl}`;
     }).join("\n");
 
-    const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e um PEDIDO DE EDIÇÃO do cliente.
+    const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e PRECISA APLICAR um PEDIDO DE EDIÇÃO do cliente.
 
-REGRAS CRÍTICAS — LEIA COM ATENÇÃO:
-1. NUNCA RETORNE UM SITE PELA METADE. Devolva SEMPRE o HTML COMPLETO, do <!doctype html> até o </html>, incluindo <head>, <body>, todas as seções, scripts e o fechamento de todas as tags. Se faltar qualquer parte é erro grave.
-2. MANTENHA 100% do conteúdo existente: TODOS os textos, títulos, parágrafos, listas, depoimentos, telefones, endereços, e-mails, links, botões, ícones, imagens, seções e classes. NÃO apague, NÃO resuma, NÃO simplifique nada que o cliente não pediu para mudar.
-3. Aplique APENAS as alterações pedidas. Tudo que não foi citado permanece IDÊNTICO ao original (mesmo texto, mesma ordem, mesmas cores, mesmas fontes, mesmas seções).
-4. Mantenha o MESMO MODELO/ESTRUTURA/ESTILO. Não recrie do zero, não troque o design, não reordene seções sem pedido.
-5. RESPONSIVIDADE OBRIGATÓRIA: o site precisa continuar 100% responsivo em mobile, tablet e desktop (use as classes responsivas do Tailwind já presentes — sm:, md:, lg:).
-6. HTML VÁLIDO: todas as tags abertas precisam ser fechadas. Não corte no meio. Não use "..." nem comentários de "resto igual".
-7. IMAGENS: Você pode usar as imagens já presentes no HTML E TAMBÉM as imagens adicionais listadas abaixo (se houver). Nunca invente URLs.
-8. SAÍDA: retorne APENAS o código HTML completo final, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
-
-${imagesList ? `IMAGENS ADICIONAIS DISPONÍVEIS PARA USAR NESTA EDIÇÃO:\n${imagesList}\n` : ""}
-PEDIDO DE EDIÇÃO DO CLIENTE:
+>>> PEDIDO DE EDIÇÃO DO CLIENTE (APLIQUE OBRIGATORIAMENTE — isto é o que mudou, NÃO devolva o HTML idêntico ao original) <<<:
 "${data.prompt}"
 
-HTML ATUAL COMPLETO (BASE — EDITE ESTE PRESERVANDO TUDO):
+${imagesList ? `IMAGENS ADICIONAIS DISPONÍVEIS PARA USAR NESTA EDIÇÃO:\n${imagesList}\n` : ""}
+ARQUITETURA DO SITE (NÃO MUDAR):
+- É UMA ÚNICA PÁGINA com TODO o conteúdo no MESMO arquivo HTML, em SEÇÕES e CONTAINERS.
+- NÃO crie outras páginas, NÃO use banco de dados, NÃO use roteamento.
+- Cada seção tem id único (#inicio, #sobre, #servicos, #galeria, #contato etc).
+- O MENU usa links âncora (<a href="#secao">) que rolam suavemente até a seção. Mantenha/garanta scroll-smooth e que CADA botão do menu vá para a seção correspondente.
+- Mantenha menu hamburguer mobile funcional.
+
+REGRAS CRÍTICAS:
+1. APLIQUE O PEDIDO DE EDIÇÃO — é OBRIGATÓRIO que o HTML retornado contenha as mudanças pedidas. Se devolver igual ao original é ERRO.
+2. PRESERVE 100% do resto: textos, títulos, telefones, endereços, e-mails, links, depoimentos, imagens, seções e classes que NÃO foram citados no pedido permanecem IDÊNTICOS.
+3. SITE COMPLETO: devolva SEMPRE o HTML inteiro, do <!doctype html> até </html>, com <head>, <body>, todas as seções e o fechamento de todas as tags. NUNCA pela metade, NUNCA "...", NUNCA "resto igual".
+4. MESMO MODELO/ESTRUTURA/ESTILO. Não recrie do zero, não troque o design, não reordene seções sem pedido.
+5. RESPONSIVIDADE OBRIGATÓRIA em mobile, tablet e desktop (Tailwind sm:, md:, lg:).
+6. HTML VÁLIDO: toda tag fechada. Saída APENAS HTML, sem markdown, sem \`\`\`html, sem comentários.
+7. IMAGENS: pode usar as já presentes no HTML E as adicionais listadas acima. Nunca invente URLs.
+
+HTML ATUAL COMPLETO (BASE — APLIQUE A EDIÇÃO AQUI PRESERVANDO O RESTO):
 ${baseHtml}
 
-LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO com todas as informações originais preservadas + as alterações pedidas. Nada de site pela metade.`;
+LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + tudo o resto preservado. Se devolver igual ao original, falhou.`;
 
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 50000);
     const actualProvider: ActualProvider = providerUsed;
