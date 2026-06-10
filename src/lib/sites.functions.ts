@@ -777,19 +777,25 @@ export const editGeneration = createServerFn({ method: "POST" })
     }).join("\n");
 
     const editPrompt = `Você é um desenvolvedor front-end sênior. Receberá um site HTML+Tailwind já pronto e um PEDIDO DE EDIÇÃO do cliente.
-REGRAS:
-1. Mantenha o MESMO MODELO/ESTRUTURA/ESTILO do site original. Não recrie do zero.
-2. Aplique APENAS as alterações pedidas pelo cliente, preservando todo o resto (cores, fontes, seções, imagens, textos não citados).
-3. Mantenha o HTML válido e responsivo.
-4. IMAGENS: Você pode usar as imagens já presentes no HTML E TAMBÉM as imagens adicionais listadas abaixo (se houver), inserindo-as conforme o pedido do cliente. Nunca invente URLs.
-5. Retorne APENAS o HTML completo final, sem comentários, sem markdown.
+
+REGRAS CRÍTICAS — LEIA COM ATENÇÃO:
+1. NUNCA RETORNE UM SITE PELA METADE. Devolva SEMPRE o HTML COMPLETO, do <!doctype html> até o </html>, incluindo <head>, <body>, todas as seções, scripts e o fechamento de todas as tags. Se faltar qualquer parte é erro grave.
+2. MANTENHA 100% do conteúdo existente: TODOS os textos, títulos, parágrafos, listas, depoimentos, telefones, endereços, e-mails, links, botões, ícones, imagens, seções e classes. NÃO apague, NÃO resuma, NÃO simplifique nada que o cliente não pediu para mudar.
+3. Aplique APENAS as alterações pedidas. Tudo que não foi citado permanece IDÊNTICO ao original (mesmo texto, mesma ordem, mesmas cores, mesmas fontes, mesmas seções).
+4. Mantenha o MESMO MODELO/ESTRUTURA/ESTILO. Não recrie do zero, não troque o design, não reordene seções sem pedido.
+5. RESPONSIVIDADE OBRIGATÓRIA: o site precisa continuar 100% responsivo em mobile, tablet e desktop (use as classes responsivas do Tailwind já presentes — sm:, md:, lg:).
+6. HTML VÁLIDO: todas as tags abertas precisam ser fechadas. Não corte no meio. Não use "..." nem comentários de "resto igual".
+7. IMAGENS: Você pode usar as imagens já presentes no HTML E TAMBÉM as imagens adicionais listadas abaixo (se houver). Nunca invente URLs.
+8. SAÍDA: retorne APENAS o código HTML completo final, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
 
 ${imagesList ? `IMAGENS ADICIONAIS DISPONÍVEIS PARA USAR NESTA EDIÇÃO:\n${imagesList}\n` : ""}
-PEDIDO DE EDIÇÃO:
+PEDIDO DE EDIÇÃO DO CLIENTE:
 "${data.prompt}"
 
-HTML ATUAL (BASE — EDITE ESTE):
-${baseHtml}`;
+HTML ATUAL COMPLETO (BASE — EDITE ESTE PRESERVANDO TUDO):
+${baseHtml}
+
+LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO com todas as informações originais preservadas + as alterações pedidas. Nada de site pela metade.`;
 
     const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 50000);
     const actualProvider: ActualProvider = providerUsed;
