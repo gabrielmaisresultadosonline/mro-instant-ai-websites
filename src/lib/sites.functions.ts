@@ -655,7 +655,9 @@ REGRAS TÉCNICAS:
 - LOGO: Se houver imagem "logo", use no header.
 - CTAs: Botões verdes (bg-green-600) com link wa.me se houver telefone.
 - ESTRUTURA: Mínimo 6 seções (Header com menu âncora, Hero #inicio, Sobre #sobre, Serviços #servicos, Galeria/Depoimentos #galeria, Contato #contato, Footer) — TODAS na MESMA página, ligadas pelo menu por âncoras.
+- SEM FORMULÁRIOS / SEM BANCO DE DADOS: este site NÃO tem backend nem banco para armazenar mensagens. NUNCA crie <form>, NUNCA crie inputs de "nome/email/mensagem/orçamento", NUNCA crie botão "Enviar mensagem". Se o cliente tiver número de WhatsApp/telefone nas informações, TODO call-to-action de contato (orçamento, fale conosco, agendar, pedir, reservar, dúvidas, contato) deve ser um link <a href="https://wa.me/55DDDNUMERO?text=Olá..."> abrindo o WhatsApp com mensagem pré-preenchida em português. Se NÃO houver WhatsApp/telefone, NÃO coloque formulário nem seção "envie mensagem" — use apenas e-mail (mailto:) e/ou redes sociais existentes. Na seção de contato exiba apenas as informações (telefone, email, endereço, redes) + botão WhatsApp grande, SEM campos de input.
 - SAÍDA: APENAS o código HTML COMPLETO E FECHADO.`;
+
 
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
@@ -810,6 +812,7 @@ REGRAS CRÍTICAS:
 5. RESPONSIVIDADE OBRIGATÓRIA em mobile, tablet e desktop (Tailwind sm:, md:, lg:).
 6. HTML VÁLIDO: toda tag fechada. Saída APENAS HTML, sem markdown, sem \`\`\`html, sem comentários.
 7. IMAGENS: pode usar as já presentes no HTML E as adicionais listadas acima. Nunca invente URLs.
+8. SEM FORMULÁRIOS / SEM BANCO DE DADOS: este site NÃO tem backend. Se o pedido pedir "formulário de contato/orçamento/cadastro" OU se já existir um <form> no HTML base, REMOVA o formulário e SUBSTITUA por um botão grande de WhatsApp (<a href="https://wa.me/55DDDNUMERO?text=Olá...">) usando o telefone/WhatsApp já presente nas informações de contato do site. Se não houver telefone/WhatsApp no site, use mailto: com o email existente. NUNCA mantenha campos <input name="nome">, <input name="email">, <textarea> de mensagem nem botão "Enviar mensagem" — eles não funcionam sem backend.
 
 HTML ATUAL COMPLETO (BASE — APLIQUE A EDIÇÃO AQUI PRESERVANDO O RESTO):
 ${baseHtml}
