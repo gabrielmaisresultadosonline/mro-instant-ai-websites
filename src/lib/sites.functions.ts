@@ -139,7 +139,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
   throw new Error(`claude todos falharam: ${lastErr.slice(0, 200)}`);
 }
 
-async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
+async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
