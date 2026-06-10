@@ -816,7 +816,7 @@ ${baseHtml}
 
 LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + tudo o resto preservado. Se devolver igual ao original, falhou.`;
 
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 50000);
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 180000);
     const actualProvider: ActualProvider = providerUsed;
 
     if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
