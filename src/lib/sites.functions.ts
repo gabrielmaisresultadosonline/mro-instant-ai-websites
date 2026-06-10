@@ -215,7 +215,7 @@ async function generateHtmlWithFallback(
       // Divide o tempo restante de forma inteligente. 
       // Se for o primeiro, não deixa ele gastar tudo para permitir o fallback.
       const isLastOption = p === order[order.length - 1];
-      const callTimeout = isLastOption ? remaining : Math.min(remaining, 25000);
+      const callTimeout = isLastOption ? remaining : Math.min(remaining, 90000);
 
       const html = p === "deepseek"
         ? await callDeepseek(token, prompt, temperature, callTimeout)
