@@ -631,18 +631,24 @@ Responda em português um briefing técnico com: Paleta HEX, Estrutura de Seçõ
 
     const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL e RESPONSIVO.
 
+REGRAS CRÍTICAS — OBRIGATÓRIAS:
+1. SITE COMPLETO: devolva SEMPRE o HTML inteiro do <!doctype html> até </html>, com <head> (meta viewport, título, Tailwind CDN, fontes), <body> e TODAS as seções fechadas. NUNCA entregue site pela metade, nunca corte no meio, nunca use "..." ou comentários de "resto igual".
+2. PRESERVE TODAS AS INFORMAÇÕES DO CLIENTE: use TUDO que ele descreveu no pedido (nome do negócio, telefones, endereço, e-mail, redes sociais, horários, serviços, depoimentos, diferenciais). Não esqueça nenhum dado. Não invente concorrentes nem omita o que foi passado.
+3. RESPONSIVIDADE 100%: o site precisa ficar perfeito em mobile, tablet e desktop. Use classes responsivas do Tailwind (sm:, md:, lg:) em TODAS as seções, fontes, paddings e grids.
+4. HTML VÁLIDO: toda tag aberta precisa ser fechada. Saída deve ser apenas o código HTML, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
+
 DIRETRIZES PREMIUM:
 1. DESIGN: Use seções com fundos contrastantes, tipografia de luxo (Playfair Display, Inter) e paddings generosos (py-24).
 2. ELEMENTOS: Bordas rounded-3xl, shadow-2xl, backdrop-blur-md no header.
 3. BRIEFING: ${brief}
-4. PEDIDO: "${data.prompt}"
+4. PEDIDO DO CLIENTE (use TUDO, não omita nada): "${data.prompt}"
 5. IMAGENS REAIS: ${imagesList}
 
 REGRAS TÉCNICAS:
 - LOGO: Se houver imagem "logo", use no header.
-- CTAs: Botões verdes vibrantes (bg-green-600).
-- ESTRUTURA: Mínimo 6 seções.
-- SAÍDA: Retorne APENAS o código HTML completo. SEJA CONCISO E EFICIENTE NO CÓDIGO.`;
+- CTAs: Botões verdes vibrantes (bg-green-600) com link para WhatsApp se houver telefone.
+- ESTRUTURA: Mínimo 6 seções (Header, Hero, Sobre, Serviços, Galeria/Depoimentos, Contato, Footer).
+- SAÍDA: Retorne APENAS o código HTML COMPLETO E FECHADO. Nada de site pela metade.`;
 
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
