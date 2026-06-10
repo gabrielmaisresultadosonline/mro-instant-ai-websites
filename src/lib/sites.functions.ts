@@ -54,7 +54,7 @@ function cleanHtmlOutput(s: string) {
   return clean.trim();
 }
 
-async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
+async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
