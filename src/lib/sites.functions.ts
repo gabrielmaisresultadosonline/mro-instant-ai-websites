@@ -54,7 +54,7 @@ function cleanHtmlOutput(s: string) {
   return clean.trim();
 }
 
-async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
+async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
@@ -71,7 +71,7 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
         model: "deepseek-chat", 
         messages: [{ role: "user", content: prompt }], 
         temperature, 
-        max_tokens: 4000 
+        max_tokens: 8000 
       }),
       signal: controller.signal
     });
@@ -90,7 +90,7 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
   }
 }
 
-async function callClaude(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
+async function callClaude(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
   const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"];
   let lastErr = "";
   for (const model of models) {
@@ -108,7 +108,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
         },
         body: JSON.stringify({ 
           model, 
-          max_tokens: 4000, 
+          max_tokens: 8000, 
           temperature, 
           messages: [{ role: "user", content: prompt }] 
         }),
@@ -139,7 +139,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
   throw new Error(`claude todos falharam: ${lastErr.slice(0, 200)}`);
 }
 
-async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
+async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
@@ -156,7 +156,7 @@ async function callOpenAI(token: string, prompt: string, temperature: number, ti
         model: "gpt-4o-mini", 
         messages: [{ role: "user", content: prompt }], 
         temperature, 
-        max_tokens: 4000 
+        max_tokens: 16000 
       }),
       signal: controller.signal
     });
@@ -181,7 +181,7 @@ async function generateHtmlWithFallback(
   tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
   prompt: string,
   temperature: number,
-  maxTotalTimeoutMs = 45000
+  maxTotalTimeoutMs = 180000
 ): Promise<{ html: string; providerUsed: ActualProvider }> {
   const startTime = Date.now();
   const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
@@ -215,7 +215,7 @@ async function generateHtmlWithFallback(
       // Divide o tempo restante de forma inteligente. 
       // Se for o primeiro, não deixa ele gastar tudo para permitir o fallback.
       const isLastOption = p === order[order.length - 1];
-      const callTimeout = isLastOption ? remaining : Math.min(remaining, 25000);
+      const callTimeout = isLastOption ? remaining : Math.min(remaining, 90000);
 
       const html = p === "deepseek"
         ? await callDeepseek(token, prompt, temperature, callTimeout)
@@ -816,7 +816,7 @@ ${baseHtml}
 
 LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + tudo o resto preservado. Se devolver igual ao original, falhou.`;
 
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 50000);
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 180000);
     const actualProvider: ActualProvider = providerUsed;
 
     if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
