@@ -81,6 +81,7 @@ function SiteEditor() {
   const [tab, setTab] = useState<"preview" | "edit" | "history" | "settings" | "insights">("preview");
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
+  const [editSelected, setEditSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState(false);
   const [confirmInfo, setConfirmInfo] = useState(false);   // popup pre-generate (info check)
   const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
@@ -227,7 +228,11 @@ function SiteEditor() {
     if (editsLeft <= 0) { toast.error(`Você usou as ${editsLimit} edições deste modelo no mês.`); return; }
     setEditing(true);
     try {
-      const res = await editGenFn({ data: { generationId: finalTarget, prompt: editPrompt } });
+      const chosenEdit = (imgs?.images ?? []).filter((im) => editSelected.has(im.public_url));
+      const missingEdit = chosenEdit.filter((im) => !im.label || !im.label.trim());
+      if (missingEdit.length > 0) { toast.error("Defina uma etiqueta para cada imagem selecionada."); setEditing(false); return; }
+      const editImages = chosenEdit.map((im) => ({ url: im.public_url, label: im.label!.trim() }));
+      const res = await editGenFn({ data: { generationId: finalTarget, prompt: editPrompt, images: editImages } });
       setPreview({ id: res.generationId, provider: res.provider, html: res.html });
       setEditPrompt("");
       setTab("preview");
@@ -565,12 +570,57 @@ function SiteEditor() {
                     </select>
                   </div>
 
+                  <div className="rounded-md border border-border bg-background/40 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Imagens já carregadas
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {editSelected.size} selecionada{editSelected.size === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    {(imgs?.images?.length ?? 0) === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Nenhuma imagem disponível. Envie imagens na aba <strong>Pré-visualização</strong> primeiro.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mb-2 text-[11px] text-muted-foreground">
+                          Marque as imagens que a I.A pode <strong>usar</strong> nesta edição (ex.: adicionar nova foto, trocar banner).
+                        </p>
+                        <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+                          {imgs!.images.map((im) => {
+                            const checked = editSelected.has(im.public_url);
+                            return (
+                              <label key={im.id}
+                                className={`relative cursor-pointer overflow-hidden rounded-md border ${checked ? "border-brand ring-2 ring-brand/40" : "border-border"}`}>
+                                <input
+                                  type="checkbox"
+                                  className="absolute left-1 top-1 z-10 h-4 w-4 accent-brand"
+                                  checked={checked}
+                                  onChange={() => setEditSelected((s) => {
+                                    const next = new Set(s);
+                                    if (next.has(im.public_url)) next.delete(im.public_url);
+                                    else next.add(im.public_url);
+                                    return next;
+                                  })}
+                                />
+                                <img src={im.public_url} alt={im.label ?? ""} className="aspect-square w-full object-cover" />
+                                <div className="truncate bg-background/80 px-1.5 py-1 text-[10px]">{im.label || "(sem etiqueta)"}</div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
                   <textarea
                     value={editPrompt}
                     onChange={(e) => setEditPrompt(e.target.value)}
                     rows={6}
                     maxLength={2000}
-                    placeholder="Ex.: Troque o título do hero para 'Bem-vindo à Essência'. Mude a cor dos botões para roxo. Adicione um depoimento da Maria abaixo da seção de serviços. Mantenha o resto igual."
+                    placeholder="Ex.: Troque o título do hero para 'Bem-vindo à Essência'. Mude a cor dos botões para roxo. Adicione a foto marcada 'equipe' na seção Sobre. Mantenha o resto igual."
                     className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none"
                   />
 
