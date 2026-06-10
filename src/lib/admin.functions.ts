@@ -160,16 +160,23 @@ export const adminResetUserGenerations = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const now = new Date().toISOString();
     const { error } = await supabaseAdmin
       .from("sites")
       .update({ 
         gens_this_month: 0, 
-        month_started_at: new Date().toISOString(),
+        month_started_at: now,
         edits_this_week: 0, 
-        week_started_at: new Date().toISOString() 
+        week_started_at: now,
       })
       .eq("owner_id", data.userId);
     if (error) throw new Error(error.message);
+    // Marca o ponto a partir do qual o contador de edições por modelo deve ser contado.
+    const { error: pErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ edits_reset_at: now })
+      .eq("id", data.userId);
+    if (pErr) throw new Error(pErr.message);
     return { ok: true };
   });
 
