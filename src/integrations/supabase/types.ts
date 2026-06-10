@@ -168,6 +168,7 @@ export type Database = {
           cpf: string
           created_at: string
           created_by_admin: boolean
+          edits_reset_at: string | null
           email: string
           expired_notice_sent_at: string | null
           grace_period_ends_at: string | null
@@ -190,6 +191,7 @@ export type Database = {
           cpf: string
           created_at?: string
           created_by_admin?: boolean
+          edits_reset_at?: string | null
           email: string
           expired_notice_sent_at?: string | null
           grace_period_ends_at?: string | null
@@ -212,6 +214,7 @@ export type Database = {
           cpf?: string
           created_at?: string
           created_by_admin?: boolean
+          edits_reset_at?: string | null
           email?: string
           expired_notice_sent_at?: string | null
           grace_period_ends_at?: string | null
