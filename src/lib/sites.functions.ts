@@ -108,7 +108,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
         },
         body: JSON.stringify({ 
           model, 
-          max_tokens: 4000, 
+          max_tokens: 8000, 
           temperature, 
           messages: [{ role: "user", content: prompt }] 
         }),
