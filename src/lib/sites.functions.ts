@@ -812,6 +812,7 @@ REGRAS CRÍTICAS:
 5. RESPONSIVIDADE OBRIGATÓRIA em mobile, tablet e desktop (Tailwind sm:, md:, lg:).
 6. HTML VÁLIDO: toda tag fechada. Saída APENAS HTML, sem markdown, sem \`\`\`html, sem comentários.
 7. IMAGENS: pode usar as já presentes no HTML E as adicionais listadas acima. Nunca invente URLs.
+8. SEM FORMULÁRIOS / SEM BANCO DE DADOS: este site NÃO tem backend. Se o pedido pedir "formulário de contato/orçamento/cadastro" OU se já existir um <form> no HTML base, REMOVA o formulário e SUBSTITUA por um botão grande de WhatsApp (<a href="https://wa.me/55DDDNUMERO?text=Olá...">) usando o telefone/WhatsApp já presente nas informações de contato do site. Se não houver telefone/WhatsApp no site, use mailto: com o email existente. NUNCA mantenha campos <input name="nome">, <input name="email">, <textarea> de mensagem nem botão "Enviar mensagem" — eles não funcionam sem backend.
 
 HTML ATUAL COMPLETO (BASE — APLIQUE A EDIÇÃO AQUI PRESERVANDO O RESTO):
 ${baseHtml}
