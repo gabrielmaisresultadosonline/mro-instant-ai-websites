@@ -90,7 +90,7 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
   }
 }
 
-async function callClaude(token: string, prompt: string, temperature: number, timeoutMs = 45000): Promise<string> {
+async function callClaude(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
   const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"];
   let lastErr = "";
   for (const model of models) {
