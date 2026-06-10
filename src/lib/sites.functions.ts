@@ -156,7 +156,7 @@ async function callOpenAI(token: string, prompt: string, temperature: number, ti
         model: "gpt-4o-mini", 
         messages: [{ role: "user", content: prompt }], 
         temperature, 
-        max_tokens: 4000 
+        max_tokens: 16000 
       }),
       signal: controller.signal
     });
