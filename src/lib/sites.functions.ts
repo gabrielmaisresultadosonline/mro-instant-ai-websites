@@ -610,13 +610,18 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
 O cliente pediu: "${data.prompt}"
 IMAGENS: ${imagesList}
 
+REGRA #1 INVIOLÁVEL — RESPEITAR O CLIENTE:
+- Se o cliente citou cores específicas (ex.: "preto, cinza, branco e vermelho"), a PALETA HEX precisa usar EXATAMENTE essas cores e NENHUMA outra cor dominante. Nada de inventar azul, roxo ou dourado se ele não pediu.
+- Se citou estilo, tipografia ou setor — respeite literalmente.
+- Extraia do pedido as cores/estilo solicitados e liste-os explicitamente no topo do briefing.
+
 DIRETRIZES:
 1. IMPACTO: Seções com fundos alternados, tipografia elegante, paddings generosos.
-2. MODERNO: Bordas arredondadas (rounded-3xl), sombras suaves, gradientes sutis.
+2. MODERNO: Bordas arredondadas (rounded-3xl), sombras suaves, gradientes sutis (apenas dentro da paleta pedida).
 3. ESTRUTURA: Header, Hero, Sobre, Serviços, Galeria, Footer.
 4. IMAGENS: Use APENAS os links reais acima. NUNCA invente URLs.
 
-Responda em português um briefing técnico com: Paleta HEX, Estrutura de Seções e Mapeamento de links.`;
+Responda em português um briefing técnico com: 1) Cores solicitadas pelo cliente (cópia literal), 2) Paleta HEX baseada NESSAS cores, 3) Estrutura de Seções, 4) Mapeamento de links.`;
 
     let brief = "";
     try {
@@ -639,21 +644,22 @@ ARQUITETURA OBRIGATÓRIA — LEIA PRIMEIRO:
 - Tudo precisa estar FUNCIONAL: menu rolando para a seção certa, botões de WhatsApp abrindo wa.me, links de redes sociais válidos, menu hamburguer mobile abrindo/fechando com JS inline.
 
 REGRAS CRÍTICAS — OBRIGATÓRIAS:
-1. SITE COMPLETO: devolva SEMPRE o HTML inteiro do <!doctype html> até </html>, com <head> (meta viewport, título, Tailwind CDN, fontes), <body> e TODAS as seções fechadas. NUNCA entregue site pela metade.
-2. PRESERVE TODAS AS INFORMAÇÕES DO CLIENTE: use TUDO que ele descreveu (nome, telefones, endereço, e-mail, redes sociais, horários, serviços, depoimentos, diferenciais). Não esqueça nada.
-3. RESPONSIVIDADE 100%: mobile, tablet e desktop. Classes sm:, md:, lg: em TODAS as seções.
-4. HTML VÁLIDO: toda tag fechada. Saída apenas o HTML, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
+1. RESPEITE LITERALMENTE O PEDIDO DO CLIENTE — cores, fontes, estilo e setor. Se ele disser "preto, cinza, branco e vermelho", use SOMENTE essas cores como paleta principal (backgrounds, textos, botões, detalhes). PROIBIDO introduzir cores que ele não pediu (azul, roxo, verde, dourado, bege etc.). Única exceção: o verde do botão de WhatsApp se houver telefone.
+2. SITE COMPLETO: devolva SEMPRE o HTML inteiro do <!doctype html> até </html>, com <head> (meta viewport, título, Tailwind CDN, fontes), <body> e TODAS as seções fechadas. NUNCA entregue site pela metade.
+3. PRESERVE TODAS AS INFORMAÇÕES DO CLIENTE: use TUDO que ele descreveu (nome, telefones, endereço, e-mail, redes sociais, horários, serviços, depoimentos, diferenciais). Não esqueça nada.
+4. RESPONSIVIDADE 100%: mobile, tablet e desktop. Classes sm:, md:, lg: em TODAS as seções.
+5. HTML VÁLIDO: toda tag fechada. Saída apenas o HTML, sem markdown, sem \`\`\`html, sem comentários antes ou depois.
 
 DIRETRIZES PREMIUM:
-1. DESIGN: Seções com fundos contrastantes, tipografia de luxo (Playfair Display, Inter), paddings py-24.
+1. DESIGN: Seções com fundos contrastantes DENTRO da paleta pedida pelo cliente, tipografia elegante, paddings py-24.
 2. ELEMENTOS: rounded-3xl, shadow-2xl, backdrop-blur-md no header.
-3. BRIEFING: ${brief}
-4. PEDIDO DO CLIENTE (use TUDO): "${data.prompt}"
+3. BRIEFING (referência — em caso de conflito de cores/estilo, o PEDIDO DO CLIENTE abaixo prevalece): ${brief}
+4. PEDIDO DO CLIENTE (FONTE DA VERDADE — use TUDO, principalmente cores e estilo): "${data.prompt}"
 5. IMAGENS REAIS: ${imagesList}
 
 REGRAS TÉCNICAS:
 - LOGO: Se houver imagem "logo", use no header.
-- CTAs: Botões verdes (bg-green-600) com link wa.me se houver telefone.
+- CTAs: Botões de WhatsApp podem ser verdes (bg-green-600) com link wa.me — única exceção à paleta.
 - ESTRUTURA: Mínimo 6 seções (Header com menu âncora, Hero #inicio, Sobre #sobre, Serviços #servicos, Galeria/Depoimentos #galeria, Contato #contato, Footer) — TODAS na MESMA página, ligadas pelo menu por âncoras.
 - SEM FORMULÁRIOS / SEM BANCO DE DADOS: este site NÃO tem backend nem banco para armazenar mensagens. NUNCA crie <form>, NUNCA crie inputs de "nome/email/mensagem/orçamento", NUNCA crie botão "Enviar mensagem". Se o cliente tiver número de WhatsApp/telefone nas informações, TODO call-to-action de contato (orçamento, fale conosco, agendar, pedir, reservar, dúvidas, contato) deve ser um link <a href="https://wa.me/55DDDNUMERO?text=Olá..."> abrindo o WhatsApp com mensagem pré-preenchida em português. Se NÃO houver WhatsApp/telefone, NÃO coloque formulário nem seção "envie mensagem" — use apenas e-mail (mailto:) e/ou redes sociais existentes. Na seção de contato exiba apenas as informações (telefone, email, endereço, redes) + botão WhatsApp grande, SEM campos de input.
 - SAÍDA: APENAS o código HTML COMPLETO E FECHADO.`;
