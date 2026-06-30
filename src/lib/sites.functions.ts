@@ -149,7 +149,14 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
 async function callClaude(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
   const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"];
   let lastErr = "";
+  const providerStartedAt = Date.now();
   for (const model of models) {
+    const remainingForClaude = timeoutMs - (Date.now() - providerStartedAt);
+    if (remainingForClaude < 4000) {
+      lastErr = `tempo insuficiente no claude (${remainingForClaude}ms restantes)`;
+      break;
+    }
+    const modelTimeoutMs = Math.min(remainingForClaude, Math.max(4000, Math.ceil(timeoutMs / models.length)));
     try {
       const r = await fetchWithHardTimeout(traceId, `claude:${model}`, "https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -165,7 +172,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
           temperature, 
           messages: [{ role: "user", content: prompt }] 
         }),
-      }, timeoutMs);
+      }, modelTimeoutMs);
       if (!r.ok) { 
         lastErr = await r.text(); 
         errorGeneration(traceId, "provider_http_error", { provider: "claude", model, status: r.status, body: lastErr.slice(0, 500) });
