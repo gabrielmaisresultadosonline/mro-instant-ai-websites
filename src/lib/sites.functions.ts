@@ -13,6 +13,74 @@ const PROVIDERS = ["deepseek", "claude", "openai"] as const;
 type Provider = typeof PROVIDERS[number];
 type ActualProvider = Provider;
 
+const AI_REQUEST_BUDGET_MS = 48000;
+const PROVIDER_ATTEMPT_MAX_MS = 30000;
+const PROVIDER_ATTEMPT_MIN_MS = 8000;
+const FINAL_RESPONSE_RESERVE_MS = 2500;
+
+function createGenerationTrace(flow: "generate" | "edit") {
+  return `${flow}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function elapsedSince(startedAt: number) {
+  return `${Date.now() - startedAt}ms`;
+}
+
+function logGeneration(traceId: string, event: string, details: Record<string, unknown> = {}) {
+  console.info(`[MRO_AI][${traceId}] ${event}`, details);
+}
+
+function warnGeneration(traceId: string, event: string, details: Record<string, unknown> = {}) {
+  console.warn(`[MRO_AI][${traceId}] ${event}`, details);
+}
+
+function errorGeneration(traceId: string, event: string, details: Record<string, unknown> = {}) {
+  console.error(`[MRO_AI][${traceId}] ${event}`, details);
+}
+
+function sanitizeApiToken(value?: string | null) {
+  return (value || "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "")
+    .replace(/^(token|key|api[ _]key|bearer):\s*/i, "")
+    .trim();
+}
+
+async function fetchWithHardTimeout(
+  traceId: string,
+  provider: string,
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+) {
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    logGeneration(traceId, "provider_fetch_start", { provider, timeoutMs });
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    logGeneration(traceId, "provider_fetch_end", {
+      provider,
+      status: response.status,
+      ok: response.ok,
+      elapsed: elapsedSince(startedAt),
+    });
+    return response;
+  } catch (error) {
+    const isAbort = error instanceof Error && error.name === "AbortError";
+    errorGeneration(traceId, "provider_fetch_error", {
+      provider,
+      elapsed: elapsedSince(startedAt),
+      reason: isAbort ? `timeout ${timeoutMs}ms` : String(error instanceof Error ? error.message : error),
+    });
+    if (isAbort) throw new Error(`${provider}: timeout ${timeoutMs}ms`);
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function cleanHtmlOutput(s: string) {
   // Remove markdown code blocks and any leading/trailing whitespace
   let clean = s.replace(/^```html\s*/i, "")
@@ -54,13 +122,8 @@ function cleanHtmlOutput(s: string) {
   return clean.trim();
 }
 
-async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    console.log(`[AI_CALL] DeepSeek - Timeout: ${timeoutMs}ms`);
-    const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
+async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
+  const r = await fetchWithHardTimeout(traceId, "deepseek", "https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
       headers: { 
         "Authorization": `Bearer ${token}`, 
@@ -73,32 +136,22 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
         temperature, 
         max_tokens: 8000 
       }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    if (!r.ok) {
-      const errorText = await r.text();
-      console.error(`[DeepSeek] Error ${r.status}:`, errorText);
-      throw new Error(`deepseek ${r.status}: ${errorText.slice(0, 200)}`);
-    }
-    const j = await r.json() as { choices: { message: { content: string } }[] };
-    return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e instanceof Error && e.name === "AbortError") throw new Error("deepseek: timeout");
-    throw e;
+    }, timeoutMs);
+  if (!r.ok) {
+    const errorText = await r.text();
+    errorGeneration(traceId, "provider_http_error", { provider: "deepseek", status: r.status, body: errorText.slice(0, 500) });
+    throw new Error(`deepseek ${r.status}: ${errorText.slice(0, 200)}`);
   }
+  const j = await r.json() as { choices: { message: { content: string } }[] };
+  return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
 }
 
-async function callClaude(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
+async function callClaude(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
   const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"];
   let lastErr = "";
   for (const model of models) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      console.log(`[AI_CALL] Claude (${model}) - Timeout: ${timeoutMs}ms`);
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
+      const r = await fetchWithHardTimeout(traceId, `claude:${model}`, "https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { 
           "x-api-key": token, 
@@ -112,12 +165,10 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
           temperature, 
           messages: [{ role: "user", content: prompt }] 
         }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+      }, timeoutMs);
       if (!r.ok) { 
         lastErr = await r.text(); 
-        console.error(`[Claude] Model ${model} failed with status ${r.status}:`, lastErr);
+        errorGeneration(traceId, "provider_http_error", { provider: "claude", model, status: r.status, body: lastErr.slice(0, 500) });
         if (r.status === 404 || r.status === 410 || r.status === 400 || r.status === 401) continue; 
         throw new Error(`claude ${r.status}: ${lastErr.slice(0, 200)}`); 
       }
@@ -125,27 +176,17 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
       const html = cleanHtmlOutput((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
       if (html) return html;
     } catch (e) {
-      clearTimeout(timeoutId);
-      if (e instanceof Error && e.name === "AbortError") {
-        lastErr = "timeout";
-        console.warn(`[Claude] Timeout with model ${model}`);
-        break; 
-      }
       lastErr = String(e);
-      console.error(`[Claude] Exception with model ${model}:`, e);
+      errorGeneration(traceId, "provider_exception", { provider: "claude", model, error: lastErr.slice(0, 500) });
+      if (lastErr.includes("timeout")) break;
       continue;
     }
   }
   throw new Error(`claude todos falharam: ${lastErr.slice(0, 200)}`);
 }
 
-async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs = 120000): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    console.log(`[AI_CALL] OpenAI - Timeout: ${timeoutMs}ms`);
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+async function callOpenAI(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
+  const r = await fetchWithHardTimeout(traceId, "openai", "https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { 
         "Authorization": `Bearer ${token}`, 
@@ -158,21 +199,14 @@ async function callOpenAI(token: string, prompt: string, temperature: number, ti
         temperature, 
         max_tokens: 16000 
       }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    if (!r.ok) {
-      const errorText = await r.text();
-      console.error(`[OpenAI] Error ${r.status}:`, errorText);
-      throw new Error(`openai ${r.status}: ${errorText.slice(0, 200)}`);
-    }
-    const j = await r.json() as { choices: { message: { content: string } }[] };
-    return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e instanceof Error && e.name === "AbortError") throw new Error("openai: timeout");
-    throw e;
+    }, timeoutMs);
+  if (!r.ok) {
+    const errorText = await r.text();
+    errorGeneration(traceId, "provider_http_error", { provider: "openai", status: r.status, body: errorText.slice(0, 500) });
+    throw new Error(`openai ${r.status}: ${errorText.slice(0, 200)}`);
   }
+  const j = await r.json() as { choices: { message: { content: string } }[] };
+  return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
 }
 
 
@@ -181,58 +215,64 @@ async function generateHtmlWithFallback(
   tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
   prompt: string,
   temperature: number,
-  maxTotalTimeoutMs = 180000
+  maxTotalTimeoutMs = AI_REQUEST_BUDGET_MS,
+  traceId = createGenerationTrace("generate"),
 ): Promise<{ html: string; providerUsed: ActualProvider }> {
   const startTime = Date.now();
   const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
   const errors: string[] = [];
+  logGeneration(traceId, "provider_sequence_start", {
+    preferred,
+    order,
+    maxTotalTimeoutMs,
+    promptChars: prompt.length,
+    configuredProviders: PROVIDERS.filter((p) => !!sanitizeApiToken(tokens[p])),
+  });
   
   for (const p of order) {
     const elapsed = Date.now() - startTime;
     const remaining = maxTotalTimeoutMs - elapsed;
     
-    if (remaining < 5000) {
-      console.warn(`[Fallback] Tempo insuficiente para tentar ${p}. Restante: ${remaining}ms`);
+    if (remaining < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
+      warnGeneration(traceId, "provider_skip_no_time", { provider: p, remainingMs: remaining });
       errors.push(`${p}: tempo insuficiente`);
       continue;
     }
 
-    const rawToken = (tokens[p] || "").trim();
-    // Limpeza rigorosa: remove prefixos (incluindo Bearer), aspas e espaços extras
-    const token = rawToken
-      .replace(/^['"]|['"]$/g, "")
-      .replace(/^(token|key|api[ _]key|bearer):\s*/i, "")
-      .trim();
+    const token = sanitizeApiToken(tokens[p]);
 
     if (!token) {
-      console.warn(`[Fallback] ${p} ignorado: Sem token configurado.`);
+      warnGeneration(traceId, "provider_skip_missing_token", { provider: p });
       errors.push(`${p}: sem token configurado`);
       continue;
     }
-    console.log(`[Fallback] Tentando ${p} com token (limpo) final: ${token.slice(0, 7)}...${token.slice(-4)} (tamanho: ${token.length})`);
+    logGeneration(traceId, "provider_attempt", {
+      provider: p,
+      tokenHint: `${token.slice(0, 7)}...${token.slice(-4)}`,
+      tokenLength: token.length,
+      elapsedMs: elapsed,
+      remainingMs: remaining,
+    });
 
     try {
-      // Divide o tempo restante de forma inteligente. 
-      // Se for o primeiro, não deixa ele gastar tudo para permitir o fallback.
-      const isLastOption = p === order[order.length - 1];
-      const callTimeout = isLastOption ? remaining : Math.min(remaining, 90000);
+      const callTimeout = Math.max(
+        PROVIDER_ATTEMPT_MIN_MS,
+        Math.min(remaining - FINAL_RESPONSE_RESERVE_MS, PROVIDER_ATTEMPT_MAX_MS),
+      );
 
       const html = p === "deepseek"
-        ? await callDeepseek(token, prompt, temperature, callTimeout)
+        ? await callDeepseek(token, prompt, temperature, callTimeout, traceId)
         : p === "claude"
-        ? await callClaude(token, prompt, temperature, callTimeout)
-        : await callOpenAI(token, prompt, temperature, callTimeout);
+        ? await callClaude(token, prompt, temperature, callTimeout, traceId)
+        : await callOpenAI(token, prompt, temperature, callTimeout, traceId);
 
+      logGeneration(traceId, "provider_output", { provider: p, htmlChars: html.length, elapsedMs: Date.now() - startTime });
       if (html && html.length > 50) return { html, providerUsed: p };
       errors.push(`${p}: retorno muito curto ou vazio`);
     } catch (e) {
       const msg = String(e instanceof Error ? e.message : e);
-      console.error(`[generateHtmlWithFallback] ${p} falhou:`, msg);
+      errorGeneration(traceId, "provider_failed", { provider: p, error: msg.slice(0, 500), elapsedMs: Date.now() - startTime });
       errors.push(`${p}: ${msg}`);
-      if (msg.includes("timeout") || msg.includes("401") || msg.includes("Authentication")) {
-        // Se deu timeout ou erro de autenticação, tenta o próximo imediatamente
-        continue;
-      }
     }
   }
 
