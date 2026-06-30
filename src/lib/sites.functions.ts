@@ -815,6 +815,15 @@ export const editGeneration = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const traceId = createGenerationTrace("edit");
+    const globalStartTime = Date.now();
+    logGeneration(traceId, "edit_start", {
+      generationId: data.generationId,
+      userId,
+      promptChars: data.prompt.length,
+      imagesCount: data.images?.length ?? 0,
+      totalBudgetMs: AI_REQUEST_BUDGET_MS,
+    });
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Load the generation the user wants to edit (could be a root or an existing edit)
@@ -822,7 +831,10 @@ export const editGeneration = createServerFn({ method: "POST" })
       .from("site_generations")
       .select("id, site_id, parent_generation_id, provider, html, prompt")
       .eq("id", data.generationId).eq("owner_id", userId).single();
-    if (genErr || !gen) throw new Error("Modelo não encontrado.");
+    if (genErr || !gen) {
+      errorGeneration(traceId, "edit_base_load_failed", { elapsed: elapsedSince(globalStartTime), error: genErr?.message ?? genErr });
+      throw new Error("Modelo não encontrado.");
+    }
 
     const rootId = (gen as any).parent_generation_id ?? gen.id;
 
@@ -837,6 +849,7 @@ export const editGeneration = createServerFn({ method: "POST" })
       .eq("parent_generation_id", rootId)
       .gte("created_at", since);
     const used = count ?? 0;
+    logGeneration(traceId, "edit_quota_loaded", { elapsed: elapsedSince(globalStartTime), used, limit: EDITS_PER_MODEL, rootId });
     if (used >= EDITS_PER_MODEL) {
       throw new Error(`Limite atingido: ${EDITS_PER_MODEL} edições por modelo neste mês. Aguarde para liberar mais ou gere um novo modelo.`);
     }
@@ -852,6 +865,7 @@ export const editGeneration = createServerFn({ method: "POST" })
       .maybeSingle();
     const baseHtml = (latest as any)?.html ?? gen.html;
     if (!baseHtml) throw new Error("O modelo base está vazio. Gere novamente.");
+    logGeneration(traceId, "edit_base_ready", { elapsed: elapsedSince(globalStartTime), baseHtmlChars: baseHtml.length });
 
     // Pick provider — prefer the model's original provider if its token is set, else any available.
     const { data: settings } = await supabaseAdmin
@@ -863,6 +877,11 @@ export const editGeneration = createServerFn({ method: "POST" })
     };
 
     const provider: Provider = (gen.provider as Provider) ?? "deepseek";
+    logGeneration(traceId, "edit_provider_selected", {
+      elapsed: elapsedSince(globalStartTime),
+      provider,
+      configuredProviders: PROVIDERS.filter((p) => !!sanitizeApiToken(tokens[p])),
+    });
 
     const baseUrl = process.env.VITE_SITE_URL || "https://mro.bio";
     const imagesList = (data.images ?? []).map((im) => {
@@ -898,10 +917,17 @@ ${baseHtml}
 
 LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + tudo o resto preservado. Se devolver igual ao original, falhou.`;
 
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, 180000);
+    const remainingBudget = AI_REQUEST_BUDGET_MS - (Date.now() - globalStartTime);
+    logGeneration(traceId, "edit_html_start", { elapsed: elapsedSince(globalStartTime), remainingBudget, promptChars: editPrompt.length });
+    if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
+      throw new Error("A edição demorou demais antes de chamar a I.A. Tente novamente com um pedido mais direto.");
+    }
+
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, remainingBudget, traceId);
     const actualProvider: ActualProvider = providerUsed;
 
     if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
+    logGeneration(traceId, "edit_html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
 
     const { data: newRow, error: insErr } = await supabaseAdmin.from("site_generations")
       .insert({
@@ -917,7 +943,12 @@ LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + 
       })
       .select("id, provider, created_at")
       .single();
-    if (insErr) throw new Error(insErr.message);
+    if (insErr) {
+      errorGeneration(traceId, "edit_insert_failed", { elapsed: elapsedSince(globalStartTime), error: insErr.message });
+      throw new Error(insErr.message);
+    }
+
+    logGeneration(traceId, "edit_done", { elapsed: elapsedSince(globalStartTime), generationId: newRow.id, provider: actualProvider });
 
     return {
       generationId: newRow.id,
