@@ -568,10 +568,17 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const traceId = createGenerationTrace("generate");
     const globalStartTime = Date.now();
-    const TOTAL_BUDGET = 45000; // Reduzido drasticamente para 45s para evitar timeout do Nginx (60s)
+    const TOTAL_BUDGET = AI_REQUEST_BUDGET_MS;
     
-    console.log(`[PROGRESS] ${new Date().toISOString()} - Iniciando geração para site ${data.id}`);
+    logGeneration(traceId, "generate_start", {
+      siteId: data.id,
+      userId,
+      promptChars: data.prompt.length,
+      imagesCount: data.images?.length ?? 0,
+      totalBudgetMs: TOTAL_BUDGET,
+    });
 
     // Using admin to check site ownership to avoid RLS issues with legacy keys
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -579,9 +586,14 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       .from("sites").select("*").eq("id", data.id).eq("owner_id", userId).single();
     
     if (siteErr || !site) {
-      console.error("[GenerateSite] Site não encontrado ou sem permissão:", siteErr);
+      errorGeneration(traceId, "site_load_failed", { error: siteErr?.message ?? siteErr });
       throw new Error("Site não encontrado ou você não tem permissão para editá-lo.");
     }
+    logGeneration(traceId, "site_loaded", {
+      elapsed: elapsedSince(globalStartTime),
+      gensThisMonth: site.gens_this_month,
+      nextProviderIdx: site.next_provider_idx,
+    });
 
     // Monthly window reset (30 days)
     const monthStart = new Date(site.month_started_at as string).getTime();
@@ -635,6 +647,11 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       deepseek: settings?.deepseek_token?.trim() || null,
       claude: settings?.claude_token?.trim() || null,
     };
+    logGeneration(traceId, "provider_selected", {
+      provider,
+      configuredProviders: PROVIDERS.filter((p) => !!sanitizeApiToken(tokens[p])),
+      elapsed: elapsedSince(globalStartTime),
+    });
 
 
     // Step 1 — briefing
@@ -644,7 +661,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       return `- ETIQUETA: "${im.label}" | LINK: ${fullUrl}`;
     }).join("\n") || "(Nenhuma imagem enviada)";
     
-    console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Gerando briefing com ${provider}...`);
+    logGeneration(traceId, "brief_start", { provider, elapsed: elapsedSince(globalStartTime) });
 
     const briefPrompt = `Você é um Diretor de Arte Sênior de Branding de Luxo.
 O cliente pediu: "${data.prompt}"
@@ -665,12 +682,12 @@ Responda em português um briefing técnico com: 1) Cores solicitadas pelo clien
 
     let brief = "";
     try {
-      // O briefing deve ser rápido. No máximo 12s para sobrar tempo para o código.
-      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 10000);
+      // O briefing deve ser muito rápido para não estourar o limite do servidor.
+      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 6000, traceId);
       brief = briefHtml;
-      console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Briefing gerado.`);
+      logGeneration(traceId, "brief_done", { elapsed: elapsedSince(globalStartTime), chars: brief.length });
     } catch (e) { 
-      console.warn(`[GenerateSite] Briefing falhou ou demorou demais, seguindo com padrão. Erro: ${e}`); 
+      warnGeneration(traceId, "brief_failed_using_default", { elapsed: elapsedSince(globalStartTime), error: String(e).slice(0, 500) });
       brief = "Crie um site moderno e luxuoso com pelo menos 6 seções, usando os links de imagem reais fornecidos.";
     }
 
@@ -707,13 +724,16 @@ REGRAS TÉCNICAS:
 
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
-    console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Gerando código HTML. Orçamento restante: ${remainingBudget}ms`);
+    logGeneration(traceId, "html_start", { elapsed: elapsedSince(globalStartTime), remainingBudget });
+    if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
+      throw new Error("A geração demorou demais antes de chamar a I.A. Tente novamente com menos imagens ou um pedido mais direto.");
+    }
 
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7, remainingBudget);
+    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7, remainingBudget, traceId);
     const actualProvider: ActualProvider = providerUsed;
 
     if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
-    console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Código gerado com sucesso via ${actualProvider}.`);
+    logGeneration(traceId, "html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
 
     // Save generation
     const { data: genRow, error: genErr } = await supabase.from("site_generations")
@@ -728,17 +748,24 @@ REGRAS TÉCNICAS:
       })
       .select("id, provider, created_at")
       .single();
-    if (genErr) throw new Error(genErr.message);
+    if (genErr) {
+      errorGeneration(traceId, "generation_insert_failed", { elapsed: elapsedSince(globalStartTime), error: genErr.message });
+      throw new Error(genErr.message);
+    }
 
     // Update site counters + provider cursor
-    await supabase.from("sites").update({
+    const { error: siteUpdateErr } = await supabase.from("sites").update({
       last_prompt: data.prompt,
       gens_this_month: gens + 1,
       month_started_at: monthStartedAt,
       next_provider_idx: (providerIdx + 1) % PROVIDERS.length,
     }).eq("id", data.id).eq("owner_id", userId);
+    if (siteUpdateErr) {
+      errorGeneration(traceId, "site_counter_update_failed", { elapsed: elapsedSince(globalStartTime), error: siteUpdateErr.message });
+      throw new Error(siteUpdateErr.message);
+    }
 
-    console.log(`[PROGRESS] ${Date.now() - globalStartTime}ms - Finalizado.`);
+    logGeneration(traceId, "generate_done", { elapsed: elapsedSince(globalStartTime), generationId: genRow.id, provider: actualProvider });
 
     return {
       needsCleanup: false as const,
