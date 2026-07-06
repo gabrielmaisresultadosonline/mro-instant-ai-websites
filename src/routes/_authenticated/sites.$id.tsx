@@ -19,6 +19,7 @@ type Pixels = { ga4?: string; gtm?: string; meta?: string; tiktok?: string };
 type LocalImage = { id: string; public_url: string; label: string | null; created_at?: string };
 
 const PROVIDER_LABEL: Record<string, string> = {
+  lovable: "Modelo 1",
   deepseek: "Modelo 1",
   claude: "Modelo 2",
   openai: "Modelo 3",

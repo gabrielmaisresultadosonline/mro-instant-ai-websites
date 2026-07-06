@@ -9,16 +9,17 @@ const MONTHLY_LIMIT = 3;
 const EDITS_PER_MODEL = 5;
 const HISTORY_LIMIT = 4;
 const HISTORY_TTL_DAYS = 45;
-const PROVIDERS = ["deepseek", "claude", "openai"] as const;
+const PROVIDERS = ["lovable", "claude", "openai", "deepseek"] as const;
 type Provider = typeof PROVIDERS[number];
 type ActualProvider = Provider | "fallback";
+type ProviderTokens = Partial<Record<Provider, string | null | undefined>>;
 
 // Mantém a chamada abaixo dos timeouts comuns de proxy/load balancer.
 // Se nenhuma IA responder rápido, geramos um HTML local de emergência em vez de deixar virar 504.
-const AI_REQUEST_BUDGET_MS = 24000;
-const PROVIDER_ATTEMPT_MAX_MS = 9000;
-const PROVIDER_ATTEMPT_MIN_MS = 3000;
-const FINAL_RESPONSE_RESERVE_MS = 1500;
+const AI_REQUEST_BUDGET_MS = 21000;
+const PROVIDER_ATTEMPT_MAX_MS = 7000;
+const PROVIDER_ATTEMPT_MIN_MS = 2500;
+const FINAL_RESPONSE_RESERVE_MS = 2000;
 
 function createGenerationTrace(flow: "generate" | "edit") {
   return `${flow}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -303,6 +304,16 @@ function buildEmergencySiteHtml(input: {
 </html>`;
 }
 
+function buildLocalBrief(prompt: string, imagesList: string) {
+  const palette = detectPalette(prompt);
+  return `Briefing local seguro:
+- Pedido do cliente: ${prompt}
+- Paleta obrigatória detectada: fundo ${palette.background}, superfície ${palette.surface}, texto ${palette.text}, apoio ${palette.muted}, destaque ${palette.accent}.
+- Use exatamente as cores citadas pelo cliente quando houver pedido explícito; não invente azul/roxo/dourado/bege.
+- Estrutura: header fixo, hero, sobre, serviços, galeria/provas sociais, contato e footer.
+- Imagens reais disponíveis:\n${imagesList || "(Nenhuma imagem enviada)"}`;
+}
+
 function buildEmergencyEditHtml(baseHtml: string, editRequest: string) {
   const note = `<section id="ajuste-solicitado" style="padding:48px 20px;background:#111;color:#fff;font-family:Inter,Arial,sans-serif"><div style="max-width:1100px;margin:auto"><p style="color:#ef4444;font-weight:800;text-transform:uppercase;letter-spacing:.12em">Ajuste solicitado</p><h2 style="font-size:32px;margin:10px 0 12px">${escapeHtml(editRequest)}</h2><p style="color:#d4d4d8;line-height:1.7">A I.A principal demorou para responder, então preservamos o modelo atual e registramos o pedido de edição para você não perder o trabalho. Tente aplicar a edição novamente com uma instrução mais curta se quiser uma alteração visual profunda.</p></div></section>`;
   if (baseHtml.toLowerCase().includes("</body>")) {
@@ -335,17 +346,66 @@ async function callDeepseek(token: string, prompt: string, temperature: number, 
   return cleanHtmlOutput(j.choices?.[0]?.message?.content ?? "");
 }
 
+async function callLovableGateway(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const [{ generateText }, { createOpenAICompatible }] = await Promise.all([
+      import("ai"),
+      import("@ai-sdk/openai-compatible"),
+    ]);
+    const gateway = createOpenAICompatible({
+      name: "lovable",
+      baseURL: "https://ai.gateway.lovable.dev/v1",
+      headers: { "Lovable-API-Key": token },
+    });
+
+    logGeneration(traceId, "lovable_gateway_start", {
+      model: "openai/gpt-5.5",
+      timeoutMs,
+      promptChars: prompt.length,
+    });
+
+    const { text } = await generateText({
+      model: gateway.chatModel("openai/gpt-5.5"),
+      prompt,
+      temperature,
+      maxOutputTokens: 14000,
+      maxRetries: 0,
+      abortSignal: controller.signal,
+      providerOptions: {
+        lovable: { service_tier: "priority" },
+      },
+    });
+
+    logGeneration(traceId, "lovable_gateway_end", { elapsed: elapsedSince(startedAt), chars: text.length });
+    return cleanHtmlOutput(text);
+  } catch (error) {
+    const isAbort = error instanceof Error && error.name === "AbortError";
+    errorGeneration(traceId, "lovable_gateway_error", {
+      elapsed: elapsedSince(startedAt),
+      reason: isAbort ? `timeout ${timeoutMs}ms` : String(error instanceof Error ? error.message : error).slice(0, 500),
+    });
+    if (isAbort) throw new Error(`lovable: timeout ${timeoutMs}ms`);
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function callClaude(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
-  const models = ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"];
+  const models = ["claude-fable-5", "claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"];
   let lastErr = "";
   const providerStartedAt = Date.now();
   for (const model of models) {
     const remainingForClaude = timeoutMs - (Date.now() - providerStartedAt);
-    if (remainingForClaude < 4000) {
+    if (remainingForClaude < 2500) {
       lastErr = `tempo insuficiente no claude (${remainingForClaude}ms restantes)`;
       break;
     }
-    const modelTimeoutMs = Math.min(remainingForClaude, Math.max(4000, Math.ceil(timeoutMs / models.length)));
+    const modelTimeoutMs = Math.min(remainingForClaude, Math.max(2500, Math.ceil(timeoutMs / models.length)));
     try {
       const r = await fetchWithHardTimeout(traceId, `claude:${model}`, "https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -357,7 +417,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
         },
         body: JSON.stringify({ 
           model, 
-          max_tokens: 8000, 
+          max_tokens: 12000, 
           temperature, 
           messages: [{ role: "user", content: prompt }] 
         }),
@@ -408,14 +468,16 @@ async function callOpenAI(token: string, prompt: string, temperature: number, ti
 
 async function generateHtmlWithFallback(
   preferred: Provider,
-  tokens: { openai?: string | null; deepseek?: string | null; claude?: string | null },
+  tokens: ProviderTokens,
   prompt: string,
   temperature: number,
   maxTotalTimeoutMs = AI_REQUEST_BUDGET_MS,
   traceId = createGenerationTrace("generate"),
 ): Promise<{ html: string; providerUsed: ActualProvider }> {
   const startTime = Date.now();
-  const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
+  // Ordem fixa e estável: Lovable AI primeiro, Claude Fable 5 depois, e provedores legados só no fim.
+  // Isso evita que o round-robin comece por DeepSeek/Claude lento e estoure o proxy com 504.
+  const order: Provider[] = ["lovable", "claude", "openai", "deepseek"];
   const errors: string[] = [];
   logGeneration(traceId, "provider_sequence_start", {
     preferred,
@@ -455,7 +517,9 @@ async function generateHtmlWithFallback(
         Math.min(remaining - FINAL_RESPONSE_RESERVE_MS, PROVIDER_ATTEMPT_MAX_MS),
       );
 
-      const html = p === "deepseek"
+      const html = p === "lovable"
+        ? await callLovableGateway(token, prompt, temperature, callTimeout, traceId)
+        : p === "deepseek"
         ? await callDeepseek(token, prompt, temperature, callTimeout, traceId)
         : p === "claude"
         ? await callClaude(token, prompt, temperature, callTimeout, traceId)
@@ -837,7 +901,8 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       .select("openai_token, deepseek_token, claude_token")
       .eq("id", true)
       .single();
-    const tokens = {
+    const tokens: ProviderTokens = {
+      lovable: process.env.LOVABLE_API_KEY?.trim() || null,
       openai: settings?.openai_token?.trim() || null,
       deepseek: settings?.deepseek_token?.trim() || null,
       claude: settings?.claude_token?.trim() || null,
@@ -849,42 +914,15 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
     });
 
 
-    // Step 1 — briefing
+    // Step 1 — briefing local: evita gastar 6-20s antes da geração principal e impede 504.
     const baseUrl = process.env.VITE_SITE_URL || "https://mro.bio";
     const imagesList = (data.images ?? []).map((im, i) => {
       const fullUrl = im.url.startsWith("http") ? im.url : `${baseUrl}${im.url}`;
       return `- ETIQUETA: "${im.label}" | LINK: ${fullUrl}`;
     }).join("\n") || "(Nenhuma imagem enviada)";
     
-    logGeneration(traceId, "brief_start", { provider, elapsed: elapsedSince(globalStartTime) });
-
-    const briefPrompt = `Você é um Diretor de Arte Sênior de Branding de Luxo.
-O cliente pediu: "${data.prompt}"
-IMAGENS: ${imagesList}
-
-REGRA #1 INVIOLÁVEL — RESPEITAR O CLIENTE:
-- Se o cliente citou cores específicas (ex.: "preto, cinza, branco e vermelho"), a PALETA HEX precisa usar EXATAMENTE essas cores e NENHUMA outra cor dominante. Nada de inventar azul, roxo ou dourado se ele não pediu.
-- Se citou estilo, tipografia ou setor — respeite literalmente.
-- Extraia do pedido as cores/estilo solicitados e liste-os explicitamente no topo do briefing.
-
-DIRETRIZES:
-1. IMPACTO: Seções com fundos alternados, tipografia elegante, paddings generosos.
-2. MODERNO: Bordas arredondadas (rounded-3xl), sombras suaves, gradientes sutis (apenas dentro da paleta pedida).
-3. ESTRUTURA: Header, Hero, Sobre, Serviços, Galeria, Footer.
-4. IMAGENS: Use APENAS os links reais acima. NUNCA invente URLs.
-
-Responda em português um briefing técnico com: 1) Cores solicitadas pelo cliente (cópia literal), 2) Paleta HEX baseada NESSAS cores, 3) Estrutura de Seções, 4) Mapeamento de links.`;
-
-    let brief = "";
-    try {
-      // O briefing deve ser muito rápido para não estourar o limite do servidor.
-      const { html: briefHtml } = await generateHtmlWithFallback(provider, tokens, briefPrompt, 0.2, 6000, traceId);
-      brief = briefHtml;
-      logGeneration(traceId, "brief_done", { elapsed: elapsedSince(globalStartTime), chars: brief.length });
-    } catch (e) { 
-      warnGeneration(traceId, "brief_failed_using_default", { elapsed: elapsedSince(globalStartTime), error: String(e).slice(0, 500) });
-      brief = "Crie um site moderno e luxuoso com pelo menos 6 seções, usando os links de imagem reais fornecidos.";
-    }
+    let brief = buildLocalBrief(data.prompt, imagesList);
+    logGeneration(traceId, "brief_local_done", { provider, elapsed: elapsedSince(globalStartTime), chars: brief.length });
 
     const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL e RESPONSIVO.
 
@@ -950,6 +988,7 @@ REGRAS TÉCNICAS:
         traceId,
       });
       brief = `${brief}\n\nFallback local usado porque os provedores de I.A não responderam dentro do limite seguro. Trace: ${traceId}`.trim();
+      logGeneration(traceId, "brief_fallback_note", { elapsed: elapsedSince(globalStartTime), chars: brief.length });
       logGeneration(traceId, "html_emergency_fallback_done", { elapsed: elapsedSince(globalStartTime), htmlChars: html.length });
     }
 
@@ -1088,13 +1127,15 @@ export const editGeneration = createServerFn({ method: "POST" })
     // Pick provider — prefer the model's original provider if its token is set, else any available.
     const { data: settings } = await supabaseAdmin
       .from("admin_settings").select("openai_token, deepseek_token, claude_token").eq("id", true).single();
-    const tokens: Record<Provider, string | null | undefined> = {
+    const tokens: ProviderTokens = {
+      lovable: process.env.LOVABLE_API_KEY?.trim() || null,
       openai: settings?.openai_token?.trim() || null,
       deepseek: settings?.deepseek_token?.trim() || null,
       claude: settings?.claude_token?.trim() || null,
     };
 
-    const provider: Provider = (gen.provider as Provider) ?? "deepseek";
+    const storedProvider = PROVIDERS.includes(gen.provider as Provider) ? (gen.provider as Provider) : "lovable";
+    const provider: Provider = storedProvider;
     logGeneration(traceId, "edit_provider_selected", {
       elapsed: elapsedSince(globalStartTime),
       provider,
