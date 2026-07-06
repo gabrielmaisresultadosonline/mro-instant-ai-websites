@@ -1138,15 +1138,28 @@ LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + 
 
     const remainingBudget = AI_REQUEST_BUDGET_MS - (Date.now() - globalStartTime);
     logGeneration(traceId, "edit_html_start", { elapsed: elapsedSince(globalStartTime), remainingBudget, promptChars: editPrompt.length });
-    if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
-      throw new Error("A edição demorou demais antes de chamar a I.A. Tente novamente com um pedido mais direto.");
+
+    let html = "";
+    let actualProvider: ActualProvider = "fallback";
+    try {
+      if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
+        throw new Error("tempo insuficiente antes da chamada principal da I.A");
+      }
+
+      const result = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, remainingBudget, traceId);
+      html = result.html;
+      actualProvider = result.providerUsed;
+      if (!html || html.length < 50) throw new Error("A I.A retornou vazio.");
+      logGeneration(traceId, "edit_html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      errorGeneration(traceId, "edit_ai_failed_using_emergency_fallback", {
+        elapsed: elapsedSince(globalStartTime),
+        error: errorMessage.slice(0, 700),
+      });
+      html = buildEmergencyEditHtml(baseHtml, data.prompt);
+      logGeneration(traceId, "edit_emergency_fallback_done", { elapsed: elapsedSince(globalStartTime), htmlChars: html.length });
     }
-
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, remainingBudget, traceId);
-    const actualProvider: ActualProvider = providerUsed;
-
-    if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
-    logGeneration(traceId, "edit_html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
 
     const { data: newRow, error: insErr } = await supabaseAdmin.from("site_generations")
       .insert({
