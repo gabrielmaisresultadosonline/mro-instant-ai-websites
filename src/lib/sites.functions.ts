@@ -21,6 +21,7 @@ const PROVIDER_ATTEMPT_MAX_MS = 7000;
 const PROVIDER_ATTEMPT_MIN_MS = 2500;
 const FINAL_RESPONSE_RESERVE_MS = 2000;
 const CLAUDE_PREFERRED_ATTEMPT_MAX_MS = 16000;
+const AI_PIPELINE_VERSION = "2026-07-06-claude-sonnet5-opus48-sonnet46";
 
 function createGenerationTrace(flow: "generate" | "edit") {
   return `${flow}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -31,15 +32,15 @@ function elapsedSince(startedAt: number) {
 }
 
 function logGeneration(traceId: string, event: string, details: Record<string, unknown> = {}) {
-  console.info(`[MRO_AI][${traceId}] ${event}`, details);
+  console.info(`[MRO_AI][${traceId}][${AI_PIPELINE_VERSION}] ${event}`, details);
 }
 
 function warnGeneration(traceId: string, event: string, details: Record<string, unknown> = {}) {
-  console.warn(`[MRO_AI][${traceId}] ${event}`, details);
+  console.warn(`[MRO_AI][${traceId}][${AI_PIPELINE_VERSION}] ${event}`, details);
 }
 
 function errorGeneration(traceId: string, event: string, details: Record<string, unknown> = {}) {
-  console.error(`[MRO_AI][${traceId}] ${event}`, details);
+  console.error(`[MRO_AI][${traceId}][${AI_PIPELINE_VERSION}] ${event}`, details);
 }
 
 function sanitizeApiToken(value?: string | null) {
