@@ -475,8 +475,9 @@ async function generateHtmlWithFallback(
   traceId = createGenerationTrace("generate"),
 ): Promise<{ html: string; providerUsed: ActualProvider }> {
   const startTime = Date.now();
-  const stableOrder: Provider[] = ["lovable", "claude", "openai", "deepseek"];
-  const order: Provider[] = Array.from(new Set([preferred, ...stableOrder]));
+  // Ordem fixa e estável: Lovable AI primeiro, Claude Fable 5 depois, e provedores legados só no fim.
+  // Isso evita que o round-robin comece por DeepSeek/Claude lento e estoure o proxy com 504.
+  const order: Provider[] = ["lovable", "claude", "openai", "deepseek"];
   const errors: string[] = [];
   logGeneration(traceId, "provider_sequence_start", {
     preferred,
