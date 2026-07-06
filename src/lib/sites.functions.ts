@@ -444,8 +444,7 @@ async function generateHtmlWithFallback(
     }
     logGeneration(traceId, "provider_attempt", {
       provider: p,
-      tokenHint: `${token.slice(0, 7)}...${token.slice(-4)}`,
-      tokenLength: token.length,
+      tokenConfigured: true,
       elapsedMs: elapsed,
       remainingMs: remaining,
     });
