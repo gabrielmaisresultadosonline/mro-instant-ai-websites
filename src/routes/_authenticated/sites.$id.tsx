@@ -22,7 +22,19 @@ const PROVIDER_LABEL: Record<string, string> = {
   deepseek: "Modelo 1",
   claude: "Modelo 2",
   openai: "Modelo 3",
+  fallback: "Modelo seguro",
 };
+
+function getFriendlyGenerationError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/504|Gateway Time-out|Gateway Timeout|nginx/i.test(message)) {
+    return "A geração demorou demais no servidor. Ajustei o sistema para tentar novamente de forma segura; se persistir, avise o suporte com este horário.";
+  }
+  if (/Failed to fetch|NetworkError|Load failed/i.test(message)) {
+    return "Não foi possível falar com o servidor agora. Verifique a conexão e tente novamente.";
+  }
+  return message || "Falha ao gerar o site.";
+}
 
 function SiteEditor() {
   const { id } = Route.useParams();
@@ -187,7 +199,7 @@ function SiteEditor() {
       qc.invalidateQueries({ queryKey: ["generations", id] });
       toast.success(`${PROVIDER_LABEL[res.provider]} pronta — ${res.gensUsed}/${res.monthlyLimit} no mês`);
     } catch (e) {
-      const msg = (e as Error).message;
+      const msg = getFriendlyGenerationError(e);
       toast.error(msg);
       if (msg.includes("Sessão inválida") || msg.includes("Unauthorized")) {
         // Se a sessão expirou ou as chaves mudaram, oferecemos logout
@@ -240,7 +252,7 @@ function SiteEditor() {
       qc.invalidateQueries({ queryKey: ["edit-quota", finalTarget] });
       toast.success(`Edição pronta — ${res.editsUsed}/${res.editsLimit} no mês deste modelo.`);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(getFriendlyGenerationError(e));
     } finally {
       setEditing(false);
     }

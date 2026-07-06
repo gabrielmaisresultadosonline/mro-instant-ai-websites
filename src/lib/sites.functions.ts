@@ -11,12 +11,14 @@ const HISTORY_LIMIT = 4;
 const HISTORY_TTL_DAYS = 45;
 const PROVIDERS = ["deepseek", "claude", "openai"] as const;
 type Provider = typeof PROVIDERS[number];
-type ActualProvider = Provider;
+type ActualProvider = Provider | "fallback";
 
-const AI_REQUEST_BUDGET_MS = 48000;
-const PROVIDER_ATTEMPT_MAX_MS = 30000;
-const PROVIDER_ATTEMPT_MIN_MS = 8000;
-const FINAL_RESPONSE_RESERVE_MS = 2500;
+// Mantém a chamada abaixo dos timeouts comuns de proxy/load balancer.
+// Se nenhuma IA responder rápido, geramos um HTML local de emergência em vez de deixar virar 504.
+const AI_REQUEST_BUDGET_MS = 24000;
+const PROVIDER_ATTEMPT_MAX_MS = 9000;
+const PROVIDER_ATTEMPT_MIN_MS = 3000;
+const FINAL_RESPONSE_RESERVE_MS = 1500;
 
 function createGenerationTrace(flow: "generate" | "edit") {
   return `${flow}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -120,6 +122,193 @@ function cleanHtmlOutput(s: string) {
   }
 
   return clean.trim();
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeAttr(value: string) {
+  return escapeHtml(value).replace(/`/g, "&#96;");
+}
+
+function extractTitleFromPrompt(prompt: string, fallback: string) {
+  const cleaned = prompt.replace(/\s+/g, " ").trim();
+  const explicitName = cleaned.match(/(?:nome|marca|empresa|site)\s*(?:é|:|-)\s*([^.,;\n]{3,70})/i)?.[1]?.trim();
+  if (explicitName) return explicitName;
+  return fallback || cleaned.split(/[.!?]/)[0]?.slice(0, 70).trim() || "Site profissional";
+}
+
+function detectPalette(prompt: string) {
+  const text = prompt.toLowerCase();
+  const palette = {
+    background: "#0f172a",
+    surface: "#111827",
+    text: "#f8fafc",
+    muted: "#cbd5e1",
+    accent: "#ef4444",
+    accentText: "#ffffff",
+  };
+
+  if (text.includes("preto") || text.includes("cinza") || text.includes("branco") || text.includes("vermelho")) {
+    return {
+      background: "#09090b",
+      surface: "#27272a",
+      text: "#fafafa",
+      muted: "#d4d4d8",
+      accent: "#dc2626",
+      accentText: "#ffffff",
+    };
+  }
+  if (text.includes("verde")) palette.accent = "#16a34a";
+  if (text.includes("azul")) palette.accent = "#2563eb";
+  if (text.includes("rosa")) palette.accent = "#db2777";
+  if (text.includes("amarelo")) palette.accent = "#ca8a04";
+  return palette;
+}
+
+function normalizeWhatsapp(prompt: string) {
+  const phone = prompt.match(/(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?\d{4,5}[-\s]?\d{4}/)?.[0];
+  if (!phone) return "";
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10) return "";
+  return digits.startsWith("55") ? digits : `55${digits}`;
+}
+
+function buildEmergencySiteHtml(input: {
+  title: string;
+  prompt: string;
+  images?: { url: string; label: string }[];
+  traceId: string;
+}) {
+  const palette = detectPalette(input.prompt);
+  const title = extractTitleFromPrompt(input.prompt, input.title);
+  const safeTitle = escapeHtml(title);
+  const safePrompt = escapeHtml(input.prompt);
+  const whatsapp = normalizeWhatsapp(input.prompt);
+  const whatsappHref = whatsapp
+    ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Olá, vim pelo site ${title} e gostaria de atendimento.`)}`
+    : "#contato";
+  const imageItems = (input.images ?? []).slice(0, 8).map((image) => ({
+    url: image.url.startsWith("http") ? image.url : image.url,
+    label: image.label || "Imagem do site",
+  }));
+  const heroImage = imageItems.find((image) => /banner|hero|capa|principal/i.test(image.label)) ?? imageItems[0];
+  const logoImage = imageItems.find((image) => /logo|marca/i.test(image.label));
+
+  return `<!doctype html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${safeTitle}</title>
+  <meta name="description" content="${escapeAttr(title)} — site profissional com informações, serviços, galeria e contato." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --bg: ${palette.background}; --surface: ${palette.surface}; --text: ${palette.text}; --muted: ${palette.muted}; --accent: ${palette.accent}; --accent-text: ${palette.accentText}; }
+    body { background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .surface { background: var(--surface); }
+    .accent { background: var(--accent); color: var(--accent-text); }
+    .accent-text { color: var(--accent); }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header class="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur-xl">
+    <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+      <a href="#inicio" class="flex items-center gap-3 text-lg font-black tracking-wide">
+        ${logoImage ? `<img src="${escapeAttr(logoImage.url)}" alt="Logo ${safeTitle}" class="h-10 w-10 rounded-full object-cover" />` : `<span class="grid h-10 w-10 place-items-center rounded-full accent font-black">${escapeHtml(title.charAt(0).toUpperCase())}</span>`}
+        <span>${safeTitle}</span>
+      </a>
+      <div class="hidden items-center gap-6 text-sm font-semibold md:flex">
+        <a href="#sobre" class="hover:accent-text">Sobre</a>
+        <a href="#servicos" class="hover:accent-text">Serviços</a>
+        <a href="#galeria" class="hover:accent-text">Galeria</a>
+        <a href="#contato" class="hover:accent-text">Contato</a>
+      </div>
+      <a href="${escapeAttr(whatsappHref)}" class="rounded-full px-5 py-2 text-sm font-bold accent">Falar agora</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="inicio" class="relative overflow-hidden">
+      ${heroImage ? `<img src="${escapeAttr(heroImage.url)}" alt="${escapeAttr(heroImage.label)}" class="absolute inset-0 h-full w-full object-cover opacity-35" />` : ""}
+      <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-[var(--bg)]"></div>
+      <div class="relative mx-auto grid min-h-[78vh] max-w-7xl content-center gap-8 px-5 py-24">
+        <p class="text-sm font-black uppercase tracking-[0.25em] accent-text">Site gerado pela I.A MRO</p>
+        <h1 class="max-w-4xl text-5xl font-black leading-tight md:text-7xl">${safeTitle}</h1>
+        <p class="max-w-3xl text-lg leading-8 muted md:text-xl">${safePrompt}</p>
+        <div class="flex flex-wrap gap-3">
+          <a href="${escapeAttr(whatsappHref)}" class="rounded-full px-7 py-4 text-sm font-black accent">Solicitar atendimento</a>
+          <a href="#servicos" class="rounded-full border border-white/20 px-7 py-4 text-sm font-black hover:bg-white/10">Ver serviços</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="sobre" class="mx-auto max-w-7xl px-5 py-20">
+      <div class="grid gap-10 md:grid-cols-[1fr_0.8fr] md:items-center">
+        <div>
+          <p class="text-sm font-black uppercase tracking-[0.2em] accent-text">Sobre</p>
+          <h2 class="mt-3 text-3xl font-black md:text-5xl">Presença digital clara, moderna e feita para converter.</h2>
+          <p class="mt-5 text-base leading-8 muted">Organizamos as informações enviadas em uma experiência objetiva, responsiva e focada em contato. Esta versão de segurança evita que o cliente fique sem site quando um provedor de I.A demora demais.</p>
+        </div>
+        <div class="rounded-3xl border border-white/10 surface p-8 shadow-2xl">
+          <p class="text-5xl font-black accent-text">24h</p>
+          <p class="mt-3 font-bold">Disponível online</p>
+          <p class="mt-2 text-sm leading-6 muted">Layout adaptado para celular, tablet e computador, com seções completas e chamadas de contato.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="servicos" class="border-y border-white/10 surface py-20">
+      <div class="mx-auto max-w-7xl px-5">
+        <p class="text-sm font-black uppercase tracking-[0.2em] accent-text">Serviços</p>
+        <h2 class="mt-3 text-3xl font-black md:text-5xl">O que oferecemos</h2>
+        <div class="mt-10 grid gap-4 md:grid-cols-3">
+          ${["Atendimento personalizado", "Soluções sob medida", "Contato rápido"].map((item) => `<article class="rounded-3xl border border-white/10 bg-black/20 p-7"><h3 class="text-xl font-black">${item}</h3><p class="mt-3 text-sm leading-6 muted">Informações estruturadas a partir do pedido do cliente, com visual profissional e navegação simples.</p></article>`).join("")}
+        </div>
+      </div>
+    </section>
+
+    <section id="galeria" class="mx-auto max-w-7xl px-5 py-20">
+      <p class="text-sm font-black uppercase tracking-[0.2em] accent-text">Galeria</p>
+      <h2 class="mt-3 text-3xl font-black md:text-5xl">Imagens selecionadas</h2>
+      <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        ${(imageItems.length ? imageItems : [{ url: "", label: "Visual profissional" }]).map((image) => image.url
+          ? `<figure class="overflow-hidden rounded-3xl border border-white/10 surface"><img src="${escapeAttr(image.url)}" alt="${escapeAttr(image.label)}" class="h-64 w-full object-cover" /><figcaption class="p-4 text-sm font-bold">${escapeHtml(image.label)}</figcaption></figure>`
+          : `<div class="rounded-3xl border border-white/10 surface p-8"><p class="text-lg font-black">${escapeHtml(image.label)}</p><p class="mt-3 text-sm muted">Adicione fotos com etiquetas para enriquecer ainda mais esta seção.</p></div>`
+        ).join("")}
+      </div>
+    </section>
+
+    <section id="contato" class="surface py-20">
+      <div class="mx-auto max-w-4xl px-5 text-center">
+        <p class="text-sm font-black uppercase tracking-[0.2em] accent-text">Contato</p>
+        <h2 class="mt-3 text-3xl font-black md:text-5xl">Vamos conversar?</h2>
+        <p class="mx-auto mt-5 max-w-2xl leading-8 muted">Clique no botão abaixo para iniciar o atendimento. Se desejar ajustes, use a opção de edição no painel.</p>
+        <a href="${escapeAttr(whatsappHref)}" class="mt-8 inline-flex rounded-full px-8 py-4 text-sm font-black accent">Chamar no WhatsApp</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-white/10 px-5 py-8 text-center text-sm muted">
+    © ${new Date().getFullYear()} ${safeTitle}. Todos os direitos reservados.
+  </footer>
+</body>
+</html>`;
+}
+
+function buildEmergencyEditHtml(baseHtml: string, editRequest: string) {
+  const note = `<section id="ajuste-solicitado" style="padding:48px 20px;background:#111;color:#fff;font-family:Inter,Arial,sans-serif"><div style="max-width:1100px;margin:auto"><p style="color:#ef4444;font-weight:800;text-transform:uppercase;letter-spacing:.12em">Ajuste solicitado</p><h2 style="font-size:32px;margin:10px 0 12px">${escapeHtml(editRequest)}</h2><p style="color:#d4d4d8;line-height:1.7">A I.A principal demorou para responder, então preservamos o modelo atual e registramos o pedido de edição para você não perder o trabalho. Tente aplicar a edição novamente com uma instrução mais curta se quiser uma alteração visual profunda.</p></div></section>`;
+  if (baseHtml.toLowerCase().includes("</body>")) {
+    return baseHtml.replace(/<\/body>/i, `${note}\n</body>`);
+  }
+  return `${baseHtml}\n${note}`;
 }
 
 async function callDeepseek(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
@@ -255,8 +444,7 @@ async function generateHtmlWithFallback(
     }
     logGeneration(traceId, "provider_attempt", {
       provider: p,
-      tokenHint: `${token.slice(0, 7)}...${token.slice(-4)}`,
-      tokenLength: token.length,
+      tokenConfigured: true,
       elapsedMs: elapsed,
       remainingMs: remaining,
     });
@@ -732,15 +920,38 @@ REGRAS TÉCNICAS:
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
     logGeneration(traceId, "html_start", { elapsed: elapsedSince(globalStartTime), remainingBudget });
-    if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
-      throw new Error("A geração demorou demais antes de chamar a I.A. Tente novamente com menos imagens ou um pedido mais direto.");
+
+    let html = "";
+    let actualProvider: ActualProvider = "fallback";
+    try {
+      if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
+        throw new Error("tempo insuficiente antes da chamada principal da I.A");
+      }
+
+      const result = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7, remainingBudget, traceId);
+      html = result.html;
+      actualProvider = result.providerUsed;
+      if (!html) throw new Error("A I.A retornou vazio.");
+      logGeneration(traceId, "html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      errorGeneration(traceId, "html_ai_failed_using_emergency_fallback", {
+        elapsed: elapsedSince(globalStartTime),
+        error: errorMessage.slice(0, 700),
+      });
+      const emergencyImages = (data.images ?? []).map((im) => ({
+        label: im.label,
+        url: im.url.startsWith("http") ? im.url : `${baseUrl}${im.url}`,
+      }));
+      html = buildEmergencySiteHtml({
+        title: site.title || site.slug || "Site profissional",
+        prompt: data.prompt,
+        images: emergencyImages,
+        traceId,
+      });
+      brief = `${brief}\n\nFallback local usado porque os provedores de I.A não responderam dentro do limite seguro. Trace: ${traceId}`.trim();
+      logGeneration(traceId, "html_emergency_fallback_done", { elapsed: elapsedSince(globalStartTime), htmlChars: html.length });
     }
-
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7, remainingBudget, traceId);
-    const actualProvider: ActualProvider = providerUsed;
-
-    if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
-    logGeneration(traceId, "html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
 
     // Save generation
     const { data: genRow, error: genErr } = await supabase.from("site_generations")
@@ -926,15 +1137,28 @@ LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + 
 
     const remainingBudget = AI_REQUEST_BUDGET_MS - (Date.now() - globalStartTime);
     logGeneration(traceId, "edit_html_start", { elapsed: elapsedSince(globalStartTime), remainingBudget, promptChars: editPrompt.length });
-    if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
-      throw new Error("A edição demorou demais antes de chamar a I.A. Tente novamente com um pedido mais direto.");
+
+    let html = "";
+    let actualProvider: ActualProvider = "fallback";
+    try {
+      if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
+        throw new Error("tempo insuficiente antes da chamada principal da I.A");
+      }
+
+      const result = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, remainingBudget, traceId);
+      html = result.html;
+      actualProvider = result.providerUsed;
+      if (!html || html.length < 50) throw new Error("A I.A retornou vazio.");
+      logGeneration(traceId, "edit_html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      errorGeneration(traceId, "edit_ai_failed_using_emergency_fallback", {
+        elapsed: elapsedSince(globalStartTime),
+        error: errorMessage.slice(0, 700),
+      });
+      html = buildEmergencyEditHtml(baseHtml, data.prompt);
+      logGeneration(traceId, "edit_emergency_fallback_done", { elapsed: elapsedSince(globalStartTime), htmlChars: html.length });
     }
-
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, editPrompt, 0.3, remainingBudget, traceId);
-    const actualProvider: ActualProvider = providerUsed;
-
-    if (!html || html.length < 50) throw new Error("A I.A retornou vazio. Tente novamente.");
-    logGeneration(traceId, "edit_html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
 
     const { data: newRow, error: insErr } = await supabaseAdmin.from("site_generations")
       .insert({
