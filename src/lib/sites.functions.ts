@@ -11,12 +11,14 @@ const HISTORY_LIMIT = 4;
 const HISTORY_TTL_DAYS = 45;
 const PROVIDERS = ["deepseek", "claude", "openai"] as const;
 type Provider = typeof PROVIDERS[number];
-type ActualProvider = Provider;
+type ActualProvider = Provider | "fallback";
 
-const AI_REQUEST_BUDGET_MS = 48000;
-const PROVIDER_ATTEMPT_MAX_MS = 30000;
-const PROVIDER_ATTEMPT_MIN_MS = 8000;
-const FINAL_RESPONSE_RESERVE_MS = 2500;
+// Mantém a chamada abaixo dos timeouts comuns de proxy/load balancer.
+// Se nenhuma IA responder rápido, geramos um HTML local de emergência em vez de deixar virar 504.
+const AI_REQUEST_BUDGET_MS = 24000;
+const PROVIDER_ATTEMPT_MAX_MS = 9000;
+const PROVIDER_ATTEMPT_MIN_MS = 3000;
+const FINAL_RESPONSE_RESERVE_MS = 1500;
 
 function createGenerationTrace(flow: "generate" | "edit") {
   return `${flow}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
