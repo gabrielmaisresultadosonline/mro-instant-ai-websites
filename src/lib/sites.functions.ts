@@ -20,6 +20,7 @@ const AI_REQUEST_BUDGET_MS = 21000;
 const PROVIDER_ATTEMPT_MAX_MS = 7000;
 const PROVIDER_ATTEMPT_MIN_MS = 2500;
 const FINAL_RESPONSE_RESERVE_MS = 2000;
+const CLAUDE_PREFERRED_ATTEMPT_MAX_MS = 16000;
 
 function createGenerationTrace(flow: "generate" | "edit") {
   return `${flow}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -396,17 +397,23 @@ async function callLovableGateway(token: string, prompt: string, temperature: nu
 }
 
 async function callClaude(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
-  const models = ["claude-fable-5", "claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"];
+  const models = timeoutMs >= 12000
+    ? ["claude-fable-5", "claude-sonnet-5", "claude-haiku-4-5-20251001", "claude-opus-4-8"]
+    : ["claude-sonnet-5", "claude-haiku-4-5-20251001", "claude-fable-5"];
   let lastErr = "";
   const providerStartedAt = Date.now();
+  logGeneration(traceId, "claude_sequence_start", { models, timeoutMs, promptChars: prompt.length });
+
   for (const model of models) {
     const remainingForClaude = timeoutMs - (Date.now() - providerStartedAt);
     if (remainingForClaude < 2500) {
       lastErr = `tempo insuficiente no claude (${remainingForClaude}ms restantes)`;
       break;
     }
-    const modelTimeoutMs = Math.min(remainingForClaude, Math.max(2500, Math.ceil(timeoutMs / models.length)));
+    const modelTimeoutMs = Math.min(remainingForClaude, Math.max(3500, Math.ceil(timeoutMs / 2)));
+    const maxTokens = model.includes("haiku") ? 8000 : 12000;
     try {
+      logGeneration(traceId, "claude_model_attempt", { model, modelTimeoutMs, maxTokens, remainingForClaude });
       const r = await fetchWithHardTimeout(traceId, `claude:${model}`, "https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { 
@@ -417,7 +424,7 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
         },
         body: JSON.stringify({ 
           model, 
-          max_tokens: 12000, 
+          max_tokens: maxTokens, 
           temperature, 
           messages: [{ role: "user", content: prompt }] 
         }),
@@ -430,11 +437,14 @@ async function callClaude(token: string, prompt: string, temperature: number, ti
       }
       const j = await r.json() as { content: { type: string; text: string }[] };
       const html = cleanHtmlOutput((j.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"));
-      if (html) return html;
+      if (html) {
+        logGeneration(traceId, "claude_model_success", { model, htmlChars: html.length, elapsed: elapsedSince(providerStartedAt) });
+        return html;
+      }
+      warnGeneration(traceId, "claude_model_empty", { model, elapsed: elapsedSince(providerStartedAt) });
     } catch (e) {
       lastErr = String(e);
       errorGeneration(traceId, "provider_exception", { provider: "claude", model, error: lastErr.slice(0, 500) });
-      if (lastErr.includes("timeout")) break;
       continue;
     }
   }
@@ -475,9 +485,9 @@ async function generateHtmlWithFallback(
   traceId = createGenerationTrace("generate"),
 ): Promise<{ html: string; providerUsed: ActualProvider }> {
   const startTime = Date.now();
-  // Ordem fixa e estável: Lovable AI primeiro, Claude Fable 5 depois, e provedores legados só no fim.
-  // Isso evita que o round-robin comece por DeepSeek/Claude lento e estoure o proxy com 504.
-  const order: Provider[] = ["lovable", "claude", "openai", "deepseek"];
+  // Tenta primeiro o provedor escolhido pelo rodízio; os demais viram fallback rápido.
+  // Assim conseguimos ver nos logs quando o Claude é realmente chamado, sem deixar virar 504.
+  const order: Provider[] = [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
   const errors: string[] = [];
   logGeneration(traceId, "provider_sequence_start", {
     preferred,
@@ -512,10 +522,14 @@ async function generateHtmlWithFallback(
     });
 
     try {
+      const providerMaxTimeout = p === "claude" && p === preferred
+        ? CLAUDE_PREFERRED_ATTEMPT_MAX_MS
+        : PROVIDER_ATTEMPT_MAX_MS;
       const callTimeout = Math.max(
         PROVIDER_ATTEMPT_MIN_MS,
-        Math.min(remaining - FINAL_RESPONSE_RESERVE_MS, PROVIDER_ATTEMPT_MAX_MS),
+        Math.min(remaining - FINAL_RESPONSE_RESERVE_MS, providerMaxTimeout),
       );
+      logGeneration(traceId, "provider_call_budget", { provider: p, callTimeout, providerMaxTimeout, remainingMs: remaining });
 
       const html = p === "lovable"
         ? await callLovableGateway(token, prompt, temperature, callTimeout, traceId)
