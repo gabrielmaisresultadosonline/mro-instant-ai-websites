@@ -920,7 +920,7 @@ export const generateSiteHtml = createServerFn({ method: "POST" })
       return `- ETIQUETA: "${im.label}" | LINK: ${fullUrl}`;
     }).join("\n") || "(Nenhuma imagem enviada)";
     
-    const brief = buildLocalBrief(data.prompt, imagesList);
+    let brief = buildLocalBrief(data.prompt, imagesList);
     logGeneration(traceId, "brief_local_done", { provider, elapsed: elapsedSince(globalStartTime), chars: brief.length });
 
     const codePrompt = `VOCÊ É O MELHOR DESENVOLVEDOR FRONT-END E DESIGNER DE UI/UX DO MUNDO. Crie um site HTML/Tailwind COMPLETO, PROFISSIONAL e RESPONSIVO.
@@ -986,8 +986,8 @@ REGRAS TÉCNICAS:
         images: emergencyImages,
         traceId,
       });
-      const fallbackBrief = `${brief}\n\nFallback local usado porque os provedores de I.A não responderam dentro do limite seguro. Trace: ${traceId}`.trim();
-      logGeneration(traceId, "brief_fallback_note", { elapsed: elapsedSince(globalStartTime), chars: fallbackBrief.length });
+      brief = `${brief}\n\nFallback local usado porque os provedores de I.A não responderam dentro do limite seguro. Trace: ${traceId}`.trim();
+      logGeneration(traceId, "brief_fallback_note", { elapsed: elapsedSince(globalStartTime), chars: brief.length });
       logGeneration(traceId, "html_emergency_fallback_done", { elapsed: elapsedSince(globalStartTime), htmlChars: html.length });
     }
 
@@ -1133,7 +1133,8 @@ export const editGeneration = createServerFn({ method: "POST" })
       claude: settings?.claude_token?.trim() || null,
     };
 
-    const provider: Provider = (gen.provider as Provider) ?? "deepseek";
+    const storedProvider = PROVIDERS.includes(gen.provider as Provider) ? (gen.provider as Provider) : "lovable";
+    const provider: Provider = storedProvider;
     logGeneration(traceId, "edit_provider_selected", {
       elapsed: elapsedSince(globalStartTime),
       provider,
