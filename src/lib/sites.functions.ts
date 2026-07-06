@@ -921,15 +921,38 @@ REGRAS TÉCNICAS:
 
     const remainingBudget = TOTAL_BUDGET - (Date.now() - globalStartTime);
     logGeneration(traceId, "html_start", { elapsed: elapsedSince(globalStartTime), remainingBudget });
-    if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
-      throw new Error("A geração demorou demais antes de chamar a I.A. Tente novamente com menos imagens ou um pedido mais direto.");
+
+    let html = "";
+    let actualProvider: ActualProvider = "fallback";
+    try {
+      if (remainingBudget < PROVIDER_ATTEMPT_MIN_MS + FINAL_RESPONSE_RESERVE_MS) {
+        throw new Error("tempo insuficiente antes da chamada principal da I.A");
+      }
+
+      const result = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7, remainingBudget, traceId);
+      html = result.html;
+      actualProvider = result.providerUsed;
+      if (!html) throw new Error("A I.A retornou vazio.");
+      logGeneration(traceId, "html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      errorGeneration(traceId, "html_ai_failed_using_emergency_fallback", {
+        elapsed: elapsedSince(globalStartTime),
+        error: errorMessage.slice(0, 700),
+      });
+      const emergencyImages = (data.images ?? []).map((im) => ({
+        label: im.label,
+        url: im.url.startsWith("http") ? im.url : `${baseUrl}${im.url}`,
+      }));
+      html = buildEmergencySiteHtml({
+        title: site.title || site.slug || "Site profissional",
+        prompt: data.prompt,
+        images: emergencyImages,
+        traceId,
+      });
+      brief = `${brief}\n\nFallback local usado porque os provedores de I.A não responderam dentro do limite seguro. Trace: ${traceId}`.trim();
+      logGeneration(traceId, "html_emergency_fallback_done", { elapsed: elapsedSince(globalStartTime), htmlChars: html.length });
     }
-
-    const { html, providerUsed } = await generateHtmlWithFallback(provider, tokens, codePrompt, 0.7, remainingBudget, traceId);
-    const actualProvider: ActualProvider = providerUsed;
-
-    if (!html) throw new Error("A I.A retornou vazio. Tente novamente.");
-    logGeneration(traceId, "html_done", { elapsed: elapsedSince(globalStartTime), provider: actualProvider, htmlChars: html.length });
 
     // Save generation
     const { data: genRow, error: genErr } = await supabase.from("site_generations")
