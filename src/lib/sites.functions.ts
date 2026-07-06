@@ -397,9 +397,7 @@ async function callLovableGateway(token: string, prompt: string, temperature: nu
 }
 
 async function callClaude(token: string, prompt: string, temperature: number, timeoutMs: number, traceId: string): Promise<string> {
-  const models = timeoutMs >= 12000
-    ? ["claude-fable-5", "claude-sonnet-5", "claude-haiku-4-5-20251001", "claude-opus-4-8"]
-    : ["claude-sonnet-5", "claude-haiku-4-5-20251001", "claude-fable-5"];
+  const models = ["claude-sonnet-5", "claude-opus-4-8", "claude-sonnet-4-6"];
   let lastErr = "";
   const providerStartedAt = Date.now();
   logGeneration(traceId, "claude_sequence_start", { models, timeoutMs, promptChars: prompt.length });
