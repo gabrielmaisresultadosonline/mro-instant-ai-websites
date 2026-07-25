@@ -56,6 +56,8 @@ function SiteEditor() {
   const deleteGenFn = useServerFn(deleteGeneration);
   const editGenFn = useServerFn(editGeneration);
   const getEditQuotaFn = useServerFn(getEditQuota);
+  const listInboxFn = useServerFn(listSiteInbox);
+  const markInboxReadFn = useServerFn(markInboxRead);
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
