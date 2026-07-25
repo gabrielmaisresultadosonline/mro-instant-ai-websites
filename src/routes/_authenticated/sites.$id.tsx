@@ -9,7 +9,7 @@ import {
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
   editGeneration, getEditQuota,
 } from "@/lib/sites.functions";
-import { listSiteInbox, markInboxRead, type InboxMessage } from "@/lib/inbox.functions";
+import { listSiteInbox, markInboxRead, refreshSiteInbox, type InboxMessage } from "@/lib/inbox.functions";
 import { SiteInbox } from "@/components/site/SiteInbox";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
@@ -58,6 +58,7 @@ function SiteEditor() {
   const getEditQuotaFn = useServerFn(getEditQuota);
   const listInboxFn = useServerFn(listSiteInbox);
   const markInboxReadFn = useServerFn(markInboxRead);
+  const refreshInboxFn = useServerFn(refreshSiteInbox);
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
@@ -798,7 +799,15 @@ function SiteEditor() {
               address={`${site.slug}@mro.bio`}
               messages={inboxMessages}
               isLoading={inboxLoading}
-              onRefresh={() => qc.invalidateQueries({ queryKey: ["site-inbox", id] })}
+              onRefresh={async () => {
+                try {
+                  // Força leitura IMAP na hora, sem esperar o cron de 1 minuto.
+                  await refreshInboxFn({ data: { siteId: id } });
+                } catch {
+                  /* se o IMAP falhar, ainda recarregamos o que já está salvo */
+                }
+                await qc.invalidateQueries({ queryKey: ["site-inbox", id] });
+              }}
               onOpen={async (messageId) => {
                 try {
                   await markInboxReadFn({ data: { id: messageId } });
