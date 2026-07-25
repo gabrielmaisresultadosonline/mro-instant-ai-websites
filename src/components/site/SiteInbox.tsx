@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { InboxMessage } from "@/lib/inbox.functions";
 
@@ -7,9 +7,13 @@ export interface SiteInboxProps {
   address: string;
   messages: InboxMessage[];
   isLoading: boolean;
-  onRefresh: () => void;
+  /** Busca imediata no servidor (IMAP) + recarga da lista. */
+  onRefresh: () => void | Promise<void>;
   onOpen: (id: string) => void;
 }
+
+/** Remetentes considerados "Meta" (Facebook/Instagram) para o modo de espera. */
+const META_SENDER = /(facebook|facebookmail|instagram|meta)\./i;
 
 /**
  * Caixa de entrada somente leitura do site.
@@ -19,6 +23,59 @@ export interface SiteInboxProps {
 export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: SiteInboxProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const open = messages.find((m) => m.id === openId) ?? null;
+
+  // ----- Modo "aguardando código do Facebook" -------------------------------
+  const [waiting, setWaiting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const startedAtRef = useRef<number>(0);
+
+  /** Código Meta que chegou DEPOIS que o cliente clicou em "aguardar". */
+  const metaCode = useMemo(() => {
+    if (!waiting) return null;
+    const found = messages.find(
+      (m) =>
+        m.verification_code &&
+        META_SENDER.test(m.from_address || "") &&
+        new Date(m.received_at).getTime() >= startedAtRef.current - 120_000,
+    );
+    return found ?? null;
+  }, [messages, waiting]);
+
+  // Enquanto aguarda, consulta o servidor a cada 6s (máx. 10 min).
+  useEffect(() => {
+    if (!waiting || metaCode) return;
+    let cancelled = false;
+
+    const tick = async () => {
+      if (cancelled) return;
+      if (Date.now() - startedAtRef.current > 10 * 60_000) {
+        setWaiting(false);
+        toast.info("Parei de aguardar. Clique de novo se o código ainda não chegou.");
+        return;
+      }
+      setChecking(true);
+      try {
+        await onRefresh();
+      } catch {
+        /* falha de rede pontual: tentamos de novo no próximo ciclo */
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+
+    void tick();
+    const timer = setInterval(tick, 6000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [waiting, metaCode, onRefresh]);
+
+  useEffect(() => {
+    if (metaCode) toast.success(`Código recebido: ${metaCode.verification_code}`);
+  }, [metaCode]);
+
+
 
   async function copyAddress() {
     try {
@@ -65,6 +122,73 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
           Novas mensagens aparecem em até 1 minuto.
         </p>
       </div>
+
+      {/* Campo dedicado: código de autenticação do Facebook/Meta */}
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-bold">📘 Receber código de autenticação do Facebook</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre <span className="font-mono font-semibold">{address}</span> no Facebook/Instagram,
+              clique no botão ao lado e peça o envio do código. Ele aparece aqui automaticamente.
+            </p>
+          </div>
+          {!waiting ? (
+            <button
+              onClick={() => {
+                startedAtRef.current = Date.now();
+                setWaiting(true);
+              }}
+              className="shrink-0 rounded-md btn-brand px-4 py-2 text-sm font-semibold"
+            >
+              Aguardar código
+            </button>
+          ) : (
+            <button
+              onClick={() => setWaiting(false)}
+              className="shrink-0 rounded-md border border-border px-4 py-2 text-sm font-semibold hover:bg-accent/40"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
+
+        {waiting && (
+          <div className="mt-4 rounded-md border border-border bg-accent/20 p-4 text-center">
+            {metaCode?.verification_code ? (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Código recebido
+                </p>
+                <button
+                  onClick={() => copyCode(metaCode.verification_code!)}
+                  className="mt-2 rounded-lg bg-primary/15 px-5 py-2 font-mono text-3xl font-black tracking-widest text-primary"
+                  title="Clique para copiar"
+                >
+                  {metaCode.verification_code}
+                </button>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  De {metaCode.from_address} — clique no código para copiar.
+                </p>
+              </>
+            ) : (
+              <>
+                <span
+                  className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"
+                  aria-hidden
+                />
+                <p className="mt-3 text-sm font-semibold">Aguardando o código do Facebook…</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {checking ? "Verificando a caixa de entrada…" : "Verificamos a cada 6 segundos."} Mantenha esta
+                  aba aberta.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando mensagens…</p>
