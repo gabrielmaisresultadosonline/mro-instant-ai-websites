@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { InboxMessage } from "@/lib/inbox.functions";
 
@@ -7,9 +7,13 @@ export interface SiteInboxProps {
   address: string;
   messages: InboxMessage[];
   isLoading: boolean;
-  onRefresh: () => void;
+  /** Busca imediata no servidor (IMAP) + recarga da lista. */
+  onRefresh: () => void | Promise<void>;
   onOpen: (id: string) => void;
 }
+
+/** Remetentes considerados "Meta" (Facebook/Instagram) para o modo de espera. */
+const META_SENDER = /(facebook|facebookmail|instagram|meta)\./i;
 
 /**
  * Caixa de entrada somente leitura do site.
@@ -19,6 +23,59 @@ export interface SiteInboxProps {
 export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: SiteInboxProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const open = messages.find((m) => m.id === openId) ?? null;
+
+  // ----- Modo "aguardando código do Facebook" -------------------------------
+  const [waiting, setWaiting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const startedAtRef = useRef<number>(0);
+
+  /** Código Meta que chegou DEPOIS que o cliente clicou em "aguardar". */
+  const metaCode = useMemo(() => {
+    if (!waiting) return null;
+    const found = messages.find(
+      (m) =>
+        m.verification_code &&
+        META_SENDER.test(m.from_address || "") &&
+        new Date(m.received_at).getTime() >= startedAtRef.current - 120_000,
+    );
+    return found ?? null;
+  }, [messages, waiting]);
+
+  // Enquanto aguarda, consulta o servidor a cada 6s (máx. 10 min).
+  useEffect(() => {
+    if (!waiting || metaCode) return;
+    let cancelled = false;
+
+    const tick = async () => {
+      if (cancelled) return;
+      if (Date.now() - startedAtRef.current > 10 * 60_000) {
+        setWaiting(false);
+        toast.info("Parei de aguardar. Clique de novo se o código ainda não chegou.");
+        return;
+      }
+      setChecking(true);
+      try {
+        await onRefresh();
+      } catch {
+        /* falha de rede pontual: tentamos de novo no próximo ciclo */
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+
+    void tick();
+    const timer = setInterval(tick, 6000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [waiting, metaCode, onRefresh]);
+
+  useEffect(() => {
+    if (metaCode) toast.success(`Código recebido: ${metaCode.verification_code}`);
+  }, [metaCode]);
+
+
 
   async function copyAddress() {
     try {
