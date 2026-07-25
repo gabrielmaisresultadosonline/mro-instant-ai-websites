@@ -123,6 +123,73 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
         </p>
       </div>
 
+      {/* Campo dedicado: código de autenticação do Facebook/Meta */}
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-bold">📘 Receber código de autenticação do Facebook</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre <span className="font-mono font-semibold">{address}</span> no Facebook/Instagram,
+              clique no botão ao lado e peça o envio do código. Ele aparece aqui automaticamente.
+            </p>
+          </div>
+          {!waiting ? (
+            <button
+              onClick={() => {
+                startedAtRef.current = Date.now();
+                setWaiting(true);
+              }}
+              className="shrink-0 rounded-md btn-brand px-4 py-2 text-sm font-semibold"
+            >
+              Aguardar código
+            </button>
+          ) : (
+            <button
+              onClick={() => setWaiting(false)}
+              className="shrink-0 rounded-md border border-border px-4 py-2 text-sm font-semibold hover:bg-accent/40"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
+
+        {waiting && (
+          <div className="mt-4 rounded-md border border-border bg-accent/20 p-4 text-center">
+            {metaCode?.verification_code ? (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Código recebido
+                </p>
+                <button
+                  onClick={() => copyCode(metaCode.verification_code!)}
+                  className="mt-2 rounded-lg bg-primary/15 px-5 py-2 font-mono text-3xl font-black tracking-widest text-primary"
+                  title="Clique para copiar"
+                >
+                  {metaCode.verification_code}
+                </button>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  De {metaCode.from_address} — clique no código para copiar.
+                </p>
+              </>
+            ) : (
+              <>
+                <span
+                  className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"
+                  aria-hidden
+                />
+                <p className="mt-3 text-sm font-semibold">Aguardando o código do Facebook…</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {checking ? "Verificando a caixa de entrada…" : "Verificamos a cada 6 segundos."} Mantenha esta
+                  aba aberta.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+
+
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando mensagens…</p>
       ) : messages.length === 0 ? (
