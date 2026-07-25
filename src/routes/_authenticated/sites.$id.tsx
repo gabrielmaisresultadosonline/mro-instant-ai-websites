@@ -9,7 +9,7 @@ import {
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
   editGeneration, getEditQuota,
 } from "@/lib/sites.functions";
-import { listSiteInbox, markInboxRead } from "@/lib/inbox.functions";
+import { listSiteInbox, markInboxRead, type InboxMessage } from "@/lib/inbox.functions";
 import { SiteInbox } from "@/components/site/SiteInbox";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
