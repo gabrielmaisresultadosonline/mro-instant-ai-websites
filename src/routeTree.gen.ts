@@ -28,6 +28,7 @@ import { Route as ApiPublicWebhooksInfinitepayRouteImport } from './routes/api/p
 import { Route as ApiPublicSiteSlugRouteImport } from './routes/api/public/site/$slug'
 import { Route as ApiPublicImgSplatRouteImport } from './routes/api/public/img/$'
 import { Route as ApiPublicCronSubscriptionsRouteImport } from './routes/api/public/cron/subscriptions'
+import { Route as ApiPublicCronInboxSyncRouteImport } from './routes/api/public/cron/inbox-sync'
 import { Route as ApiPublicCronEmailOutboxRouteImport } from './routes/api/public/cron/email-outbox'
 
 const RendaextraRoute = RendaextraRouteImport.update({
@@ -126,6 +127,11 @@ const ApiPublicCronSubscriptionsRoute =
     path: '/api/public/cron/subscriptions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronInboxSyncRoute = ApiPublicCronInboxSyncRouteImport.update({
+  id: '/api/public/cron/inbox-sync',
+  path: '/api/public/cron/inbox-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronEmailOutboxRoute =
   ApiPublicCronEmailOutboxRouteImport.update({
     id: '/api/public/cron/email-outbox',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/local-images': typeof ApiPublicLocalImagesRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
+  '/api/public/cron/inbox-sync': typeof ApiPublicCronInboxSyncRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/local-images': typeof ApiPublicLocalImagesRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
+  '/api/public/cron/inbox-sync': typeof ApiPublicCronInboxSyncRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/local-images': typeof ApiPublicLocalImagesRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
+  '/api/public/cron/inbox-sync': typeof ApiPublicCronInboxSyncRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
   '/api/public/img/$': typeof ApiPublicImgSplatRoute
   '/api/public/site/$slug': typeof ApiPublicSiteSlugRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/api/public/cert-check'
     | '/api/public/local-images'
     | '/api/public/cron/email-outbox'
+    | '/api/public/cron/inbox-sync'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/api/public/cert-check'
     | '/api/public/local-images'
     | '/api/public/cron/email-outbox'
+    | '/api/public/cron/inbox-sync'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/api/public/cert-check'
     | '/api/public/local-images'
     | '/api/public/cron/email-outbox'
+    | '/api/public/cron/inbox-sync'
     | '/api/public/cron/subscriptions'
     | '/api/public/img/$'
     | '/api/public/site/$slug'
@@ -278,6 +290,7 @@ export interface RootRouteChildren {
   ApiPublicCertCheckRoute: typeof ApiPublicCertCheckRoute
   ApiPublicLocalImagesRoute: typeof ApiPublicLocalImagesRoute
   ApiPublicCronEmailOutboxRoute: typeof ApiPublicCronEmailOutboxRoute
+  ApiPublicCronInboxSyncRoute: typeof ApiPublicCronInboxSyncRoute
   ApiPublicCronSubscriptionsRoute: typeof ApiPublicCronSubscriptionsRoute
   ApiPublicImgSplatRoute: typeof ApiPublicImgSplatRoute
   ApiPublicSiteSlugRoute: typeof ApiPublicSiteSlugRoute
@@ -420,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronSubscriptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/inbox-sync': {
+      id: '/api/public/cron/inbox-sync'
+      path: '/api/public/cron/inbox-sync'
+      fullPath: '/api/public/cron/inbox-sync'
+      preLoaderRoute: typeof ApiPublicCronInboxSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/email-outbox': {
       id: '/api/public/cron/email-outbox'
       path: '/api/public/cron/email-outbox'
@@ -458,6 +478,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCertCheckRoute: ApiPublicCertCheckRoute,
   ApiPublicLocalImagesRoute: ApiPublicLocalImagesRoute,
   ApiPublicCronEmailOutboxRoute: ApiPublicCronEmailOutboxRoute,
+  ApiPublicCronInboxSyncRoute: ApiPublicCronInboxSyncRoute,
   ApiPublicCronSubscriptionsRoute: ApiPublicCronSubscriptionsRoute,
   ApiPublicImgSplatRoute: ApiPublicImgSplatRoute,
   ApiPublicSiteSlugRoute: ApiPublicSiteSlugRoute,
@@ -467,13 +488,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -130,6 +130,33 @@ export type Database = {
         }
         Relationships: []
       }
+      inbox_sync_state: {
+        Row: {
+          created_at: string
+          id: string
+          last_error: string | null
+          last_run_at: string | null
+          last_uid: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_uid?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_uid?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kiwify_webhook_log: {
         Row: {
           created_at: string
@@ -396,6 +423,75 @@ export type Database = {
           },
           {
             foreignKeyName: "site_images_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_inbox: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          from_address: string
+          from_name: string | null
+          id: string
+          is_read: boolean
+          message_uid: string
+          owner_id: string
+          received_at: string
+          site_id: string
+          subject: string
+          to_address: string
+          updated_at: string
+          verification_code: string | null
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          from_address: string
+          from_name?: string | null
+          id?: string
+          is_read?: boolean
+          message_uid: string
+          owner_id: string
+          received_at?: string
+          site_id: string
+          subject?: string
+          to_address: string
+          updated_at?: string
+          verification_code?: string | null
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          from_address?: string
+          from_name?: string | null
+          id?: string
+          is_read?: boolean
+          message_uid?: string
+          owner_id?: string
+          received_at?: string
+          site_id?: string
+          subject?: string
+          to_address?: string
+          updated_at?: string
+          verification_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_inbox_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "published_sites_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_inbox_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"

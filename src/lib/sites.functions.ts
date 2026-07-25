@@ -3,7 +3,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
-const RESERVED = new Set(["www", "app", "admin", "administracao", "api", "mail", "blog", "dashboard", "login", "cadastro"]);
+// Slugs reservados: além das rotas do app, bloqueamos nomes sensíveis de e-mail,
+// porque cada slug também vira um endereço (slug@mro.bio) na caixa catch-all.
+const RESERVED = new Set([
+  "www", "app", "admin", "administracao", "administrador", "api", "mail", "email", "blog",
+  "dashboard", "login", "cadastro", "postmaster", "abuse", "root", "webmaster", "hostmaster",
+  "suporte", "support", "contato", "contact", "no-reply", "noreply", "inbox", "billing",
+  "financeiro", "security", "seguranca", "smtp", "imap", "dns", "ns1", "ns2", "mx",
+]);
 
 const MONTHLY_LIMIT = 3;
 const EDITS_PER_MODEL = 5;

@@ -9,6 +9,8 @@ import {
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
   editGeneration, getEditQuota,
 } from "@/lib/sites.functions";
+import { listSiteInbox, markInboxRead, type InboxMessage } from "@/lib/inbox.functions";
+import { SiteInbox } from "@/components/site/SiteInbox";
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
   head: () => ({ meta: [{ title: "Editor — MRO.BIO" }] }),
@@ -54,6 +56,8 @@ function SiteEditor() {
   const deleteGenFn = useServerFn(deleteGeneration);
   const editGenFn = useServerFn(editGeneration);
   const getEditQuotaFn = useServerFn(getEditQuota);
+  const listInboxFn = useServerFn(listSiteInbox);
+  const markInboxReadFn = useServerFn(markInboxRead);
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
@@ -76,6 +80,13 @@ function SiteEditor() {
     queryKey: ["generations", id],
     queryFn: () => listGensFn({ data: { siteId: id } }),
   });
+  const { data: inbox, isLoading: inboxLoading } = useQuery({
+    queryKey: ["site-inbox", id],
+    queryFn: () => listInboxFn({ data: { siteId: id } }),
+    refetchInterval: 60_000,
+  });
+  const inboxMessages: InboxMessage[] = inbox?.messages ?? [];
+  const inboxUnread = inboxMessages.filter((m) => !m.is_read).length;
   const activeGen = (gens?.generations ?? []).find((g) => g.is_active) ?? null;
   const { data: editQuota } = useQuery({
     queryKey: ["edit-quota", selectedGenId || activeGen?.id],
@@ -91,7 +102,7 @@ function SiteEditor() {
   const [pixels, setPixels] = useState<Pixels>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"preview" | "edit" | "history" | "settings" | "insights">("preview");
+  const [tab, setTab] = useState<"preview" | "edit" | "history" | "inbox" | "settings" | "insights">("preview");
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [editSelected, setEditSelected] = useState<Set<string>>(new Set());
@@ -491,12 +502,13 @@ function SiteEditor() {
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
           <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
-            {(["preview", "edit", "history", "settings", "insights"] as const).map((t) => (
+            {(["preview", "edit", "history", "inbox", "settings", "insights"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização"
                   : t === "edit" ? `✏️ Editar modelo${(selectedGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
                   : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
+                  : t === "inbox" ? `📬 E-mails${inboxUnread > 0 ? ` (${inboxUnread})` : ""}`
                   : t === "settings" ? "Configurações"
                   : "Insights"}
               </button>
@@ -779,6 +791,23 @@ function SiteEditor() {
                 )}
               </div>
             </div>
+          )}
+
+          {tab === "inbox" && (
+            <SiteInbox
+              address={`${site.slug}@mro.bio`}
+              messages={inboxMessages}
+              isLoading={inboxLoading}
+              onRefresh={() => qc.invalidateQueries({ queryKey: ["site-inbox", id] })}
+              onOpen={async (messageId) => {
+                try {
+                  await markInboxReadFn({ data: { id: messageId } });
+                  qc.invalidateQueries({ queryKey: ["site-inbox", id] });
+                } catch {
+                  /* marcar como lido é acessório: falha silenciosa */
+                }
+              }}
+            />
           )}
         </section>
       </div>
