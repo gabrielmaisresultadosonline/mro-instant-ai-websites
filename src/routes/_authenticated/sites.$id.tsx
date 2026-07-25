@@ -85,7 +85,7 @@ function SiteEditor() {
     queryFn: () => listInboxFn({ data: { siteId: id } }),
     refetchInterval: 60_000,
   });
-  const inboxMessages = inbox?.messages ?? [];
+  const inboxMessages: InboxMessage[] = inbox?.messages ?? [];
   const inboxUnread = inboxMessages.filter((m) => !m.is_read).length;
   const activeGen = (gens?.generations ?? []).find((g) => g.is_active) ?? null;
   const { data: editQuota } = useQuery({
