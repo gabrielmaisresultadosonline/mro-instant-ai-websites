@@ -792,6 +792,23 @@ function SiteEditor() {
               </div>
             </div>
           )}
+
+          {tab === "inbox" && (
+            <SiteInbox
+              address={`${site.slug}@mro.bio`}
+              messages={inboxMessages}
+              isLoading={inboxLoading}
+              onRefresh={() => qc.invalidateQueries({ queryKey: ["site-inbox", id] })}
+              onOpen={async (messageId) => {
+                try {
+                  await markInboxReadFn({ data: { id: messageId } });
+                  qc.invalidateQueries({ queryKey: ["site-inbox", id] });
+                } catch {
+                  /* marcar como lido é acessório: falha silenciosa */
+                }
+              }}
+            />
+          )}
         </section>
       </div>
 
