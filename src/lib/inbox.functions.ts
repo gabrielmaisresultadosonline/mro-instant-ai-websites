@@ -53,3 +53,27 @@ export const markInboxRead = createServerFn({ method: "POST" })
     if (error) throw new Error(`Não foi possível marcar como lido: ${error.message}`);
     return { ok: true };
   });
+
+/**
+ * Força uma leitura imediata da caixa catch-all (sem esperar o cron de 1 min).
+ * Exige usuário autenticado e que o site pertença a ele — o RLS valida a posse.
+ */
+export const refreshSiteInbox = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { siteId: string }) => z.object({ siteId: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    // Só sincroniza se o site for realmente do usuário (RLS aplicado).
+    const { data: site, error } = await context.supabase
+      .from("sites")
+      .select("id")
+      .eq("id", data.siteId)
+      .maybeSingle();
+
+    if (error || !site) throw new Error("Site não encontrado.");
+
+    const { runInboxSync } = await import("@/lib/inbox-sync.server");
+    const result = await runInboxSync();
+
+    // Nunca devolvemos detalhes internos de conexão para o cliente.
+    return { ok: result.ok, inserted: result.inserted };
+  });
