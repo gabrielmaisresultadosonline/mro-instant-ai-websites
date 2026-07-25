@@ -78,6 +78,13 @@ function SiteEditor() {
     queryKey: ["generations", id],
     queryFn: () => listGensFn({ data: { siteId: id } }),
   });
+  const { data: inbox, isLoading: inboxLoading } = useQuery({
+    queryKey: ["site-inbox", id],
+    queryFn: () => listInboxFn({ data: { siteId: id } }),
+    refetchInterval: 60_000,
+  });
+  const inboxMessages = inbox?.messages ?? [];
+  const inboxUnread = inboxMessages.filter((m) => !m.is_read).length;
   const activeGen = (gens?.generations ?? []).find((g) => g.is_active) ?? null;
   const { data: editQuota } = useQuery({
     queryKey: ["edit-quota", selectedGenId || activeGen?.id],
