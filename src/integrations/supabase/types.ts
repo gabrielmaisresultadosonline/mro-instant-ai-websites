@@ -499,6 +499,127 @@ export type Database = {
           },
         ]
       }
+      site_page_leads: {
+        Row: {
+          created_at: string | null
+          event_name: string
+          id: string
+          metadata: Json | null
+          page_id: string
+          site_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_name: string
+          id?: string
+          metadata?: Json | null
+          page_id: string
+          site_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_name?: string
+          id?: string
+          metadata?: Json | null
+          page_id?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_page_leads_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "site_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_page_leads_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "published_sites_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_page_leads_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_pages: {
+        Row: {
+          background_type: string | null
+          background_value: string | null
+          created_at: string | null
+          cta_link: string | null
+          cta_text: string | null
+          description: string | null
+          fb_pixel_id: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          owner_id: string
+          site_id: string
+          slug: string
+          subtitle: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          background_type?: string | null
+          background_value?: string | null
+          created_at?: string | null
+          cta_link?: string | null
+          cta_text?: string | null
+          description?: string | null
+          fb_pixel_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          owner_id: string
+          site_id: string
+          slug: string
+          subtitle?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          background_type?: string | null
+          background_value?: string | null
+          created_at?: string | null
+          cta_link?: string | null
+          cta_text?: string | null
+          description?: string | null
+          fb_pixel_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          owner_id?: string
+          site_id?: string
+          slug?: string
+          subtitle?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_pages_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "published_sites_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_pages_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_visits: {
         Row: {
           city: string | null

@@ -1251,3 +1251,114 @@ LEMBRE-SE: devolva o HTML COMPLETO E INTEIRO contendo as ALTERAÇÕES PEDIDAS + 
       rootId,
     };
   });
+
+export const getStandardPage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { siteId: string }) => z.object({ siteId: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: page, error } = await supabase
+      .from("site_pages")
+      .select("*")
+      .eq("site_id", data.siteId)
+      .eq("owner_id", userId)
+      .maybeSingle();
+    
+    if (error) throw new Error(error.message);
+    return page;
+  });
+
+export const saveStandardPage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: any) => z.object({
+    siteId: z.string().uuid(),
+    title: z.string().min(1),
+    subtitle: z.string().optional(),
+    description: z.string().optional(),
+    cta_text: z.string().optional(),
+    cta_link: z.string().optional(),
+    background_type: z.enum(["color", "image", "gradient"]),
+    background_value: z.string().optional(),
+    logo_url: z.string().optional(),
+    fb_pixel_id: z.string().optional(),
+    slug: z.string().min(1),
+  }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    
+    const { data: site } = await supabase.from("sites").select("id").eq("id", data.siteId).eq("owner_id", userId).single();
+    if (!site) throw new Error("Site não encontrado");
+
+    const { data: existing } = await supabase
+      .from("site_pages")
+      .select("id")
+      .eq("site_id", data.siteId)
+      .maybeSingle();
+
+    if (existing) {
+      const { data: updated, error } = await supabase
+        .from("site_pages")
+        .update({
+          title: data.title,
+          subtitle: data.subtitle,
+          description: data.description,
+          cta_text: data.cta_text,
+          cta_link: data.cta_link,
+          background_type: data.background_type,
+          background_value: data.background_value,
+          logo_url: data.logo_url,
+          fb_pixel_id: data.fb_pixel_id,
+          slug: data.slug,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return updated;
+    } else {
+      const { data: inserted, error } = await supabase
+        .from("site_pages")
+        .insert({
+          site_id: data.siteId,
+          owner_id: userId,
+          title: data.title,
+          subtitle: data.subtitle,
+          description: data.description,
+          cta_text: data.cta_text,
+          cta_link: data.cta_link,
+          background_type: data.background_type,
+          background_value: data.background_value,
+          logo_url: data.logo_url,
+          fb_pixel_id: data.fb_pixel_id,
+          slug: data.slug,
+        })
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return inserted;
+    }
+  });
+
+export const trackLead = createServerFn({ method: "POST" })
+  .inputValidator((i: { siteId: string; pageId: string; eventName: string; metadata?: any }) => 
+    z.object({
+      siteId: z.string().uuid(),
+      pageId: z.string().uuid(),
+      eventName: z.string(),
+      metadata: z.any().optional(),
+    }).parse(i))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("site_page_leads")
+      .insert({
+        site_id: data.siteId,
+        page_id: data.pageId,
+        event_name: data.eventName,
+        metadata: data.metadata || {},
+      });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
