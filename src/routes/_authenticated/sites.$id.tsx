@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights,
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
-  editGeneration, getEditQuota,
+  editGeneration, getEditQuota, getStandardPage, saveStandardPage,
 } from "@/lib/sites.functions";
 import { listSiteInbox, markInboxRead, refreshSiteInbox, type InboxMessage } from "@/lib/inbox.functions";
 import { SiteInbox } from "@/components/site/SiteInbox";
@@ -41,7 +41,9 @@ function getFriendlyGenerationError(error: unknown) {
 
 function SiteEditor() {
   const { id } = Route.useParams();
+  const { tab: initialTab } = Route.useSearch<{ tab?: string }>();
   const { user } = Route.useRouteContext();
+
   const qc = useQueryClient();
   const [selectedGenId, setSelectedGenId] = useState<string | null>(null);
 
@@ -59,6 +61,9 @@ function SiteEditor() {
   const listInboxFn = useServerFn(listSiteInbox);
   const markInboxReadFn = useServerFn(markInboxRead);
   const refreshInboxFn = useServerFn(refreshSiteInbox);
+  const getStandardPageFn = useServerFn(getStandardPage);
+  const saveStandardPageFn = useServerFn(saveStandardPage);
+
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
@@ -103,7 +108,8 @@ function SiteEditor() {
   const [pixels, setPixels] = useState<Pixels>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"preview" | "edit" | "history" | "inbox" | "settings" | "insights">("preview");
+  const [tab, setTab] = useState<"preview" | "edit" | "history" | "inbox" | "settings" | "insights" | "standard">((initialTab as any) || "preview");
+
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [editSelected, setEditSelected] = useState<Set<string>>(new Set());
@@ -386,6 +392,7 @@ function SiteEditor() {
       {generating && <LoadingOverlay message="Gerando com I.A..." />}
       {editing && <LoadingOverlay message="Editando modelo..." />}
 
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link
@@ -503,15 +510,17 @@ function SiteEditor() {
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
           <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
-            {(["preview", "edit", "history", "inbox", "settings", "insights"] as const).map((t) => (
+            {(["preview", "edit", "history", "standard", "inbox", "settings", "insights"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização"
                   : t === "edit" ? `✏️ Editar modelo${(selectedGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
                   : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
                   : t === "inbox" ? `📬 E-mails${inboxUnread > 0 ? ` (${inboxUnread})` : ""}`
+                  : t === "standard" ? "⭐ Modelo Padrão"
                   : t === "settings" ? "Configurações"
                   : "Insights"}
+
               </button>
             ))}
           </div>
