@@ -11,6 +11,10 @@ import {
 } from "@/lib/sites.functions";
 import { listSiteInbox, markInboxRead, refreshSiteInbox, type InboxMessage } from "@/lib/inbox.functions";
 import { SiteInbox } from "@/components/site/SiteInbox";
+import { StandardPageEditor } from "@/components/site/StandardPageEditor";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
+
+
 
 export const Route = createFileRoute("/_authenticated/sites/$id")({
   head: () => ({ meta: [{ title: "Editor — MRO.BIO" }] }),
@@ -41,7 +45,9 @@ function getFriendlyGenerationError(error: unknown) {
 
 function SiteEditor() {
   const { id } = Route.useParams();
-  const { tab: initialTab } = Route.useSearch<{ tab?: string }>();
+  const search = Route.useSearch() as any;
+  const initialTab = search?.tab;
+
   const { user } = Route.useRouteContext();
 
   const qc = useQueryClient();
@@ -511,6 +517,7 @@ function SiteEditor() {
         <section className="rounded-xl border border-border bg-card">
           <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
             {(["preview", "edit", "history", "standard", "inbox", "settings", "insights"] as const).map((t) => (
+
               <button key={t} onClick={() => setTab(t)}
                 className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização"
@@ -827,7 +834,11 @@ function SiteEditor() {
               }}
             />
           )}
+          {tab === "standard" && (
+            <StandardPageEditor siteId={id} userId={user.id} />
+          )}
         </section>
+
       </div>
 
       {/* POPUP — Regras mensais (mostrado na 1ª vez) */}
