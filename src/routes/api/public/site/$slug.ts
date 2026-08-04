@@ -57,7 +57,95 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           return new Response("Site indisponível", { status: 503 });
         }
 
-        if (!site || !site.html) {
+        let renderedHtml = "";
+        let sitePixels = (site?.pixels ?? {}) as Record<string, string>;
+        let siteId = site?.id;
+
+        if (site && site.html) {
+          renderedHtml = site.html;
+        } else {
+          // Check if it's a Standard Page before returning 404
+          const { data: stdPage } = await publicDb
+            .from("site_pages")
+            .select("*, sites(slug, pixels, is_blocked)")
+            .eq("slug", slug)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (stdPage && stdPage.sites) {
+            siteId = stdPage.site_id;
+            sitePixels = (stdPage.sites.pixels ?? {}) as Record<string, string>;
+            if (stdPage.fb_pixel_id) sitePixels.meta = stdPage.fb_pixel_id;
+
+            if (stdPage.sites.is_blocked) {
+              return new Response(
+                `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
+                <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
+                <div>
+                  <h1>⚠ Site temporariamente indisponível</h1>
+                  <p>Este site encontra-se fora do ar por falta de pagamento.</p>
+                  <p style="opacity:.7">Se você é o proprietário, regularize sua assinatura para reativar.</p>
+                </div>`,
+                { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
+              );
+            }
+
+            const bg = stdPage.background_type === 'image' 
+              ? `url('${stdPage.background_value}') center/cover fixed` 
+              : stdPage.background_type === 'color' 
+                ? stdPage.background_value 
+                : stdPage.background_value;
+
+            renderedHtml = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${stdPage.title}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: ${bg}; min-height: 100vh; color: white; font-family: system-ui, -apple-system, sans-serif; }
+        .glass { background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        @keyframes pulse-gold { 0% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(255, 214, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0); } }
+        .btn-pulse { animation: pulse-gold 2s infinite; }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="max-w-md w-full glass rounded-[2.5rem] p-8 text-center shadow-2xl">
+        ${stdPage.logo_url ? `<img src="${stdPage.logo_url}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
+        <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${stdPage.title}</h1>
+        <p class="text-lg opacity-90 mb-8 font-medium">${stdPage.subtitle || ''}</p>
+        
+        <a href="${stdPage.cta_link || '#'}" id="cta-button" 
+           class="block w-full bg-green-500 hover:bg-green-600 text-white font-black py-5 rounded-2xl text-xl uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 btn-pulse shadow-xl mb-6">
+            ${stdPage.cta_text || 'Quero participar'}
+        </a>
+
+        <p class="text-sm opacity-70 leading-relaxed">${stdPage.description || ''}</p>
+    </div>
+
+    <script>
+    document.getElementById('cta-button').addEventListener('click', function(e) {
+        if (window.fbq) fbq('track', 'Lead', { content_name: '${stdPage.title}' });
+        
+        // Track locally
+        fetch('/_serverFn/trackLead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                siteId: '${stdPage.site_id}', 
+                pageId: '${stdPage.id}', 
+                eventName: 'Lead' 
+            })
+        }).catch(() => {});
+    });
+    </script>
+</body>
+</html>`;
+          }
+        }
+
+        if (!renderedHtml) {
           return new Response(
             `<!doctype html><meta charset="utf-8"><title>Site não cadastrado - MRO.BIO</title>
             <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2.5rem;margin:0 0 .5rem;color:#FFD600}.btn{display:inline-block;margin-top:1.5rem;padding:.8rem 1.5rem;background:#FFD600;color:#000;text-decoration:none;border-radius:.5rem;font-weight:700}</style>
@@ -71,44 +159,28 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           );
         }
 
-        // Block published site if owner's subscription is not active
-        if (site.is_blocked) {
-          return new Response(
-            `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
-            <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
-            <div>
-              <h1>⚠ Site temporariamente indisponível</h1>
-              <p>Este site encontra-se fora do ar por falta de pagamento.</p>
-              <p style="opacity:.7">Se você é o proprietário, regularize sua assinatura para reativar.</p>
-            </div>`,
-            { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
-          );
+        // Fire-and-forget visit record
+        if (siteId) {
+          try {
+            const cf = request.headers as Headers & { get(name: string): string | null };
+            const ip = cf.get("cf-connecting-ip") ?? cf.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+            const country = cf.get("cf-ipcountry") ?? null;
+            const region = cf.get("cf-region") ?? null;
+            const city = cf.get("cf-ipcity") ?? null;
+            const userAgent = cf.get("user-agent") ?? null;
+            const referrer = cf.get("referer") ?? null;
+            void publicDb.from("site_visits").insert({
+              site_id: siteId,
+              ip, country, region, city,
+              user_agent: userAgent,
+              referrer,
+            });
+          } catch (e) { console.error("visit log failed", e); }
         }
 
+        const htmlWithPixels = injectPixels(renderedHtml, sitePixels);
+        return new Response(htmlWithPixels, {
 
-        // Fire-and-forget visit record
-        try {
-          const url = new URL(request.url);
-          const cf = request.headers as Headers & { get(name: string): string | null };
-          const ip = cf.get("cf-connecting-ip") ?? cf.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-          const country = cf.get("cf-ipcountry") ?? null;
-          const region = cf.get("cf-region") ?? null;
-          const city = cf.get("cf-ipcity") ?? null;
-          const userAgent = cf.get("user-agent") ?? null;
-          const referrer = cf.get("referer") ?? null;
-          // do not await
-          void publicDb.from("site_visits").insert({
-            site_id: site.id,
-            ip, country, region, city,
-            user_agent: userAgent,
-            referrer,
-          });
-          // touch url to keep var used (eslint)
-          void url;
-        } catch (e) { console.error("visit log failed", e); }
-
-        const html = injectPixels(site.html, (site.pixels ?? {}) as Record<string, string>);
-        return new Response(html, {
           status: 200,
           headers: {
             "content-type": "text/html; charset=utf-8",
