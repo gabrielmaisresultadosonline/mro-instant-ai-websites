@@ -426,7 +426,12 @@ function Dashboard() {
             className="rounded-md btn-brand px-4 py-2 text-sm font-semibold">
             ✏️ Editar site
           </Link>
+          <Link to="/sites/$id" params={{ id: site.id }} search={{ tab: "standard" }}
+            className="rounded-md border border-brand/50 bg-brand/5 px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/10">
+            ⭐ Usar Modelo Padrão
+          </Link>
           <button
+
             onClick={() => publishMut.mutate()}
             disabled={!hasHtml || publishMut.isPending}
             className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent/40 disabled:opacity-50">
