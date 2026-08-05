@@ -118,14 +118,14 @@ export const Route = createFileRoute("/api/public/site/$slug")({
 
         ${stdPage.logo_url ? `<img src="${stdPage.logo_url}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
         <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${stdPage.title}</h1>
-        <p class="text-lg opacity-90 mb-8 font-medium">${stdPage.subtitle || ''}</p>
+        <p class="text-lg opacity-90 mb-8 font-medium whitespace-pre-wrap break-words">${stdPage.subtitle || ""}</p>
         
         <a href="${stdPage.cta_link || '#'}" id="cta-button" 
            class="block w-full bg-green-500 hover:bg-green-600 text-white font-black py-5 rounded-2xl text-xl uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 btn-pulse shadow-xl mb-6">
             ${stdPage.cta_text || 'Quero participar'}
         </a>
 
-        <p class="text-sm opacity-70 leading-relaxed">${stdPage.description || ''}</p>
+        <p class="text-sm opacity-70 leading-relaxed whitespace-pre-wrap break-words">${stdPage.description || ""}</p>
     </div>
 
     <script>
