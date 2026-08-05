@@ -1,23 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 /*
 COMO EU COLOCO NO TERMIANL PARA SUIR TUDO ? QUAL E O CODIG OQUE USO PARA O TERMINAL DA VPS HOSTINGER PAR ASUBIR TUDO?
-# 1. Entra na pasta do projeto
-cd /var/www/mro.bio
+# 1. Entra na pasta do deploy
+cd /var/www/mro.bio/deploy
 
-# 2. Pega a última versão do código
-git pull
+# 2. Build completo com log salvo (NÃO aperte Ctrl+C — leva 5-8 min)
+sudo docker compose --progress plain build app 2>&1 | tee /tmp/mro-build.log
 
-# 3. Entra na pasta de deploy
-cd deploy
+# 3. Confirme que terminou bem
+tail -n 30 /tmp/mro-build.log
+grep -nE "error|Error|exit code: 1|Killed" /tmp/mro-build.log || echo "BUILD OK"
 
-# 4. Rebuild e reinicia SOMENTE o app MRO.BIO
-sudo docker compose up -d --build
+# 4. Só então troca o container (downtime de ~3s)
+sudo docker compose up -d --no-build app
 
-# 5. Verifica se subiu certinho
+# 5. Valida
 sudo docker compose ps
-sudo docker compose logs --tail=50 app
+curl -I http://127.0.0.1:3001
+sudo docker compose logs --tail=40 app
 
-ESSE?
+posso usar esse para atualizar?
 */
 
 
