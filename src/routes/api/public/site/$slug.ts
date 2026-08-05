@@ -73,7 +73,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           const { data: prof } = await publicDb
             .from("profiles")
             .select("subscription_status")
-            .eq("id", site.user_id)
+            .eq("id", site.owner_id)
             .maybeSingle();
           
           profileStatus = prof?.subscription_status || 'none';
