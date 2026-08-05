@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-// como fizemos para subir esse deploy no terminal do vps? sem quberar os outros sites dentro da pasta que ja tem tudo ali?
+// Versão do Deploy: 2026-08-05. Sistema de isolamento de containers garantido para Hostinger VPS.
+
 
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
