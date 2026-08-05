@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 /*
-SUBO NO TERMINAL ASIM PARA ATUALIZAR TUDO? 
+COMO EU COLOCO NO TERMIANL PARA SUIR TUDO ? QUAL E O CODIG OQUE USO PARA O TERMINAL DA VPS HOSTINGER PAR ASUBIR TUDO?
 # 1. Entra na pasta do projeto
 cd /var/www/mro.bio
 
@@ -16,6 +16,8 @@ sudo docker compose up -d --build
 # 5. Verifica se subiu certinho
 sudo docker compose ps
 sudo docker compose logs --tail=50 app
+
+ESSE?
 */
 
 
