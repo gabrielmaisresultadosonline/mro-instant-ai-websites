@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+// como fizemos para subir esse deploy no terminal do vps? sem quberar os outros sites dentro da pasta que ja tem tudo ali?
+
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
 import { fbEvent } from "@/lib/facebook-pixel";
