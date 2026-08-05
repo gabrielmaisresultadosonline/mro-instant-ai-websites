@@ -522,7 +522,7 @@ function SiteEditor() {
               )}
             </section>
           </aside>
-        ) : <div className="hidden lg:block" />}
+        ) : null}
 
 
         {/* RIGHT: tabs */}
