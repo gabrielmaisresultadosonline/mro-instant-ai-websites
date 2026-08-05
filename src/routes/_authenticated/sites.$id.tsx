@@ -417,6 +417,10 @@ function SiteEditor() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setTab("inbox")}
+            className="rounded-md btn-brand px-3 py-2 text-xs font-semibold shadow-sm">
+            📥 Receber Email
+          </button>
           <button onClick={() => saveMut.mutate({ is_published: !site.is_published })}
             className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
             {site.is_published ? "🟢 Despublicar" : "🟡 Publicar"}
@@ -435,6 +439,7 @@ function SiteEditor() {
           <button onClick={() => { if (confirm("Excluir este site para sempre?")) deleteMut.mutate(); }}
             className="rounded-md border border-destructive/40 px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10">Excluir</button>
         </div>
+
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[380px_1fr]">
