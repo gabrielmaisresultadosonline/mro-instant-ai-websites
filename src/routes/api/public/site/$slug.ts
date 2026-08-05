@@ -53,7 +53,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         // Manual join to avoid cache relationship issues
         const { data: site, error: siteError } = await publicDb
           .from("sites")
-          .select("id, slug, html, pixels, is_published, user_id")
+          .select("id, slug, html, pixels, is_published, owner_id")
           .eq("slug", slug)
           .eq("is_published", true)
           .maybeSingle();
