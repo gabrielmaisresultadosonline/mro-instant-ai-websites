@@ -106,18 +106,18 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             // Get site info manually
             const { data: parentSite } = await publicDb
               .from("sites")
-              .select("pixels, user_id")
+              .select("pixels, owner_id")
               .eq("id", stdPage.site_id)
               .maybeSingle();
 
             sitePixels = (parentSite?.pixels ?? {}) as Record<string, string>;
             if (stdPage.fb_pixel_id) sitePixels.meta = stdPage.fb_pixel_id;
             
-            if (parentSite?.user_id) {
+            if (parentSite?.owner_id) {
               const { data: prof } = await publicDb
                 .from("profiles")
                 .select("subscription_status")
-                .eq("id", parentSite.user_id)
+                .eq("id", parentSite.owner_id)
                 .maybeSingle();
               profileStatus = prof?.subscription_status || 'none';
             }
