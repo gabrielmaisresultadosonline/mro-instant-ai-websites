@@ -438,82 +438,85 @@ function SiteEditor() {
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[380px_1fr]">
-        {/* LEFT: prompt + images */}
-        <aside className="space-y-5">
-          <section className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="font-display text-base font-bold">Descrição do site</h2>
-              <span className="chip">I.A da MRO</span>
-            </div>
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={6}
-              placeholder="Ex.: Quero um site de coach de emagrecimento para mulheres 30+, tom amigável, com depoimentos e botão de WhatsApp. Inclua nome, endereço, telefone e principais serviços."
-              className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none" />
-            <button onClick={openGenerateFlow} disabled={generating || monthlyLeft <= 0}
-              className="mt-3 w-full rounded-md btn-brand py-2.5 text-sm font-semibold disabled:opacity-60 relative overflow-hidden">
-              {generating ? "Gerando com I.A…" : monthlyLeft <= 0 ? "Limite mensal atingido" : "✨ Gerar com I.A"}
-              {generating && (
-                <div className="absolute bottom-0 left-0 h-1 bg-white/30 animate-[progress_15s_ease-in-out_infinite]" style={{ width: '100%' }} />
-              )}
-            </button>
-            <style>{`
-              @keyframes progress {
-                0% { width: 0%; }
-                100% { width: 100%; }
-              }
-            `}</style>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Você tem <strong>{monthlyLeft}</strong> de {monthlyLimit} gerações disponíveis este mês. Cada geração usa uma versão diferente da nossa <strong>I.A MRO</strong> e fica salva no histórico.
-            </p>
-          </section>
+        {/* LEFT: prompt + images (Only visible if not on standard tab) */}
+        {tab !== "standard" ? (
+          <aside className="space-y-5">
+            <section className="rounded-xl border border-border bg-card p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="font-display text-base font-bold">Descrição do site</h2>
+                <span className="chip">I.A da MRO</span>
+              </div>
+              <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={6}
+                placeholder="Ex.: Quero um site de coach de emagrecimento para mulheres 30+, tom amigável, com depoimentos e botão de WhatsApp. Inclua nome, endereço, telefone e principais serviços."
+                className="w-full rounded-md border border-border bg-background p-3 text-sm focus:border-brand focus:outline-none" />
+              <button onClick={openGenerateFlow} disabled={generating || monthlyLeft <= 0}
+                className="mt-3 w-full rounded-md btn-brand py-2.5 text-sm font-semibold disabled:opacity-60 relative overflow-hidden">
+                {generating ? "Gerando com I.A…" : monthlyLeft <= 0 ? "Limite mensal atingido" : "✨ Gerar com I.A"}
+                {generating && (
+                  <div className="absolute bottom-0 left-0 h-1 bg-white/30 animate-[progress_15s_ease-in-out_infinite]" style={{ width: '100%' }} />
+                )}
+              </button>
+              <style>{`
+                @keyframes progress {
+                  0% { width: 0%; }
+                  100% { width: 100%; }
+                }
+              `}</style>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Você tem <strong>{monthlyLeft}</strong> de {monthlyLimit} gerações disponíveis este mês. Cada geração usa uma versão diferente da nossa <strong>I.A MRO</strong> e fica salva no histórico.
+              </p>
+            </section>
 
-          <section className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-display text-base font-bold">Imagens</h2>
-              <label className="cursor-pointer rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent/40">
-                + Enviar
-                <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
-                  onChange={(e) => queueUpload(e.target.files)} />
-              </label>
-            </div>
-            <div className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">Sempre salve uma etiqueta</strong> ao enviar (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>).
-              A etiqueta diz à I.A MRO <strong>o que cada imagem é</strong> — isso faz o site sair muito melhor. Tudo fica salvo no seu servidor.
-            </div>
-            {imgs?.images.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Clique em <strong>+ Enviar</strong> e dê uma etiqueta para cada uma.</p>
-            ) : (
-              <>
-                <p className="mb-2 text-[10px] text-muted-foreground">Clique na imagem para ver em tamanho grande. Use o ✓ para selecionar quais entram na geração.</p>
-                <div className="grid grid-cols-3 gap-1.5 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5">
-                  {imgs?.images.map((im) => {
-                    const isSel = selected.has(im.public_url);
-                    const hasTag = !!(im.label && im.label.trim());
-                    return (
-                      <div key={im.id} className={`group relative overflow-hidden rounded-md border ${isSel ? "border-brand ring-1 ring-brand" : "border-border"}`}>
-                        <button type="button" onClick={() => setViewer({ url: im.public_url, label: im.label ?? "" })}
-                          className="block w-full" title="Ver maior">
-                          <img src={im.public_url} alt={im.label ?? ""} loading="lazy" className="aspect-square w-full object-cover" />
-                        </button>
-                        <button type="button" onClick={(e) => { e.stopPropagation(); toggleSelected(im.public_url); }}
-                          aria-label={isSel ? "Desmarcar" : "Selecionar"}
-                          className={`absolute left-1 top-1 grid h-5 w-5 place-items-center rounded-full border text-[10px] font-bold shadow ${isSel ? "border-brand bg-brand text-brand-foreground" : "border-white/70 bg-black/40 text-white"}`}>
-                          {isSel ? "✓" : ""}
-                        </button>
-                        <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { try { await removeLocalImage(im.id); } catch (e) { toast.error((e as Error).message); } } }}
-                          aria-label="Excluir"
-                          className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/50 text-[11px] leading-none text-white hover:bg-destructive">×</button>
-                        <button type="button" onClick={() => setRenameTarget({ id: im.id, label: im.label ?? "" })}
-                          className={`block w-full truncate border-t border-border bg-background/70 px-1 py-0.5 text-left text-[9px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}>
-                          {hasTag ? `#${im.label}` : "+ etiqueta"}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </section>
-        </aside>
+            <section className="rounded-xl border border-border bg-card p-4">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-display text-base font-bold">Imagens</h2>
+                <label className="cursor-pointer rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent/40">
+                  + Enviar
+                  <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+                    onChange={(e) => queueUpload(e.target.files)} />
+                </label>
+              </div>
+              <div className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                <strong className="text-foreground">Sempre salve uma etiqueta</strong> ao enviar (ex.: <em>logo</em>, <em>banner</em>, <em>foto-equipe</em>, <em>produto-1</em>).
+                A etiqueta diz à I.A MRO <strong>o que cada imagem é</strong> — isso faz o site sair muito melhor. Tudo fica salvo no seu servidor.
+              </div>
+              {imgs?.images.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhuma imagem ainda. Clique em <strong>+ Enviar</strong> e dê uma etiqueta para cada uma.</p>
+              ) : (
+                <>
+                  <p className="mb-2 text-[10px] text-muted-foreground">Clique na imagem para ver em tamanho grande. Use o ✓ para selecionar quais entram na geração.</p>
+                  <div className="grid grid-cols-3 gap-1.5 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5">
+                    {imgs?.images.map((im) => {
+                      const isSel = selected.has(im.public_url);
+                      const hasTag = !!(im.label && im.label.trim());
+                      return (
+                        <div key={im.id} className={`group relative overflow-hidden rounded-md border ${isSel ? "border-brand ring-1 ring-brand" : "border-border"}`}>
+                          <button type="button" onClick={() => setViewer({ url: im.public_url, label: im.label ?? "" })}
+                            className="block w-full" title="Ver maior">
+                            <img src={im.public_url} alt={im.label ?? ""} loading="lazy" className="aspect-square w-full object-cover" />
+                          </button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); toggleSelected(im.public_url); }}
+                            aria-label={isSel ? "Desmarcar" : "Selecionar"}
+                            className={`absolute left-1 top-1 grid h-5 w-5 place-items-center rounded-full border text-[10px] font-bold shadow ${isSel ? "border-brand bg-brand text-brand-foreground" : "border-white/70 bg-black/40 text-white"}`}>
+                            {isSel ? "✓" : ""}
+                          </button>
+                          <button type="button" onClick={async () => { if (confirm("Excluir imagem?")) { try { await removeLocalImage(im.id); } catch (e) { toast.error((e as Error).message); } } }}
+                            aria-label="Excluir"
+                            className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/50 text-[11px] leading-none text-white hover:bg-destructive">×</button>
+                          <button type="button" onClick={() => setRenameTarget({ id: im.id, label: im.label ?? "" })}
+                            className={`block w-full truncate border-t border-border bg-background/70 px-1 py-0.5 text-left text-[9px] font-semibold ${hasTag ? "text-foreground" : "text-amber-500"}`}>
+                            {hasTag ? `#${im.label}` : "+ etiqueta"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </section>
+          </aside>
+        ) : <div className="hidden lg:block" />}
+
 
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
