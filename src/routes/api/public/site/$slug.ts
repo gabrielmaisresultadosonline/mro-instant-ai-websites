@@ -35,11 +35,14 @@ export const Route = createFileRoute("/api/public/site/$slug")({
     handlers: {
       GET: async ({ params, request }) => {
         const slug = String(params.slug).trim().toLowerCase();
+        console.log(`[Public site] Request for slug: ${slug}`);
+
         const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim().replace(/\/$/, "");
         const supabaseKey = (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "").trim();
+        
         if (!supabaseUrl || !supabaseKey) {
           console.error("[Public site] Missing public database env vars");
-          return new Response("Site indisponível", { status: 503 });
+          return new Response("Configuração do servidor incompleta (Missing SUPABASE_URL/KEY)", { status: 503 });
         }
 
         const publicDb = createClient<any>(supabaseUrl, supabaseKey, {
@@ -55,8 +58,8 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           .maybeSingle();
 
         if (siteError) {
-          console.error("[Public site] load failed:", siteError);
-          return new Response("Site indisponível", { status: 503 });
+          console.error("[Public site] Load failed (sites query):", siteError);
+          return new Response(`Erro ao carregar site: ${siteError.message}`, { status: 503 });
         }
 
         let renderedHtml = "";
