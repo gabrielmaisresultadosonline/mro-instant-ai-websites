@@ -46,6 +46,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
         });
 
+        // 1. First, check if there's an AI-generated site (published)
         const { data: site, error: siteError } = await publicDb
           .from("sites")
           .select("id, slug, html, pixels, is_published, profiles(subscription_status)")
@@ -61,9 +62,10 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         let renderedHtml = "";
         let sitePixels = (site?.pixels ?? {}) as Record<string, string>;
         let siteId = site?.id;
+        let profile = site?.profiles as any;
 
         if (site && site.html) {
-          const status = (site.profiles as any)?.subscription_status || 'none';
+          const status = profile?.subscription_status || 'none';
           if (status !== 'active') {
             return new Response(
               `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
@@ -78,18 +80,21 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           }
           renderedHtml = site.html;
         } else {
-          // Check if it's a Standard Page before returning 404
-          const { data: stdPage } = await publicDb
+          // 2. If no AI site, check for a Standard Page
+          // We query by SLUG. The system should prioritize this slug for the site logic.
+          const { data: stdPage, error: pageError } = await publicDb
             .from("site_pages")
-            .select("*, sites(slug, pixels, is_blocked)")
+            .select("*, sites(slug, pixels, is_blocked, profiles(subscription_status))")
             .eq("slug", slug)
             .eq("is_active", true)
             .maybeSingle();
 
-          if (stdPage && stdPage.sites) {
+          if (stdPage) {
             siteId = stdPage.site_id;
-            sitePixels = (stdPage.sites.pixels ?? {}) as Record<string, string>;
+            sitePixels = (stdPage.sites?.pixels ?? {}) as Record<string, string>;
             if (stdPage.fb_pixel_id) sitePixels.meta = stdPage.fb_pixel_id;
+            
+            const status = (stdPage.sites?.profiles as any)?.subscription_status || 'none';
 
             if (status !== 'active') {
               return new Response(
@@ -118,7 +123,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
     <title>${stdPage.title}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: ${bg}; min-height: 100vh; color: white; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: ${bg}; min-height: 100vh; color: white; font-family: system-ui, -apple-system, sans-serif; margin: 0; }
         .glass { background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         @keyframes pulse-gold { 0% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(255, 214, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0); } }
         .btn-pulse { animation: pulse-gold 2s infinite; }
