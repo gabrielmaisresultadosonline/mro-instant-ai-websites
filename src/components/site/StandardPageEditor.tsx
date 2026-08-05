@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { getStandardPage, saveStandardPage } from "@/lib/sites.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { Upload, Image as ImageIcon, Loader2 } from "lucide-react";
 
 type StandardPageData = {
   id?: string;
