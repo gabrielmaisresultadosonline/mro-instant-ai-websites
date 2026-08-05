@@ -66,11 +66,19 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         let renderedHtml = "";
         let sitePixels = (site?.pixels ?? {}) as Record<string, string>;
         let siteId = site?.id;
-        let profile = site?.profiles as any;
+        let profileStatus = 'none';
 
         if (site && site.html) {
-          const status = profile?.subscription_status || 'none';
-          if (status !== 'active') {
+          // Manual profile fetch to avoid relationship errors
+          const { data: prof } = await publicDb
+            .from("profiles")
+            .select("subscription_status")
+            .eq("id", site.user_id)
+            .maybeSingle();
+          
+          profileStatus = prof?.subscription_status || 'none';
+
+          if (profileStatus !== 'active') {
             return new Response(
               `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
               <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
@@ -85,22 +93,36 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           renderedHtml = site.html;
         } else {
           // 2. If no AI site, check for a Standard Page
-          // We query by SLUG. The system should prioritize this slug for the site logic.
           const { data: stdPage, error: pageError } = await publicDb
             .from("site_pages")
-            .select("*, sites(slug, pixels, is_blocked, profiles(subscription_status))")
+            .select("*")
             .eq("slug", slug)
             .eq("is_active", true)
             .maybeSingle();
 
           if (stdPage) {
             siteId = stdPage.site_id;
-            sitePixels = (stdPage.sites?.pixels ?? {}) as Record<string, string>;
+            
+            // Get site info manually
+            const { data: parentSite } = await publicDb
+              .from("sites")
+              .select("pixels, user_id")
+              .eq("id", stdPage.site_id)
+              .maybeSingle();
+
+            sitePixels = (parentSite?.pixels ?? {}) as Record<string, string>;
             if (stdPage.fb_pixel_id) sitePixels.meta = stdPage.fb_pixel_id;
             
-            const status = (stdPage.sites?.profiles as any)?.subscription_status || 'none';
+            if (parentSite?.user_id) {
+              const { data: prof } = await publicDb
+                .from("profiles")
+                .select("subscription_status")
+                .eq("id", parentSite.user_id)
+                .maybeSingle();
+              profileStatus = prof?.subscription_status || 'none';
+            }
 
-            if (status !== 'active') {
+            if (profileStatus !== 'active') {
               return new Response(
                 `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
                 <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
