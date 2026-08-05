@@ -47,9 +47,10 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         });
 
         const { data: site, error: siteError } = await publicDb
-          .from("published_sites_public")
-          .select("id, slug, html, pixels, is_blocked")
+          .from("sites")
+          .select("id, slug, html, pixels, is_published, profiles(subscription_status)")
           .eq("slug", slug)
+          .eq("is_published", true)
           .maybeSingle();
 
         if (siteError) {
@@ -62,6 +63,19 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         let siteId = site?.id;
 
         if (site && site.html) {
+          const status = (site.profiles as any)?.subscription_status || 'none';
+          if (status !== 'active') {
+            return new Response(
+              `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
+              <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
+              <div>
+                <h1>⚠ Site temporariamente indisponível</h1>
+                <p>Este site encontra-se fora do ar por falta de assinatura ativa.</p>
+                <p style="opacity:.7">Se você é o proprietário, regularize seu plano no painel MRO.BIO.</p>
+              </div>`,
+              { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
+            );
+          }
           renderedHtml = site.html;
         } else {
           // Check if it's a Standard Page before returning 404
@@ -77,14 +91,14 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             sitePixels = (stdPage.sites.pixels ?? {}) as Record<string, string>;
             if (stdPage.fb_pixel_id) sitePixels.meta = stdPage.fb_pixel_id;
 
-            if (stdPage.sites.is_blocked) {
+            if (status !== 'active') {
               return new Response(
                 `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
                 <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
                 <div>
                   <h1>⚠ Site temporariamente indisponível</h1>
-                  <p>Este site encontra-se fora do ar por falta de pagamento.</p>
-                  <p style="opacity:.7">Se você é o proprietário, regularize sua assinatura para reativar.</p>
+                  <p>Este site encontra-se fora do ar por falta de assinatura ativa.</p>
+                  <p style="opacity:.7">Se você é o proprietário, regularize seu plano no painel MRO.BIO.</p>
                 </div>`,
                 { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
               );
@@ -95,9 +109,6 @@ export const Route = createFileRoute("/api/public/site/$slug")({
               : stdPage.background_type === 'color' 
                 ? stdPage.background_value 
                 : stdPage.background_value;
-
-            const bgOpacity = 1; // Default opacity for background layer
-
 
             renderedHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -150,6 +161,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         }
 
         if (!renderedHtml) {
+
           return new Response(
             `<!doctype html><meta charset="utf-8"><title>Site não cadastrado - MRO.BIO</title>
             <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2.5rem;margin:0 0 .5rem;color:#FFD600}.btn{display:inline-block;margin-top:1.5rem;padding:.8rem 1.5rem;background:#FFD600;color:#000;text-decoration:none;border-radius:.5rem;font-weight:700}</style>
