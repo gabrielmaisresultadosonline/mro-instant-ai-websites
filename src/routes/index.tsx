@@ -1,5 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-// Versão do Deploy: 2026-08-05. Sistema de isolamento de containers garantido para Hostinger VPS.
+/*
+SUBO NO TERMINAL ASIM PARA ATUALIZAR TUDO? 
+# 1. Entra na pasta do projeto
+cd /var/www/mro.bio
+
+# 2. Pega a última versão do código
+git pull
+
+# 3. Entra na pasta de deploy
+cd deploy
+
+# 4. Rebuild e reinicia SOMENTE o app MRO.BIO
+sudo docker compose up -d --build
+
+# 5. Verifica se subiu certinho
+sudo docker compose ps
+sudo docker compose logs --tail=50 app
+*/
 
 
 import { useEffect, useState } from "react";
