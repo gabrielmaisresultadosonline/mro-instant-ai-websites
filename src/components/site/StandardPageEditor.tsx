@@ -213,38 +213,9 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
                 <span className="opacity-50">→</span>
               </>
             )}
-          </button>
         </div>
-
-
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Pré-visualização Mobile</h3>
-        <div 
-          className="mx-auto aspect-[9/19] w-full max-w-[320px] overflow-hidden rounded-[3rem] border-[8px] border-zinc-800 bg-black shadow-2xl ring-4 ring-zinc-700/50"
-          style={{ 
-            background: form.background_type === "image" ? `url(${form.background_value}) center/cover` : form.background_value,
-            backgroundColor: form.background_type === "color" ? form.background_value : "black"
-          }}
-        >
-          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            {form.logo_url && <img src={form.logo_url} className="mb-8 h-16 w-auto" alt="Logo" />}
-            <h1 className="font-display text-2xl font-bold text-white drop-shadow-lg">{form.title || "Seu Título Aqui"}</h1>
-            <p className="mt-2 text-sm font-medium text-white/90 drop-shadow">{form.subtitle || "Seu subtítulo explicativo"}</p>
-            
-            <div className="mt-12 w-full space-y-4">
-              <button 
-                className="w-full rounded-full bg-green-500 py-4 text-sm font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(34,197,94,0.5)] animate-bounce"
-                style={{ animationDuration: '3s' }}
-              >
-                {form.cta_text}
-              </button>
-            </div>
-            
-            <p className="mt-8 text-xs text-white/60">{form.description}</p>
-          </div>
-        </div>
-        <p className="text-center text-xs text-muted-foreground">O link da sua página será:<br/><strong className="text-foreground">mro.bio/{form.slug}</strong> (ou no seu subdomínio)</p>
       </div>
     </div>
   );
 }
+
