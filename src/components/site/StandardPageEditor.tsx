@@ -71,127 +71,151 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
   if (isLoading) return <div className="p-10 text-center">Carregando configurações...</div>;
 
   return (
-    <div className="grid gap-8 p-6 lg:grid-cols-2">
-      <div className="space-y-6">
-        <div>
-          <h2 className="font-display text-xl font-bold">Configurar Modelo Padrão</h2>
-          <p className="text-sm text-muted-foreground">Esta página é otimizada para anúncios e captura de leads.</p>
-        </div>
+    <div className="mx-auto w-full max-w-7xl">
+      <div className="flex flex-col gap-6 p-4 lg:flex-row lg:items-start lg:gap-8">
+        {/* CONFIGURATION SIDE */}
+        <div className="flex-1 space-y-6">
+          <header className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-display text-2xl font-bold tracking-tight">Modelo Padrão</h2>
+              <p className="text-sm text-muted-foreground">Página otimizada para anúncios e captura de leads.</p>
+            </div>
+            {saveMut.isPending && <span className="text-xs font-medium text-brand animate-pulse">Salvando...</span>}
+          </header>
 
-        <div className="space-y-4 rounded-xl border border-border bg-card p-5">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold">Título Principal</span>
-            <input 
-              value={form.title} 
-              onChange={e => setForm({...form, title: e.target.value})}
-              className="w-full rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
-              placeholder="Ex: Participe do nosso grupo VIP"
-            />
-          </label>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            {/* TEXT CONTENT CARD */}
+            <div className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-border pb-3 mb-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/10 text-[10px] font-bold text-brand">1</span>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Conteúdo do Site</h3>
+              </div>
+              
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Título Principal</span>
+                <input 
+                  value={form.title} 
+                  onChange={e => setForm({...form, title: e.target.value})}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                  placeholder="Ex: Participe do nosso grupo VIP"
+                />
+              </label>
 
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold">Subtítulo</span>
-            <input 
-              value={form.subtitle} 
-              onChange={e => setForm({...form, subtitle: e.target.value})}
-              className="w-full rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
-              placeholder="Ex: Receba ofertas exclusivas todos os dias"
-            />
-          </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Subtítulo</span>
+                <input 
+                  value={form.subtitle} 
+                  onChange={e => setForm({...form, subtitle: e.target.value})}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                  placeholder="Ex: Receba ofertas exclusivas todos os dias"
+                />
+              </label>
 
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold">Descrição / Texto de apoio</span>
-            <textarea 
-              value={form.description} 
-              onChange={e => setForm({...form, description: e.target.value})}
-              className="w-full rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
-              rows={3}
-              placeholder="Explique por que a pessoa deve clicar no botão abaixo."
-            />
-          </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Descrição / Rodapé</span>
+                <textarea 
+                  value={form.description} 
+                  onChange={e => setForm({...form, description: e.target.value})}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                  rows={3}
+                  placeholder="Explique por que a pessoa deve clicar no botão abaixo."
+                />
+              </label>
 
-          <div className="grid grid-cols-2 gap-4">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold">Texto do Botão</span>
-              <input 
-                value={form.cta_text} 
-                onChange={e => setForm({...form, cta_text: e.target.value})}
-                className="w-full rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold">Link (WhatsApp/Telegram)</span>
-              <input 
-                value={form.cta_link} 
-                onChange={e => setForm({...form, cta_link: e.target.value})}
-                className="w-full rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
-                placeholder="https://wa.me/..."
-              />
-            </label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Texto do Botão</span>
+                  <input 
+                    value={form.cta_text} 
+                    onChange={e => setForm({...form, cta_text: e.target.value})}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">WhatsApp / Telegram</span>
+                  <input 
+                    value={form.cta_link} 
+                    onChange={e => setForm({...form, cta_link: e.target.value})}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                    placeholder="https://wa.me/..."
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* DESIGN & APPEARANCE CARD */}
+            <div className="space-y-5 rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-border pb-3 mb-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/10 text-[10px] font-bold text-brand">2</span>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Design & Identidade</h3>
+              </div>
+
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Tipo de Fundo</span>
+                  <div className="flex overflow-hidden rounded-lg border border-border">
+                    {(["color", "gradient", "image"] as const).map(t => (
+                      <button 
+                        key={t}
+                        type="button"
+                        onClick={() => setForm({...form, background_type: t})}
+                        className={`flex-1 px-2 py-2 text-[10px] font-bold uppercase transition-colors ${form.background_type === t ? "bg-brand text-brand-foreground" : "bg-background text-muted-foreground hover:bg-accent"}`}
+                      >
+                        {t === "color" ? "Cor" : t === "gradient" ? "Degradê" : "Imagem"}
+                      </button>
+                    ))}
+                  </div>
+                </label>
+                
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">
+                    {form.background_type === "color" ? "Cor Principal (#hex)" : form.background_type === "gradient" ? "CSS Gradient" : "Link da Foto"}
+                  </span>
+                  <input 
+                    value={form.background_value} 
+                    onChange={e => setForm({...form, background_value: e.target.value})}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                    placeholder={form.background_type === "color" ? "#000000" : "linear-gradient(...)"}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">URL da Logo (Opcional)</span>
+                  <input 
+                    value={form.logo_url} 
+                    onChange={e => setForm({...form, logo_url: e.target.value})}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                    placeholder="https://..."
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Facebook Pixel ID</span>
+                  <input 
+                    value={form.fb_pixel_id} 
+                    onChange={e => setForm({...form, fb_pixel_id: e.target.value})}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                    placeholder="ID Numérico"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
-
-
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold">Facebook Pixel ID (Opcional)</span>
-            <input 
-              value={form.fb_pixel_id} 
-              onChange={e => setForm({...form, fb_pixel_id: e.target.value})}
-              className="w-full rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
-              placeholder="Apenas o número do ID"
-            />
-            <p className="mt-1 text-[10px] text-muted-foreground">Dispara evento de "Lead" ao clicar no botão.</p>
-          </label>
 
           <button 
             onClick={() => saveMut.mutate(form)}
             disabled={saveMut.isPending}
-            className="w-full rounded-md btn-brand py-2.5 font-bold shadow-lg"
+            className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl btn-brand py-4 text-sm font-black uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
           >
-            {saveMut.isPending ? "Salvando..." : "Salvar Configurações"}
+            {saveMut.isPending ? "Sincronizando..." : (
+              <>
+                <span>Salvar & Publicar</span>
+                <span className="opacity-50">→</span>
+              </>
+            )}
           </button>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">Aparência</h3>
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              {(["color", "gradient", "image"] as const).map(t => (
-                <button 
-                  key={t}
-                  onClick={() => setForm({...form, background_type: t})}
-                  className={`flex-1 rounded-md border py-2 text-xs font-semibold ${form.background_type === t ? "border-brand bg-brand/10 text-brand" : "border-border"}`}
-                >
-                  {t === "color" ? "Cor Sólida" : t === "gradient" ? "Degradê" : "Imagem"}
-                </button>
-              ))}
-            </div>
-            
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold">
-                {form.background_type === "color" ? "Código Hex (ex: #1a1a2e)" : form.background_type === "gradient" ? "CSS Linear Gradient" : "URL da Imagem de Fundo"}
-              </span>
-              <div className="flex gap-2">
-                <input 
-                  value={form.background_value} 
-                  onChange={e => setForm({...form, background_value: e.target.value})}
-                  className="flex-1 rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
-                />
-              </div>
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold">URL da Logo (PNG transparente recomendado)</span>
-              <input 
-                value={form.logo_url} 
-                onChange={e => setForm({...form, logo_url: e.target.value})}
-                className="w-full rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
-                placeholder="https://..."
-              />
-            </label>
-          </div>
-        </div>
-
-      </div>
 
       <div className="space-y-4">
         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Pré-visualização Mobile</h3>
