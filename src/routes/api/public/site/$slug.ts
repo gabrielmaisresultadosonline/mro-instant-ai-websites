@@ -63,6 +63,19 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         let siteId = site?.id;
 
         if (site && site.html) {
+          const status = (site.profiles as any)?.subscription_status || 'none';
+          if (status !== 'active') {
+            return new Response(
+              `<!doctype html><meta charset="utf-8"><title>Site temporariamente indisponível</title>
+              <style>body{font:16px/1.5 system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#0A0A0A;color:#fff;text-align:center;padding:2rem}h1{font-size:2rem;color:#FFD600}</style>
+              <div>
+                <h1>⚠ Site temporariamente indisponível</h1>
+                <p>Este site encontra-se fora do ar por falta de assinatura ativa.</p>
+                <p style="opacity:.7">Se você é o proprietário, regularize seu plano no painel MRO.BIO.</p>
+              </div>`,
+              { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
+            );
+          }
           renderedHtml = site.html;
         } else {
           // Check if it's a Standard Page before returning 404
