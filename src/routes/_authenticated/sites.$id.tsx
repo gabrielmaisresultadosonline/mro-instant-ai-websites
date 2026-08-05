@@ -231,7 +231,8 @@ function SiteEditor() {
       if (msg.includes("Sessão inválida") || msg.includes("Unauthorized")) {
         // Se a sessão expirou ou as chaves mudaram, oferecemos logout
         if (confirm("Sua sessão parece ter expirado ou as chaves do servidor foram alteradas. Deseja sair e entrar novamente para sincronizar?")) {
-          await Route.useRouteContext().supabase.auth.signOut();
+          const { supabase } = await import("@/integrations/supabase/client");
+          await supabase.auth.signOut();
           window.location.href = "/login";
         }
       }
