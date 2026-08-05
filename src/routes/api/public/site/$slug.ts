@@ -53,7 +53,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         // Manual join to avoid cache relationship issues
         const { data: site, error: siteError } = await publicDb
           .from("sites")
-          .select("id, slug, html, pixels, is_published, user_id")
+          .select("id, slug, html, pixels, is_published, owner_id")
           .eq("slug", slug)
           .eq("is_published", true)
           .maybeSingle();
@@ -73,7 +73,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           const { data: prof } = await publicDb
             .from("profiles")
             .select("subscription_status")
-            .eq("id", site.user_id)
+            .eq("id", site.owner_id)
             .maybeSingle();
           
           profileStatus = prof?.subscription_status || 'none';
@@ -106,18 +106,18 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             // Get site info manually
             const { data: parentSite } = await publicDb
               .from("sites")
-              .select("pixels, user_id")
+              .select("pixels, owner_id")
               .eq("id", stdPage.site_id)
               .maybeSingle();
 
             sitePixels = (parentSite?.pixels ?? {}) as Record<string, string>;
             if (stdPage.fb_pixel_id) sitePixels.meta = stdPage.fb_pixel_id;
             
-            if (parentSite?.user_id) {
+            if (parentSite?.owner_id) {
               const { data: prof } = await publicDb
                 .from("profiles")
                 .select("subscription_status")
-                .eq("id", parentSite.user_id)
+                .eq("id", parentSite.owner_id)
                 .maybeSingle();
               profileStatus = prof?.subscription_status || 'none';
             }
