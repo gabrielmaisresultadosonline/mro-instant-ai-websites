@@ -43,7 +43,46 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
     slug: "oferta",
   });
 
+  const [isUploading, setIsUploading] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const bgInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo_url' | 'background_value') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Limite de 10MB.");
+      return;
+    }
+
+    setIsUploading(field);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${siteId}/${field}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('site-assets')
+        .upload(fileName, file, { upsert: true });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('site-assets')
+        .getPublicUrl(data.path);
+
+      setForm(prev => ({ ...prev, [field]: publicUrl }));
+      toast.success("Upload concluído!");
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error("Erro no upload: " + error.message);
+    } finally {
+      setIsUploading(null);
+    }
+  };
+
   useEffect(() => {
+
     if (page) {
       setForm({
         id: page.id,
