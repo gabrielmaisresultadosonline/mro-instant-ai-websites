@@ -444,9 +444,9 @@ function SiteEditor() {
 
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[380px_1fr]">
-        {/* LEFT: prompt + images (Only visible if not on standard tab) */}
-        {tab !== "standard" ? (
+      <div className={`mt-6 grid gap-5 ${(["preview", "edit", "history"].includes(tab)) ? "lg:grid-cols-[380px_1fr]" : "grid-cols-1"}`}>
+        {/* LEFT: prompt + images (Only visible for IA tabs) */}
+        {(["preview", "edit", "history"].includes(tab)) ? (
           <aside className="space-y-5">
             <section className="rounded-xl border border-border bg-card p-4">
               <div className="mb-2 flex items-center justify-between">
