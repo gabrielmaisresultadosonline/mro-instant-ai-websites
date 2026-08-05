@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { getStandardPage, saveStandardPage } from "@/lib/sites.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { Upload, Image as ImageIcon, Loader2 } from "lucide-react";
 
 type StandardPageData = {
   id?: string;
@@ -41,7 +43,46 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
     slug: "oferta",
   });
 
+  const [isUploading, setIsUploading] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const bgInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo_url' | 'background_value') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Limite de 10MB.");
+      return;
+    }
+
+    setIsUploading(field);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${siteId}/${field}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('site-assets')
+        .upload(fileName, file, { upsert: true });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('site-assets')
+        .getPublicUrl(data.path);
+
+      setForm(prev => ({ ...prev, [field]: publicUrl }));
+      toast.success("Upload concluído!");
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error("Erro no upload: " + error.message);
+    } finally {
+      setIsUploading(null);
+    }
+  };
+
   useEffect(() => {
+
     if (page) {
       setForm({
         id: page.id,
@@ -169,25 +210,52 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
                 
                 <label className="block">
                   <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">
-                    {form.background_type === "color" ? "Cor Principal (#hex)" : form.background_type === "gradient" ? "CSS Gradient" : "Link da Foto"}
+                    {form.background_type === "color" ? "Cor Principal (#hex)" : form.background_type === "gradient" ? "CSS Gradient" : "Fundo (Upload ou Link)"}
                   </span>
-                  <input 
-                    value={form.background_value} 
-                    onChange={e => setForm({...form, background_value: e.target.value})}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
-                    placeholder={form.background_type === "color" ? "#000000" : "linear-gradient(...)"}
-                  />
+                  <div className="flex gap-2">
+                    <input 
+                      value={form.background_value} 
+                      onChange={e => setForm({...form, background_value: e.target.value})}
+                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                      placeholder={form.background_type === "color" ? "#000000" : form.background_type === "gradient" ? "linear-gradient(...)" : "Link da imagem..."}
+                    />
+                    {form.background_type === "image" && (
+                      <>
+                        <input type="file" ref={bgInputRef} onChange={e => handleFileUpload(e, 'background_value')} accept="image/*" className="hidden" />
+                        <button 
+                          onClick={() => bgInputRef.current?.click()}
+                          disabled={!!isUploading}
+                          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+                          title="Fazer upload de imagem"
+                        >
+                          {isUploading === 'background_value' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </label>
 
                 <label className="block">
-                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">URL da Logo (Opcional)</span>
-                  <input 
-                    value={form.logo_url} 
-                    onChange={e => setForm({...form, logo_url: e.target.value})}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
-                    placeholder="https://..."
-                  />
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Logo (Upload ou Link)</span>
+                  <div className="flex gap-2">
+                    <input 
+                      value={form.logo_url} 
+                      onChange={e => setForm({...form, logo_url: e.target.value})}
+                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                      placeholder="https://..."
+                    />
+                    <input type="file" ref={logoInputRef} onChange={e => handleFileUpload(e, 'logo_url')} accept="image/*" className="hidden" />
+                    <button 
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={!!isUploading}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+                      title="Fazer upload da logo"
+                    >
+                      {isUploading === 'logo_url' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </label>
+
 
                 <label className="block">
                   <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Facebook Pixel ID</span>
