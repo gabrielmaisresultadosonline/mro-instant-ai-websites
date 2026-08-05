@@ -91,10 +91,13 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             }
 
             const bg = stdPage.background_type === 'image' 
-              ? `url('${stdPage.background_value}') center/cover fixed` 
+              ? `url('${stdPage.background_value}') center/cover fixed no-repeat` 
               : stdPage.background_type === 'color' 
                 ? stdPage.background_value 
                 : stdPage.background_value;
+
+            const bgOpacity = 1; // Default opacity for background layer
+
 
             renderedHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -111,7 +114,8 @@ export const Route = createFileRoute("/api/public/site/$slug")({
     </style>
 </head>
 <body class="flex items-center justify-center p-4">
-    <div class="max-w-md w-full glass rounded-[2.5rem] p-8 text-center shadow-2xl">
+    <div class="max-w-md w-full glass rounded-[2.5rem] p-8 text-center shadow-2xl overflow-hidden">
+
         ${stdPage.logo_url ? `<img src="${stdPage.logo_url}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
         <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${stdPage.title}</h1>
         <p class="text-lg opacity-90 mb-8 font-medium">${stdPage.subtitle || ''}</p>
