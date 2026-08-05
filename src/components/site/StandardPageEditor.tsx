@@ -112,7 +112,7 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
 
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold">Texto do Botão (Grande)</span>
+              <span className="mb-1.5 block text-xs font-semibold">Texto do Botão</span>
               <input 
                 value={form.cta_text} 
                 onChange={e => setForm({...form, cta_text: e.target.value})}
@@ -120,7 +120,7 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold">Link do Botão (WhatsApp/Telegram)</span>
+              <span className="mb-1.5 block text-xs font-semibold">Link (WhatsApp/Telegram)</span>
               <input 
                 value={form.cta_link} 
                 onChange={e => setForm({...form, cta_link: e.target.value})}
@@ -129,6 +129,7 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
               />
             </label>
           </div>
+
 
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold">Facebook Pixel ID (Opcional)</span>
@@ -164,18 +165,32 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
                 </button>
               ))}
             </div>
+            
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold">
-                {form.background_type === "color" ? "Código Hex (ex: #1a1a2e)" : form.background_type === "gradient" ? "CSS Linear Gradient" : "URL da Imagem"}
+                {form.background_type === "color" ? "Código Hex (ex: #1a1a2e)" : form.background_type === "gradient" ? "CSS Linear Gradient" : "URL da Imagem de Fundo"}
               </span>
+              <div className="flex gap-2">
+                <input 
+                  value={form.background_value} 
+                  onChange={e => setForm({...form, background_value: e.target.value})}
+                  className="flex-1 rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
+                />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold">URL da Logo (PNG transparente recomendado)</span>
               <input 
-                value={form.background_value} 
-                onChange={e => setForm({...form, background_value: e.target.value})}
+                value={form.logo_url} 
+                onChange={e => setForm({...form, logo_url: e.target.value})}
                 className="w-full rounded-md border border-border bg-background p-2 text-sm focus:border-brand" 
+                placeholder="https://..."
               />
             </label>
           </div>
         </div>
+
       </div>
 
       <div className="space-y-4">
