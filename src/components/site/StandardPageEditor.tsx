@@ -213,9 +213,44 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
                 <span className="opacity-50">→</span>
               </>
             )}
+          </button>
+        </div>
+
+        {/* PREVIEW SIDE */}
+        <div className="w-full lg:w-[360px] lg:flex-shrink-0">
+          <div className="sticky top-6 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pré-visualização Mobile</h3>
+            <div 
+              className="mx-auto aspect-[9/19] w-full max-w-[300px] overflow-hidden rounded-[3rem] border-[8px] border-zinc-800 bg-black shadow-2xl ring-4 ring-zinc-700/50"
+              style={{ 
+                background: form.background_type === "image" ? `url(${form.background_value}) center/cover` : form.background_value,
+                backgroundColor: form.background_type === "color" ? form.background_value : "black"
+              }}
+            >
+              <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+                {form.logo_url && <img src={form.logo_url} className="mb-8 h-12 w-auto object-contain" alt="Logo" />}
+                <h1 className="font-display text-2xl font-bold text-white drop-shadow-lg leading-tight">{form.title || "Seu Título Aqui"}</h1>
+                <p className="mt-2 text-xs font-medium text-white/90 drop-shadow line-clamp-3">{form.subtitle || "Seu subtítulo explicativo"}</p>
+                
+                <div className="mt-8 w-full">
+                  <div 
+                    className="w-full rounded-full bg-green-500 py-4 text-[10px] font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] animate-bounce text-center"
+                    style={{ animationDuration: '3s' }}
+                  >
+                    {form.cta_text || "QUERO ENTRAR"}
+                  </div>
+                </div>
+                
+                <p className="mt-6 text-[10px] text-white/50 line-clamp-3 leading-relaxed">{form.description}</p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-accent/30 p-3 text-center">
+              <p className="text-[10px] text-muted-foreground leading-tight">Link da página pública:</p>
+              <code className="mt-1 block text-[11px] font-bold text-brand">mro.bio/{form.slug || "oferta"}</code>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
