@@ -427,9 +427,6 @@ function SiteEditor() {
             className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
             {site.is_published ? "🟢 Despublicar" : "🟡 Publicar"}
           </button>
-            className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
-            {site.is_published ? "🟢 Despublicar" : "🟡 Publicar"}
-          </button>
           <a href={`https://${site.slug}.mro.bio`} target="_blank" rel="noreferrer"
             className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">Ver site ↗</a>
           <button
