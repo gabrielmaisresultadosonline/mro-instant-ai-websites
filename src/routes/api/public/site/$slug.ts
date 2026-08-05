@@ -47,9 +47,10 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         });
 
         const { data: site, error: siteError } = await publicDb
-          .from("published_sites_public")
-          .select("id, slug, html, pixels, is_blocked")
+          .from("sites")
+          .select("id, slug, html, pixels, is_published, profiles(subscription_status)")
           .eq("slug", slug)
+          .eq("is_published", true)
           .maybeSingle();
 
         if (siteError) {
