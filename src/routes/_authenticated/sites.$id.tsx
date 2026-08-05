@@ -444,9 +444,9 @@ function SiteEditor() {
 
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[380px_1fr]">
-        {/* LEFT: prompt + images (Only visible if not on standard tab) */}
-        {tab !== "standard" ? (
+      <div className={`mt-6 grid gap-5 ${(["preview", "edit", "history"].includes(tab)) ? "lg:grid-cols-[380px_1fr]" : "grid-cols-1"}`}>
+        {/* LEFT: prompt + images (Only visible for IA tabs) */}
+        {(["preview", "edit", "history"].includes(tab)) ? (
           <aside className="space-y-5">
             <section className="rounded-xl border border-border bg-card p-4">
               <div className="mb-2 flex items-center justify-between">
@@ -522,15 +522,23 @@ function SiteEditor() {
               )}
             </section>
           </aside>
-        ) : <div className="hidden lg:block" />}
+        ) : null}
 
 
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
           <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
-            {(["preview", "edit", "history", "standard", "inbox", "settings", "insights"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
+            {(["preview", "edit", "history", "standard", "inbox", "settings", "insights"] as const)
+              .filter((t) => {
+                const iaTabs = ["preview", "edit", "history"];
+                if (iaTabs.includes(tab)) return [...iaTabs, "settings", "insights"].includes(t);
+                if (tab === "standard") return ["standard", "settings", "insights"].includes(t);
+                if (tab === "inbox") return ["inbox", "settings", "insights"].includes(t);
+                return true; // fallback for settings/insights
+              })
+              .map((t) => (
+                <button key={t} onClick={() => setTab(t)}
+                  className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização"
                   : t === "edit" ? `✏️ Site I.A${(selectedGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
                   : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
