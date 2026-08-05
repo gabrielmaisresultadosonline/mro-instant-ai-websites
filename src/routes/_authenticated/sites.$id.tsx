@@ -423,13 +423,10 @@ function SiteEditor() {
               📥 Receber Email
             </button>
           )}
-          {tab === "standard" && (
-            <button onClick={() => saveStandardPageMut.mutate()} disabled={saveStandardPageMut.isPending}
-              className="rounded-md btn-brand px-4 py-2 text-sm font-semibold shadow-sm">
-              {saveStandardPageMut.isPending ? "Salvando..." : "Salvar & Publicar"}
-            </button>
-          )}
           <button onClick={() => saveMut.mutate({ is_published: !site.is_published })}
+            className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
+            {site.is_published ? "🟢 Despublicar" : "🟡 Publicar"}
+          </button>
             className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
             {site.is_published ? "🟢 Despublicar" : "🟡 Publicar"}
           </button>
