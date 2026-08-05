@@ -50,9 +50,10 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         });
 
         // 1. First, check if there's an AI-generated site (published)
+        // Manual join to avoid cache relationship issues
         const { data: site, error: siteError } = await publicDb
           .from("sites")
-          .select("id, slug, html, pixels, is_published, profiles(subscription_status)")
+          .select("id, slug, html, pixels, is_published, user_id")
           .eq("slug", slug)
           .eq("is_published", true)
           .maybeSingle();
