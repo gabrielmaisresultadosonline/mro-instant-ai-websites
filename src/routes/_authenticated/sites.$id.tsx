@@ -417,10 +417,6 @@ function SiteEditor() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setTab("inbox")}
-            className="rounded-md btn-brand px-3 py-2 text-xs font-semibold shadow-sm">
-            📥 Receber Email
-          </button>
           <button onClick={() => saveMut.mutate({ is_published: !site.is_published })}
             className="rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent/40">
             {site.is_published ? "🟢 Despublicar" : "🟡 Publicar"}
