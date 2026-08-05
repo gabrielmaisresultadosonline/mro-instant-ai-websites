@@ -124,15 +124,19 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
       </div>
 
       {/* Campo dedicado: código de autenticação do Facebook/Meta */}
-      <div className="rounded-lg border border-border bg-card p-4">
+      <div className="rounded-lg border border-border bg-blue-500/5 p-4 ring-1 ring-blue-500/20">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-sm font-bold">📘 Receber código de autenticação do Facebook</div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Cadastre <span className="font-mono font-semibold">{address}</span> no Facebook/Instagram,
-              clique no botão ao lado e peça o envio do código. Ele aparece aqui automaticamente.
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold">📘 Receber código de autenticação do Facebook</span>
+              <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase text-blue-600">Meta Portfolio</span>
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              Este e-mail é direcionado exclusivamente à <strong>Meta Portfolio de Negócios</strong> para receber o código de verificação do Facebook para verificar o portfólio.
+              Cadastre <span className="font-mono font-semibold text-foreground">{address}</span> na Meta, clique em "Aguardar código" e peça o envio.
             </p>
           </div>
+
           {!waiting ? (
             <button
               onClick={() => {
