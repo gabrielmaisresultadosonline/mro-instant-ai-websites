@@ -66,13 +66,13 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
       const fileName = `${userId}/${siteId}/${field}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       
       const { data, error } = await supabase.storage
-        .from('site-assets')
+        .from('site-assets-v2')
         .upload(fileName, file, { upsert: true });
 
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('site-assets')
+        .from('site-assets-v2')
         .getPublicUrl(data.path);
 
       // If we're uploading a background and it's currently an image, update the value
