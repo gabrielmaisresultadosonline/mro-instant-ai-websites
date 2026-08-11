@@ -254,6 +254,11 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
                 <label className="block">
                   <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Logo (Upload ou Link)</span>
                   <div className="flex gap-2">
+                    {form.logo_url && (
+                      <div className="h-10 w-10 flex-shrink-0 rounded-lg border border-border bg-background p-1">
+                        <img src={form.logo_url} alt="Logo preview" className="h-full w-full object-contain" />
+                      </div>
+                    )}
                     <input 
                       value={form.logo_url} 
                       onChange={e => setForm({...form, logo_url: e.target.value})}
