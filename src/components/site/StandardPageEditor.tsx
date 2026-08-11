@@ -71,7 +71,13 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
         .from('site-assets')
         .getPublicUrl(data.path);
 
-      setForm(prev => ({ ...prev, [field]: publicUrl }));
+      // If we're uploading a background and it's currently an image, update the value
+      setForm(prev => ({ 
+        ...prev, 
+        [field]: publicUrl,
+        // Also ensure background_type is set to image if we upload a background
+        ...(field === 'background_value' ? { background_type: 'image' as const } : {})
+      }));
       toast.success("Upload concluído!");
     } catch (error: any) {
       console.error("Upload error:", error);
@@ -210,34 +216,49 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
                 
                 <label className="block">
                   <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">
-                    {form.background_type === "color" ? "Cor Principal (#hex)" : form.background_type === "gradient" ? "CSS Gradient" : "Fundo (Upload ou Link)"}
+                    {form.background_type === "color" ? "Cor Sólida" : form.background_type === "gradient" ? "CSS Gradient" : "Fundo (Upload ou Link)"}
                   </span>
-                  <div className="flex gap-2">
-                    <input 
-                      value={form.background_value} 
-                      onChange={e => setForm({...form, background_value: e.target.value})}
-                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
-                      placeholder={form.background_type === "color" ? "#000000" : form.background_type === "gradient" ? "linear-gradient(...)" : "Link da imagem..."}
-                    />
-                    {form.background_type === "image" && (
-                      <>
-                        <input type="file" ref={bgInputRef} onChange={e => handleFileUpload(e, 'background_value')} accept="image/*" className="hidden" />
-                        <button 
-                          onClick={() => bgInputRef.current?.click()}
-                          disabled={!!isUploading}
-                          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
-                          title="Fazer upload de imagem"
-                        >
-                          {isUploading === 'background_value' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                        </button>
-                      </>
-                    )}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      {form.background_type === "color" && (
+                        <input 
+                          type="color"
+                          value={form.background_value.startsWith("#") ? form.background_value : "#000000"} 
+                          onChange={e => setForm({...form, background_value: e.target.value})}
+                          className="h-10 w-10 cursor-pointer overflow-hidden rounded-lg border border-border bg-background p-0"
+                        />
+                      )}
+                      <input 
+                        value={form.background_value} 
+                        onChange={e => setForm({...form, background_value: e.target.value})}
+                        className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                        placeholder={form.background_type === "color" ? "#000000" : form.background_type === "gradient" ? "linear-gradient(...)" : "Link da imagem..."}
+                      />
+                      {form.background_type === "image" && (
+                        <>
+                          <input type="file" ref={bgInputRef} onChange={e => handleFileUpload(e, 'background_value')} accept="image/*" className="hidden" />
+                          <button 
+                            onClick={() => bgInputRef.current?.click()}
+                            disabled={!!isUploading}
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+                            title="Fazer upload de imagem"
+                          >
+                            {isUploading === 'background_value' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </label>
 
                 <label className="block">
                   <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Logo (Upload ou Link)</span>
                   <div className="flex gap-2">
+                    {form.logo_url && (
+                      <div className="h-10 w-10 flex-shrink-0 rounded-lg border border-border bg-background p-1">
+                        <img src={form.logo_url} alt="Logo preview" className="h-full w-full object-contain" />
+                      </div>
+                    )}
                     <input 
                       value={form.logo_url} 
                       onChange={e => setForm({...form, logo_url: e.target.value})}
