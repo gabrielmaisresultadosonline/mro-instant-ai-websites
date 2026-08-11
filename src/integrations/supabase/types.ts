@@ -564,6 +564,7 @@ export type Database = {
           site_id: string
           slug: string
           subtitle: string | null
+          text_color: string | null
           title: string
           updated_at: string | null
         }
@@ -582,6 +583,7 @@ export type Database = {
           site_id: string
           slug: string
           subtitle?: string | null
+          text_color?: string | null
           title: string
           updated_at?: string | null
         }
@@ -600,6 +602,7 @@ export type Database = {
           site_id?: string
           slug?: string
           subtitle?: string | null
+          text_color?: string | null
           title?: string
           updated_at?: string | null
         }

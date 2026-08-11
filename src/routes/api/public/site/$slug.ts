@@ -149,7 +149,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
     <title>${stdPage.title}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: ${bg}; min-height: 100vh; color: white; font-family: system-ui, -apple-system, sans-serif; margin: 0; }
+        body { background: ${bg}; min-height: 100vh; color: ${stdPage.text_color || '#FFFFFF'}; font-family: system-ui, -apple-system, sans-serif; margin: 0; }
         .glass { background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         @keyframes pulse-gold { 0% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(255, 214, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0); } }
         .btn-pulse { animation: pulse-gold 2s infinite; }
