@@ -15,6 +15,8 @@ type StandardPageData = {
   cta_link: string;
   background_type: "color" | "image" | "gradient";
   background_value: string;
+  background_gradient_colors?: string[];
+  background_gradient_direction?: string;
   logo_url: string;
   fb_pixel_id: string;
   slug: string;
@@ -38,6 +40,8 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
     cta_link: "",
     background_type: "gradient",
     background_value: "linear-gradient(135deg, #1e1e2f 0%, #000000 100%)",
+    background_gradient_colors: ["#1e1e2f", "#000000"],
+    background_gradient_direction: "135deg",
     logo_url: "",
     fb_pixel_id: "",
     slug: "oferta",
@@ -99,6 +103,8 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
         cta_link: page.cta_link || "",
         background_type: (page.background_type as any) || "gradient",
         background_value: page.background_value || "",
+        background_gradient_colors: (page as any).background_gradient_colors || ["#1e1e2f", "#000000"],
+        background_gradient_direction: (page as any).background_gradient_direction || "135deg",
         logo_url: page.logo_url || "",
         fb_pixel_id: page.fb_pixel_id || "",
         slug: page.slug || "oferta",
@@ -275,26 +281,106 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                 
                 <label className="block">
                   <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">
-                    {form.background_type === "color" ? "Cor Sólida" : form.background_type === "gradient" ? "CSS Gradient" : "Fundo (Upload ou Link)"}
+                    {form.background_type === "color" ? "Cor Sólida" : form.background_type === "gradient" ? "Cores do Degradê" : "Fundo (Upload ou Link)"}
                   </span>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap gap-2">
                       {form.background_type === "color" && (
-                        <input 
-                          type="color"
-                          value={form.background_value.startsWith("#") ? form.background_value : "#000000"} 
-                          onChange={e => setForm({...form, background_value: e.target.value})}
-                          className="h-10 w-10 cursor-pointer overflow-hidden rounded-lg border border-border bg-background p-0"
-                        />
+                        <div className="flex w-full gap-2">
+                          <input 
+                            type="color"
+                            value={form.background_value.startsWith("#") ? form.background_value : "#000000"} 
+                            onChange={e => setForm({...form, background_value: e.target.value})}
+                            className="h-10 w-10 cursor-pointer overflow-hidden rounded-lg border border-border bg-background p-0"
+                          />
+                          <input 
+                            value={form.background_value} 
+                            onChange={e => setForm({...form, background_value: e.target.value})}
+                            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                            placeholder="#000000"
+                          />
+                        </div>
                       )}
-                      <input 
-                        value={form.background_value} 
-                        onChange={e => setForm({...form, background_value: e.target.value})}
-                        className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
-                        placeholder={form.background_type === "color" ? "#000000" : form.background_type === "gradient" ? "linear-gradient(...)" : "Link da imagem..."}
-                      />
+
+                      {form.background_type === "gradient" && (
+                        <div className="flex w-full flex-col gap-3">
+                          <div className="flex flex-wrap gap-3">
+                            {(form.background_gradient_colors || ["#1e1e2f", "#000000"]).map((color, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <input 
+                                  type="color"
+                                  value={color} 
+                                  onChange={e => {
+                                    const newColors = [...(form.background_gradient_colors || ["#1e1e2f", "#000000"])];
+                                    newColors[idx] = e.target.value;
+                                    const gradient = `linear-gradient(${form.background_gradient_direction || "135deg"}, ${newColors.join(", ")})`;
+                                    setForm({...form, background_gradient_colors: newColors, background_value: gradient});
+                                  }}
+                                  className="h-10 w-10 cursor-pointer overflow-hidden rounded-lg border border-border bg-background p-0"
+                                />
+                                {idx > 1 && (
+                                  <button 
+                                    onClick={() => {
+                                      const newColors = (form.background_gradient_colors || []).filter((_, i) => i !== idx);
+                                      const gradient = `linear-gradient(${form.background_gradient_direction || "135deg"}, ${newColors.join(", ")})`;
+                                      setForm({...form, background_gradient_colors: newColors, background_value: gradient});
+                                    }}
+                                    className="text-[10px] font-bold text-destructive hover:underline"
+                                  >
+                                    Remover
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            {(form.background_gradient_colors?.length || 0) < 3 && (
+                              <button 
+                                onClick={() => {
+                                  const newColors = [...(form.background_gradient_colors || ["#1e1e2f", "#000000"]), "#ffffff"];
+                                  const gradient = `linear-gradient(${form.background_gradient_direction || "135deg"}, ${newColors.join(", ")})`;
+                                  setForm({...form, background_gradient_colors: newColors, background_value: gradient});
+                                }}
+                                className="flex h-10 items-center justify-center rounded-lg border border-dashed border-border px-3 text-[10px] font-bold uppercase hover:bg-accent"
+                              >
+                                + Adicionar Cor
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold uppercase text-muted-foreground">Direção:</span>
+                            <select 
+                              value={form.background_gradient_direction}
+                              onChange={e => {
+                                const dir = e.target.value;
+                                const colors = form.background_gradient_colors || ["#1e1e2f", "#000000"];
+                                const gradient = `linear-gradient(${dir}, ${colors.join(", ")})`;
+                                setForm({...form, background_gradient_direction: dir, background_value: gradient});
+                              }}
+                              className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-bold"
+                            >
+                              <option value="to right">Horizontal</option>
+                              <option value="to bottom">Vertical</option>
+                              <option value="135deg">Diagonal 1</option>
+                              <option value="45deg">Diagonal 2</option>
+                            </select>
+                          </div>
+
+                          <input 
+                            value={form.background_value} 
+                            readOnly
+                            className="w-full rounded-lg border border-border bg-accent/30 px-3 py-2 text-[10px] font-mono text-muted-foreground" 
+                          />
+                        </div>
+                      )}
+
                       {form.background_type === "image" && (
-                        <>
+                        <div className="flex w-full gap-2">
+                          <input 
+                            value={form.background_value} 
+                            onChange={e => setForm({...form, background_value: e.target.value})}
+                            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                            placeholder="Link da imagem..."
+                          />
                           <input type="file" ref={bgInputRef} onChange={e => handleFileUpload(e, 'background_value')} accept="image/*" className="hidden" />
                           <button 
                             onClick={() => bgInputRef.current?.click()}
@@ -304,7 +390,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                           >
                             {isUploading === 'background_value' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
