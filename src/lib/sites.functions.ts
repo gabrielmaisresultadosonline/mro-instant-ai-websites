@@ -1281,6 +1281,7 @@ export const saveStandardPage = createServerFn({ method: "POST" })
     background_value: z.string().optional(),
     logo_url: z.string().optional(),
     fb_pixel_id: z.string().optional(),
+    text_color: z.string().optional(),
     slug: z.string().min(1),
   }).parse(i))
   .handler(async ({ data, context }) => {
@@ -1308,6 +1309,7 @@ export const saveStandardPage = createServerFn({ method: "POST" })
           background_value: data.background_value,
           logo_url: data.logo_url,
           fb_pixel_id: data.fb_pixel_id,
+          text_color: data.text_color,
           slug: data.slug,
           updated_at: new Date().toISOString(),
         })
@@ -1331,6 +1333,7 @@ export const saveStandardPage = createServerFn({ method: "POST" })
           background_value: data.background_value,
           logo_url: data.logo_url,
           fb_pixel_id: data.fb_pixel_id,
+          text_color: data.text_color,
           slug: data.slug,
         })
         .select()
