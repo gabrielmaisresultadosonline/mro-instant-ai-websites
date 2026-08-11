@@ -862,7 +862,7 @@ function SiteEditor() {
             />
           )}
           {(tab === "standard" || tab === "standard_settings" || tab === "standard_insights") && (
-            <StandardPageEditor siteId={id} userId={user.id} />
+            <StandardPageEditor siteId={id} userId={user.id} activeTab={tab} />
           )}
         </section>
 
