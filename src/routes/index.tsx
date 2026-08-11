@@ -18,8 +18,6 @@ sudo docker compose up -d --no-build app
 sudo docker compose ps
 curl -I http://127.0.0.1:3001
 sudo docker compose logs --tail=40 app
-
-posso usar esse para atualizar?
 */
 
 
