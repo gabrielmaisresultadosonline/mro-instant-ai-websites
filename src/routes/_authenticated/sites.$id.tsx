@@ -116,7 +116,7 @@ function SiteEditor() {
   const [pixels, setPixels] = useState<Pixels>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"preview" | "edit" | "history" | "inbox" | "settings" | "insights" | "standard">((initialTab as any) || "preview");
+  const [tab, setTab] = useState<"preview" | "edit" | "history" | "inbox" | "settings" | "insights" | "standard" | "standard_settings" | "standard_insights">((initialTab as any) || "preview");
 
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
@@ -529,13 +529,17 @@ function SiteEditor() {
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
           <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
-            {(["preview", "edit", "history", "standard", "inbox", "settings", "insights"] as const)
+            {(["preview", "edit", "history", "standard", "inbox", "settings", "insights", "standard_settings", "standard_insights"] as const)
               .filter((t) => {
                 const iaTabs = ["preview", "edit", "history"];
+                const standardTabs = ["standard", "standard_settings", "standard_insights"];
+                const globalTabs = ["settings", "insights"]; 
+                
                 if (iaTabs.includes(tab)) return [...iaTabs, "settings", "insights"].includes(t);
-                if (tab === "standard") return ["standard", "settings", "insights"].includes(t);
+                if (standardTabs.includes(tab)) return standardTabs.includes(t);
                 if (tab === "inbox") return ["inbox", "settings", "insights"].includes(t);
-                return true; // fallback for settings/insights
+                if (globalTabs.includes(tab)) return [...iaTabs, ...globalTabs].includes(t);
+                return true; 
               })
               .map((t) => (
                 <button key={t} onClick={() => setTab(t)}
@@ -544,6 +548,8 @@ function SiteEditor() {
                   : t === "edit" ? `✏️ Site I.A${(selectedGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
                   : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
                   : t === "standard" ? "⭐ Modelo Padrão"
+                  : t === "standard_settings" ? "Configurações"
+                  : t === "standard_insights" ? "Insights"
                   : t === "inbox" ? `📬 E-mails${inboxUnread > 0 ? ` (${inboxUnread})` : ""}`
                   : t === "settings" ? "Configurações"
                   : "Insights"}
@@ -855,8 +861,8 @@ function SiteEditor() {
               }}
             />
           )}
-          {tab === "standard" && (
-            <StandardPageEditor siteId={id} userId={user.id} />
+          {(tab === "standard" || tab === "standard_settings" || tab === "standard_insights") && (
+            <StandardPageEditor siteId={id} userId={user.id} activeTab={tab} />
           )}
         </section>
 

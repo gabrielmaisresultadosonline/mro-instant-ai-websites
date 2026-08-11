@@ -20,7 +20,7 @@ type StandardPageData = {
   slug: string;
 };
 
-export function StandardPageEditor({ siteId, userId }: { siteId: string; userId: string }) {
+export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: { siteId: string; userId: string; activeTab?: string }) {
   const qc = useQueryClient();
   const getPageFn = useServerFn(getStandardPage);
   const savePageFn = useServerFn(saveStandardPage);
@@ -116,6 +116,65 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
   });
 
   if (isLoading) return <div className="p-10 text-center">Carregando configurações...</div>;
+
+  if (activeTab === "standard_settings") {
+    return (
+      <div className="mx-auto w-full max-w-2xl p-6">
+        <header className="mb-6">
+          <h2 className="font-display text-2xl font-bold tracking-tight">Configurações do Modelo Padrão</h2>
+          <p className="text-sm text-muted-foreground">Gerencie pixels e integrações desta página.</p>
+        </header>
+
+        <div className="space-y-6">
+          <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <h3 className="mb-4 font-display text-base font-bold">Pixels de Rastreio</h3>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Facebook Pixel ID</span>
+                <input 
+                  value={form.fb_pixel_id} 
+                  onChange={e => setForm({...form, fb_pixel_id: e.target.value})}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                  placeholder="ID Numérico"
+                />
+              </label>
+              <p className="text-[11px] text-muted-foreground">
+                O evento de <strong>Lead</strong> será disparado automaticamente quando o usuário clicar no botão principal.
+              </p>
+            </div>
+          </section>
+
+          <button 
+            onClick={() => saveMut.mutate(form)}
+            disabled={saveMut.isPending}
+            className="w-full rounded-xl btn-brand py-3 text-sm font-bold uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
+          >
+            {saveMut.isPending ? "Salvando..." : "Salvar Configurações"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeTab === "standard_insights") {
+    return (
+      <div className="mx-auto w-full max-w-4xl p-6 text-center">
+        <header className="mb-10">
+          <h2 className="font-display text-2xl font-bold tracking-tight">Insights do Modelo Padrão</h2>
+          <p className="text-sm text-muted-foreground">Desempenho da sua página otimizada.</p>
+        </header>
+        <div className="rounded-2xl border border-border bg-accent/20 p-12">
+          <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-brand/10 text-brand">
+            <ImageIcon className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-bold">Em breve</h3>
+          <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
+            Estamos preparando métricas específicas de conversão para o Modelo Padrão.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl">
