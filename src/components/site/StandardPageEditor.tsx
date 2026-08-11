@@ -17,6 +17,7 @@ type StandardPageData = {
   background_value: string;
   background_gradient_colors?: string[];
   background_gradient_direction?: string;
+  text_color?: string;
   logo_url: string;
   fb_pixel_id: string;
   slug: string;
@@ -42,6 +43,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
     background_value: "linear-gradient(135deg, #1e1e2f 0%, #000000 100%)",
     background_gradient_colors: ["#1e1e2f", "#000000"],
     background_gradient_direction: "135deg",
+    text_color: "#FFFFFF",
     logo_url: "",
     fb_pixel_id: "",
     slug: "oferta",
@@ -105,6 +107,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
         background_value: page.background_value || "",
         background_gradient_colors: (page as any).background_gradient_colors || ["#1e1e2f", "#000000"],
         background_gradient_direction: (page as any).background_gradient_direction || "135deg",
+        text_color: (page as any).text_color || "#FFFFFF",
         logo_url: page.logo_url || "",
         fb_pixel_id: page.fb_pixel_id || "",
         slug: page.slug || "oferta",
@@ -397,6 +400,24 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                 </label>
 
                 <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Cor do Texto</span>
+                  <div className="flex gap-2">
+                    <input 
+                      type="color"
+                      value={form.text_color || "#FFFFFF"} 
+                      onChange={e => setForm({...form, text_color: e.target.value})}
+                      className="h-10 w-10 cursor-pointer overflow-hidden rounded-lg border border-border bg-background p-0"
+                    />
+                    <input 
+                      value={form.text_color || "#FFFFFF"} 
+                      onChange={e => setForm({...form, text_color: e.target.value})}
+                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                      placeholder="#FFFFFF"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
                   <span className="mb-1.5 block text-[11px] font-bold uppercase text-muted-foreground/70">Logo (Upload ou Link)</span>
                   <div className="flex gap-2">
                     {form.logo_url && (
@@ -461,10 +482,10 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                 backgroundColor: form.background_type === "color" ? form.background_value : "black"
               }}
             >
-              <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+              <div className="flex h-full flex-col items-center justify-center p-6 text-center" style={{ color: form.text_color || "#FFFFFF" }}>
                 {form.logo_url && <img src={form.logo_url} className="mb-8 h-12 w-auto object-contain" alt="Logo" />}
-                <h1 className="font-display text-2xl font-bold text-white drop-shadow-lg leading-tight">{form.title || "Seu Título Aqui"}</h1>
-                <p className="mt-2 text-xs font-medium text-white/90 drop-shadow line-clamp-3">{form.subtitle || "Seu subtítulo explicativo"}</p>
+                <h1 className="font-display text-2xl font-bold drop-shadow-lg leading-tight">{form.title || "Seu Título Aqui"}</h1>
+                <p className="mt-2 text-xs font-medium opacity-90 drop-shadow line-clamp-3">{form.subtitle || "Seu subtítulo explicativo"}</p>
                 
                 <div className="mt-8 w-full">
                   <div 
@@ -475,7 +496,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                   </div>
                 </div>
                 
-                <p className="mt-6 text-[10px] text-white/50 line-clamp-3 leading-relaxed">{form.description}</p>
+                <p className="mt-6 text-[10px] opacity-50 line-clamp-3 leading-relaxed">{form.description}</p>
               </div>
             </div>
             <div className="rounded-lg bg-accent/30 p-3 text-center">
