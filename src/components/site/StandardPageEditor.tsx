@@ -71,7 +71,13 @@ export function StandardPageEditor({ siteId, userId }: { siteId: string; userId:
         .from('site-assets')
         .getPublicUrl(data.path);
 
-      setForm(prev => ({ ...prev, [field]: publicUrl }));
+      // If we're uploading a background and it's currently an image, update the value
+      setForm(prev => ({ 
+        ...prev, 
+        [field]: publicUrl,
+        // Also ensure background_type is set to image if we upload a background
+        ...(field === 'background_value' ? { background_type: 'image' as const } : {})
+      }));
       toast.success("Upload concluído!");
     } catch (error: any) {
       console.error("Upload error:", error);
