@@ -20,7 +20,7 @@ type StandardPageData = {
   slug: string;
 };
 
-export function StandardPageEditor({ siteId, userId }: { siteId: string; userId: string }) {
+export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: { siteId: string; userId: string; activeTab?: string }) {
   const qc = useQueryClient();
   const getPageFn = useServerFn(getStandardPage);
   const savePageFn = useServerFn(saveStandardPage);
