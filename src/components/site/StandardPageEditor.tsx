@@ -499,16 +499,26 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                 <p className="mt-6 text-[10px] opacity-50 line-clamp-3 leading-relaxed">{form.description}</p>
               </div>
             </div>
-            <div className="rounded-lg bg-accent/30 p-3 text-center">
-              <p className="text-[10px] text-muted-foreground leading-tight">Link da página pública:</p>
-              <a 
-                href={`https://${form.slug}.mro.bio`} 
-                target="_blank" 
-                rel="noreferrer"
-                className="mt-1 block text-[11px] font-bold text-brand hover:underline"
-              >
-                {form.slug}.mro.bio
-              </a>
+            <div className="flex flex-col gap-2 rounded-2xl border border-border bg-brand/5 p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider">Link Oficial</span>
+                <a 
+                  href={`https://${form.slug}.mro.bio`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold text-brand hover:underline"
+                >
+                  Ver site →
+                </a>
+              </div>
+              <div className="overflow-hidden rounded-lg border border-border bg-background px-3 py-2">
+                <span className="block truncate text-xs font-bold text-foreground">
+                  https://{form.slug}.mro.bio
+                </span>
+              </div>
+              <p className="text-[9px] leading-relaxed text-muted-foreground font-medium">
+                Use este link em seus anúncios. Ao clicar no botão, dispararemos o evento de <strong>Lead</strong> no seu pixel antes do redirecionamento.
+              </p>
             </div>
           </div>
         </div>

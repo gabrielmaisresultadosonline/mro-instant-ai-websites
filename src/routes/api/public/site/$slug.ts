@@ -192,7 +192,10 @@ export const Route = createFileRoute("/api/public/site/$slug")({
 
     <script>
     document.getElementById('cta-button').addEventListener('click', function(e) {
-        if (window.fbq) fbq('track', 'Lead', { content_name: '${stdPage.title}' });
+        // Track meta lead
+        if (window.fbq) {
+            fbq('track', 'Lead', { content_name: '${stdPage.title}' });
+        }
         
         // Track locally
         fetch('/_serverFn/trackLead', {
@@ -204,6 +207,10 @@ export const Route = createFileRoute("/api/public/site/$slug")({
                 eventName: 'Lead' 
             })
         }).catch(() => {});
+        
+        // Pixel leads take a moment to fire, but we want direct navigation
+        // The user wants direct link ("abrir o link direto nao mro.bio junto")
+        // No e.preventDefault() here means it follows the href naturally.
     });
     </script>
 </body>
