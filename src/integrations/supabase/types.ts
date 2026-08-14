@@ -336,6 +336,7 @@ export type Database = {
           html: string
           id: string
           is_active: boolean
+          logo_size: number | null
           owner_id: string
           parent_generation_id: string | null
           prompt: string
@@ -349,6 +350,7 @@ export type Database = {
           html?: string
           id?: string
           is_active?: boolean
+          logo_size?: number | null
           owner_id: string
           parent_generation_id?: string | null
           prompt?: string
@@ -362,6 +364,7 @@ export type Database = {
           html?: string
           id?: string
           is_active?: boolean
+          logo_size?: number | null
           owner_id?: string
           parent_generation_id?: string | null
           prompt?: string
