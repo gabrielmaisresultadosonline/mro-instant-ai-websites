@@ -53,7 +53,7 @@ function Cadastro() {
             Seu site em <span className="bg-brand px-1.5">minutos</span>, não em meses.
           </h1>
           <p className="mt-4 text-muted-foreground">
-            Crie sua conta gratuita e ganhe um endereço próprio em <strong>seunome.mro.bio</strong>.
+            logo que cadastra vai colocar o slug do site, nome do site e vai avançar.. dai vai aparecer na tela duas opões site com i.a site site modelo padrão. {"\n\n"}e ai ele escolhendo ali vai abrir o editor do site ali direto. inclua isso o resto mantem tudo como esta comopleto.
           </p>
           <ul className="mt-6 space-y-2 text-sm">
             <li>✓ Pixels do FB, GA e TikTok</li>
