@@ -202,8 +202,8 @@ export const Route = createFileRoute("/api/public/site/$slug")({
     ${imageOverlay}
     <div class="content-wrap">
         <div class="max-w-md w-full glass rounded-[2.5rem] p-8 text-center shadow-2xl overflow-hidden">
-
-        ${stdPage.logo_url ? `<img src="${logoUrl}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
+        
+        ${stdPage.logo_url ? `<img src="${logoUrl}" style="height: ${stdPage.logo_size || 80}px; width: auto;" class="mx-auto mb-8 object-contain" alt="Logo">` : ''}
         <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${stdPage.title}</h1>
         <p class="text-lg opacity-90 mb-8 font-medium whitespace-pre-wrap break-words">${stdPage.subtitle || ""}</p>
         

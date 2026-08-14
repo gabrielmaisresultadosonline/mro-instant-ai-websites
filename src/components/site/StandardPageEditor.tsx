@@ -23,6 +23,7 @@ type StandardPageData = {
   slug: string;
   image_opacity?: number;
   background_color_under_image?: string;
+  logo_size?: number;
 };
 
 function toPublicAssetUrl(value: string): string {
@@ -57,6 +58,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
     slug: "oferta",
     image_opacity: 1.0,
     background_color_under_image: "#000000",
+    logo_size: 80,
   });
 
   const [isUploading, setIsUploading] = useState<string | null>(null);
@@ -121,6 +123,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
         slug: page.slug || "oferta",
         image_opacity: (page as any).image_opacity ?? 1.0,
         background_color_under_image: (page as any).background_color_under_image || "#000000",
+        logo_size: (page as any).logo_size || 80,
       });
     }
   }, [page]);
@@ -131,7 +134,8 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
       ...data, 
       is_active: true,
       image_opacity: data.image_opacity,
-      background_color_under_image: data.background_color_under_image
+      background_color_under_image: data.background_color_under_image,
+      logo_size: data.logo_size
     } }),
     onSuccess: () => {
       toast.success("Página padrão salva e publicada com sucesso!");
@@ -490,6 +494,18 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                       {isUploading === 'logo_url' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                     </button>
                   </div>
+                  <div className="mt-3">
+                    <span className="mb-1 block text-[10px] font-bold uppercase text-muted-foreground">Tamanho da Logo: {form.logo_size}px</span>
+                    <input 
+                      type="range" 
+                      min="20" 
+                      max="200" 
+                      step="4"
+                      value={form.logo_size || 80}
+                      onChange={e => setForm({...form, logo_size: parseInt(e.target.value)})}
+                      className="h-8 w-full cursor-pointer accent-brand"
+                    />
+                  </div>
                 </label>
 
 
@@ -546,7 +562,8 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                 {form.logo_url && (
                   <img 
                     src={form.logo_url} 
-                    className="mb-8 h-12 w-auto object-contain" 
+                    className="mb-8 object-contain" 
+                    style={{ height: `${form.logo_size || 80}px`, width: 'auto' }}
                     alt="Logo" 
                   />
                 )}

@@ -336,6 +336,7 @@ export type Database = {
           html: string
           id: string
           is_active: boolean
+          logo_size: number | null
           owner_id: string
           parent_generation_id: string | null
           prompt: string
@@ -349,6 +350,7 @@ export type Database = {
           html?: string
           id?: string
           is_active?: boolean
+          logo_size?: number | null
           owner_id: string
           parent_generation_id?: string | null
           prompt?: string
@@ -362,6 +364,7 @@ export type Database = {
           html?: string
           id?: string
           is_active?: boolean
+          logo_size?: number | null
           owner_id?: string
           parent_generation_id?: string | null
           prompt?: string
@@ -561,6 +564,7 @@ export type Database = {
           id: string
           image_opacity: number | null
           is_active: boolean | null
+          logo_size: number | null
           logo_url: string | null
           owner_id: string
           site_id: string
@@ -582,6 +586,7 @@ export type Database = {
           id?: string
           image_opacity?: number | null
           is_active?: boolean | null
+          logo_size?: number | null
           logo_url?: string | null
           owner_id: string
           site_id: string
@@ -603,6 +608,7 @@ export type Database = {
           id?: string
           image_opacity?: number | null
           is_active?: boolean | null
+          logo_size?: number | null
           logo_url?: string | null
           owner_id?: string
           site_id?: string
