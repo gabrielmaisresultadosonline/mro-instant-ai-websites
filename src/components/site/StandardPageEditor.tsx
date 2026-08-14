@@ -78,7 +78,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
       if (error) throw error;
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '') || '';
-      const publicUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${data.path.replace(/^\//, '')}`;
+      const publicUrl = `${supabaseUrl}/storage/v1/object/authenticated/site-assets-v3/${data.path.replace(/^\//, '')}`;
 
       // If we're uploading a background and it's currently an image, update the value
       setForm(prev => ({ 
