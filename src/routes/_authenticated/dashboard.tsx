@@ -219,7 +219,58 @@ function Dashboard() {
     );
   }
 
+  // Etapa 2 do onboarding: escolher o tipo de site logo após definir o slug
+  if (justCreated) {
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-16">
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-elevate)]">
+          <h1 className="font-display text-2xl font-bold text-center">Escolha como criar seu site</h1>
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            Seu link <span className="font-mono">{justCreated.slug}.mro.bio</span> está reservado. Agora escolha o tipo de site.
+          </p>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => nav({ to: "/sites/$id", params: { id: justCreated.id }, search: { tab: "edit" }, replace: true })}
+              className="rounded-xl border border-border bg-background p-6 text-left transition hover:border-brand hover:bg-accent/30"
+            >
+              <div className="text-2xl">✨</div>
+              <div className="mt-3 font-display text-lg font-bold">Site com I.A</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Você descreve o que quer e a I.A da MRO cria o site completo para você.
+              </p>
+              <span className="mt-4 inline-block text-xs font-semibold text-brand">Criar com I.A →</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => nav({ to: "/sites/$id", params: { id: justCreated.id }, search: { tab: "standard" }, replace: true })}
+              className="rounded-xl border border-border bg-background p-6 text-left transition hover:border-brand hover:bg-accent/30"
+            >
+              <div className="text-2xl">⭐</div>
+              <div className="mt-3 font-display text-lg font-bold">Modelo Padrão</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Página pronta com fundo, logo, botões e pixel do Facebook. Rápido de configurar.
+              </p>
+              <span className="mt-4 inline-block text-xs font-semibold text-brand">Abrir Modelo Padrão →</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setJustCreated(null)}
+            className="mt-6 w-full text-center text-xs text-muted-foreground hover:text-foreground"
+          >
+            Decidir depois — ir para o painel
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   // Se não tem site, mostra o formulário de criação
+
   if (!site) {
     return (
       <main className="mx-auto max-w-xl px-5 py-16">
