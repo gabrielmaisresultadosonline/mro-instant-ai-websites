@@ -49,6 +49,8 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
     logo_url: "",
     fb_pixel_id: "",
     slug: "oferta",
+    image_opacity: 1.0,
+    background_color_under_image: "#000000",
   });
 
   const [isUploading, setIsUploading] = useState<string | null>(null);

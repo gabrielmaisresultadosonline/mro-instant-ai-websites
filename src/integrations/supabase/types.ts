@@ -550,6 +550,7 @@ export type Database = {
       }
       site_pages: {
         Row: {
+          background_color_under_image: string | null
           background_type: string | null
           background_value: string | null
           created_at: string | null
@@ -558,6 +559,7 @@ export type Database = {
           description: string | null
           fb_pixel_id: string | null
           id: string
+          image_opacity: number | null
           is_active: boolean | null
           logo_url: string | null
           owner_id: string
@@ -569,6 +571,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          background_color_under_image?: string | null
           background_type?: string | null
           background_value?: string | null
           created_at?: string | null
@@ -577,6 +580,7 @@ export type Database = {
           description?: string | null
           fb_pixel_id?: string | null
           id?: string
+          image_opacity?: number | null
           is_active?: boolean | null
           logo_url?: string | null
           owner_id: string
@@ -588,6 +592,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          background_color_under_image?: string | null
           background_type?: string | null
           background_value?: string | null
           created_at?: string | null
@@ -596,6 +601,7 @@ export type Database = {
           description?: string | null
           fb_pixel_id?: string | null
           id?: string
+          image_opacity?: number | null
           is_active?: boolean | null
           logo_url?: string | null
           owner_id?: string
