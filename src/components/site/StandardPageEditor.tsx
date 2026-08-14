@@ -115,6 +115,8 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
         logo_url: page.logo_url || "",
         fb_pixel_id: page.fb_pixel_id || "",
         slug: page.slug || "oferta",
+        image_opacity: (page as any).image_opacity ?? 1.0,
+        background_color_under_image: (page as any).background_color_under_image || "#000000",
       });
     }
   }, [page]);
