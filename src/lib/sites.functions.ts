@@ -1342,6 +1342,7 @@ export const saveStandardPage = createServerFn({ method: "POST" })
           text_color: data.text_color,
           image_opacity: data.image_opacity,
           background_color_under_image: data.background_color_under_image,
+          logo_size: data.logo_size,
           slug: data.slug,
         })
         .select()
