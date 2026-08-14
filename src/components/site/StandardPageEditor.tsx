@@ -116,9 +116,9 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
   }, [page]);
 
   const saveMut = useMutation({
-    mutationFn: (data: StandardPageData) => savePageFn({ data: { siteId, ...data } }),
+    mutationFn: (data: StandardPageData) => savePageFn({ data: { siteId, ...data, is_active: true } }),
     onSuccess: () => {
-      toast.success("Página padrão salva com sucesso!");
+      toast.success("Página padrão salva e publicada com sucesso!");
       qc.invalidateQueries({ queryKey: ["standard-page", siteId] });
     },
     onError: (e: Error) => toast.error(e.message),

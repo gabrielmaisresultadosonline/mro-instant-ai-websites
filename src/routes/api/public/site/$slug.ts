@@ -49,8 +49,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
         });
 
-        // 1. First, check if there's an AI-generated site (published)
-        // Manual join to avoid cache relationship issues
+        // 1. First, check for an AI-generated site (published)
         const { data: site, error: siteError } = await publicDb
           .from("sites")
           .select("id, slug, html, pixels, is_published, owner_id")
@@ -93,6 +92,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           renderedHtml = site.html;
         } else {
           // 2. If no AI site, check for a Standard Page
+          // We check for both active and published standard pages
           const { data: stdPage, error: pageError } = await publicDb
             .from("site_pages")
             .select("*")
