@@ -502,6 +502,9 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
             <div className="rounded-lg bg-accent/30 p-3 text-center">
               <p className="text-[10px] text-muted-foreground leading-tight">Link da página pública:</p>
               <code className="mt-1 block text-[11px] font-bold text-brand">mro.bio/{form.slug || "oferta"}</code>
+              <p className="mt-2 text-[10px] text-muted-foreground italic">
+                veja ali no modelopadrao precisa aparecer o link que vai ser o riiginal daquele site ali dquele usuariio ali..
+              </p>
             </div>
           </div>
         </div>
