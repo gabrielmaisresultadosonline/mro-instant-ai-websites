@@ -161,8 +161,12 @@ export const Route = createFileRoute("/api/public/site/$slug")({
 
             // Normalize background image URL
             let bgImageUrl = stdPage.background_value || '';
-            if (stdPage.background_type === 'image' && bgImageUrl && !bgImageUrl.startsWith('http')) {
-              bgImageUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${bgImageUrl}`;
+            if (stdPage.background_type === 'image' && bgImageUrl) {
+              if (!bgImageUrl.startsWith('http')) {
+                // Remove potential duplicate paths
+                const cleanPath = bgImageUrl.replace(/.*site-assets-v3\//, '');
+                bgImageUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
+              }
             }
 
             const imageOverlay = stdPage.background_type === 'image' && bgImageUrl
@@ -171,8 +175,11 @@ export const Route = createFileRoute("/api/public/site/$slug")({
 
             // Normalize logo URL
             let logoUrl = stdPage.logo_url || '';
-            if (logoUrl && !logoUrl.startsWith('http')) {
-              logoUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${logoUrl}`;
+            if (logoUrl) {
+              if (!logoUrl.startsWith('http')) {
+                const cleanPath = logoUrl.replace(/.*site-assets-v3\//, '');
+                logoUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
+              }
             }
 
             renderedHtml = `<!DOCTYPE html>
