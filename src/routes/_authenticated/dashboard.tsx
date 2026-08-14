@@ -17,6 +17,8 @@ function Dashboard() {
   const qc = useQueryClient();
   const { user } = Route.useRouteContext();
   const [formData, setFormData] = useState({ title: "", slug: "" });
+  const [justCreated, setJustCreated] = useState<{ id: string; slug: string } | null>(null);
+
   const [isSlugManual, setIsSlugManual] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ title: "", slug: "" });
