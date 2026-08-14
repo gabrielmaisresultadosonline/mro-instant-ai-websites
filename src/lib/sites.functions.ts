@@ -1284,6 +1284,7 @@ export const saveStandardPage = createServerFn({ method: "POST" })
     text_color: z.string().optional().nullable(),
     image_opacity: z.number().optional().nullable(),
     background_color_under_image: z.string().optional().nullable(),
+    logo_size: z.number().optional().nullable(),
     slug: z.string().min(1),
   }).parse(i))
   .handler(async ({ data, context }) => {
