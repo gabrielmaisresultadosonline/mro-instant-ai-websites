@@ -188,7 +188,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${stdPage.title}</h1>
         <p class="text-lg opacity-90 mb-8 font-medium whitespace-pre-wrap break-words">${stdPage.subtitle || ""}</p>
         
-        <a href="${stdPage.cta_link || '#'}" id="cta-button" 
+        <a href="${stdPage.cta_link?.startsWith('http') ? stdPage.cta_link : `https://${stdPage.cta_link}`}" id="cta-button" 
            class="block w-full bg-green-500 hover:bg-green-600 text-white font-black py-5 rounded-2xl text-xl uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 btn-pulse shadow-xl mb-6">
             ${stdPage.cta_text || 'Quero participar'}
         </a>
