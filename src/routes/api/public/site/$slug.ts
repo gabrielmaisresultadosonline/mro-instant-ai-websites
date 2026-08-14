@@ -162,9 +162,10 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             // Normalize background image URL
             let bgImageUrl = stdPage.background_value || '';
             if (stdPage.background_type === 'image' && bgImageUrl) {
-              if (!bgImageUrl.startsWith('http')) {
-                // Remove potential duplicate paths
-                const cleanPath = bgImageUrl.replace(/.*site-assets-v3\//, '');
+              if (bgImageUrl.includes('site-assets-v3')) {
+                // Ensure it's a full public URL. If it's just a path or partial, rebuild it.
+                const pathMatch = bgImageUrl.match(/site-assets-v3\/(.+)$/);
+                const cleanPath = pathMatch ? pathMatch[1] : bgImageUrl.replace(/.*site-assets-v3\//, '');
                 bgImageUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
               }
             }
@@ -176,8 +177,9 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             // Normalize logo URL
             let logoUrl = stdPage.logo_url || '';
             if (logoUrl) {
-              if (!logoUrl.startsWith('http')) {
-                const cleanPath = logoUrl.replace(/.*site-assets-v3\//, '');
+              if (logoUrl.includes('site-assets-v3')) {
+                const pathMatch = logoUrl.match(/site-assets-v3\/(.+)$/);
+                const cleanPath = pathMatch ? pathMatch[1] : logoUrl.replace(/.*site-assets-v3\//, '');
                 logoUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
               }
             }
