@@ -163,10 +163,9 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             let bgImageUrl = stdPage.background_value || '';
             if (stdPage.background_type === 'image' && bgImageUrl) {
               if (bgImageUrl.includes('site-assets-v3')) {
-                // Remove everything before site-assets-v3 and ensure it's a full public URL
-                const pathMatch = bgImageUrl.match(/site-assets-v3\/(.+)$/);
-                const cleanPath = pathMatch ? pathMatch[1] : bgImageUrl.replace(/.*site-assets-v3\//, '');
-                // Use public/ instead of authenticated/ for public access
+                // Robust extraction of the path after site-assets-v3
+                const parts = bgImageUrl.split('site-assets-v3/');
+                const cleanPath = parts[parts.length - 1].replace(/^\/+/, '');
                 bgImageUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
               }
             }
@@ -179,9 +178,8 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             let logoUrl = stdPage.logo_url || '';
             if (logoUrl) {
               if (logoUrl.includes('site-assets-v3')) {
-                const pathMatch = logoUrl.match(/site-assets-v3\/(.+)$/);
-                const cleanPath = pathMatch ? pathMatch[1] : logoUrl.replace(/.*site-assets-v3\//, '');
-                // Use public/ instead of authenticated/ for public access
+                const parts = logoUrl.split('site-assets-v3/');
+                const cleanPath = parts[parts.length - 1].replace(/^\/+/, '');
                 logoUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
               }
             }
