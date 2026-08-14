@@ -163,10 +163,11 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             let bgImageUrl = stdPage.background_value || '';
             if (stdPage.background_type === 'image' && bgImageUrl) {
               if (bgImageUrl.includes('site-assets-v3')) {
-                // Ensure it's a full public URL. If it's just a path or partial, rebuild it.
+                // Remove everything before site-assets-v3 and ensure it's a full public URL
                 const pathMatch = bgImageUrl.match(/site-assets-v3\/(.+)$/);
                 const cleanPath = pathMatch ? pathMatch[1] : bgImageUrl.replace(/.*site-assets-v3\//, '');
-                bgImageUrl = `${supabaseUrl}/storage/v1/object/authenticated/site-assets-v3/${cleanPath}`;
+                // Use public/ instead of authenticated/ for public access
+                bgImageUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
               }
             }
 
@@ -180,7 +181,8 @@ export const Route = createFileRoute("/api/public/site/$slug")({
               if (logoUrl.includes('site-assets-v3')) {
                 const pathMatch = logoUrl.match(/site-assets-v3\/(.+)$/);
                 const cleanPath = pathMatch ? pathMatch[1] : logoUrl.replace(/.*site-assets-v3\//, '');
-                logoUrl = `${supabaseUrl}/storage/v1/object/authenticated/site-assets-v3/${cleanPath}`;
+                // Use public/ instead of authenticated/ for public access
+                logoUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
               }
             }
 
