@@ -1279,9 +1279,11 @@ export const saveStandardPage = createServerFn({ method: "POST" })
     cta_link: z.string().optional(),
     background_type: z.enum(["color", "image", "gradient"]),
     background_value: z.string().optional(),
-    logo_url: z.string().optional(),
-    fb_pixel_id: z.string().optional(),
-    text_color: z.string().optional(),
+    logo_url: z.string().optional().nullable(),
+    fb_pixel_id: z.string().optional().nullable(),
+    text_color: z.string().optional().nullable(),
+    image_opacity: z.number().optional().nullable(),
+    background_color_under_image: z.string().optional().nullable(),
     slug: z.string().min(1),
   }).parse(i))
   .handler(async ({ data, context }) => {
@@ -1310,6 +1312,8 @@ export const saveStandardPage = createServerFn({ method: "POST" })
           logo_url: data.logo_url,
           fb_pixel_id: data.fb_pixel_id,
           text_color: data.text_color,
+          image_opacity: data.image_opacity,
+          background_color_under_image: data.background_color_under_image,
           slug: data.slug,
           updated_at: new Date().toISOString(),
         })
@@ -1334,6 +1338,8 @@ export const saveStandardPage = createServerFn({ method: "POST" })
           logo_url: data.logo_url,
           fb_pixel_id: data.fb_pixel_id,
           text_color: data.text_color,
+          image_opacity: data.image_opacity,
+          background_color_under_image: data.background_color_under_image,
           slug: data.slug,
         })
         .select()

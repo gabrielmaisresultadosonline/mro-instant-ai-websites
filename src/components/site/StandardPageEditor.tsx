@@ -122,7 +122,13 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
   }, [page]);
 
   const saveMut = useMutation({
-    mutationFn: (data: StandardPageData) => savePageFn({ data: { siteId, ...data, is_active: true } }),
+    mutationFn: (data: StandardPageData) => savePageFn({ data: { 
+      siteId, 
+      ...data, 
+      is_active: true,
+      image_opacity: data.image_opacity,
+      background_color_under_image: data.background_color_under_image
+    } }),
     onSuccess: () => {
       toast.success("Página padrão salva e publicada com sucesso!");
       qc.invalidateQueries({ queryKey: ["standard-page", siteId] });
