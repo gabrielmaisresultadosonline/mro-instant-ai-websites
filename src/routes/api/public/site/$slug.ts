@@ -159,9 +159,17 @@ export const Route = createFileRoute("/api/public/site/$slug")({
               ? `background-color: ${stdPage.background_color_under_image || '#000000'}; position: relative; overflow: hidden;`
               : `background: ${stdPage.background_type === 'gradient' ? stdPage.background_value : stdPage.background_value};`;
 
+            const bgImageUrl = stdPage.background_value?.startsWith('http') 
+              ? stdPage.background_value 
+              : `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${stdPage.background_value}`;
+
             const imageOverlay = stdPage.background_type === 'image' && stdPage.background_value
-              ? `<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-image: url('${stdPage.background_value}'); background-size: cover; background-position: center; opacity: ${stdPage.image_opacity ?? 1}; pointer-events: none;"></div>`
+              ? `<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-image: url('${bgImageUrl}'); background-size: cover; background-position: center; opacity: ${stdPage.image_opacity ?? 1}; pointer-events: none;"></div>`
               : '';
+
+            const logoUrl = stdPage.logo_url?.startsWith('http') 
+              ? stdPage.logo_url 
+              : `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${stdPage.logo_url}`;
 
             renderedHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -183,8 +191,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
     <div class="content-wrap">
         <div class="max-w-md w-full glass rounded-[2.5rem] p-8 text-center shadow-2xl overflow-hidden">
 
-
-        ${stdPage.logo_url ? `<img src="${stdPage.logo_url}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
+        ${stdPage.logo_url ? `<img src="${logoUrl}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
         <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${stdPage.title}</h1>
         <p class="text-lg opacity-90 mb-8 font-medium whitespace-pre-wrap break-words">${stdPage.subtitle || ""}</p>
         
