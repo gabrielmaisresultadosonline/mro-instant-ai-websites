@@ -30,6 +30,7 @@ import { Route as ApiPublicImgSplatRouteImport } from './routes/api/public/img/$
 import { Route as ApiPublicCronSubscriptionsRouteImport } from './routes/api/public/cron/subscriptions'
 import { Route as ApiPublicCronInboxSyncRouteImport } from './routes/api/public/cron/inbox-sync'
 import { Route as ApiPublicCronEmailOutboxRouteImport } from './routes/api/public/cron/email-outbox'
+import { Route as ApiPublicAssetsSplatRouteImport } from './routes/api/public/assets/$'
 
 const RendaextraRoute = RendaextraRouteImport.update({
   id: '/rendaextra',
@@ -138,6 +139,11 @@ const ApiPublicCronEmailOutboxRoute =
     path: '/api/public/cron/email-outbox',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicAssetsSplatRoute = ApiPublicAssetsSplatRouteImport.update({
+  id: '/api/public/assets/$',
+  path: '/api/public/assets/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/local-images': typeof ApiPublicLocalImagesRoute
+  '/api/public/assets/$': typeof ApiPublicAssetsSplatRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/inbox-sync': typeof ApiPublicCronInboxSyncRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByTo {
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/local-images': typeof ApiPublicLocalImagesRoute
+  '/api/public/assets/$': typeof ApiPublicAssetsSplatRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/inbox-sync': typeof ApiPublicCronInboxSyncRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
   '/api/public/local-images': typeof ApiPublicLocalImagesRoute
+  '/api/public/assets/$': typeof ApiPublicAssetsSplatRoute
   '/api/public/cron/email-outbox': typeof ApiPublicCronEmailOutboxRoute
   '/api/public/cron/inbox-sync': typeof ApiPublicCronInboxSyncRoute
   '/api/public/cron/subscriptions': typeof ApiPublicCronSubscriptionsRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/sites/novo'
     | '/api/public/cert-check'
     | '/api/public/local-images'
+    | '/api/public/assets/$'
     | '/api/public/cron/email-outbox'
     | '/api/public/cron/inbox-sync'
     | '/api/public/cron/subscriptions'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/sites/novo'
     | '/api/public/cert-check'
     | '/api/public/local-images'
+    | '/api/public/assets/$'
     | '/api/public/cron/email-outbox'
     | '/api/public/cron/inbox-sync'
     | '/api/public/cron/subscriptions'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/_authenticated/sites/novo'
     | '/api/public/cert-check'
     | '/api/public/local-images'
+    | '/api/public/assets/$'
     | '/api/public/cron/email-outbox'
     | '/api/public/cron/inbox-sync'
     | '/api/public/cron/subscriptions'
@@ -289,6 +301,7 @@ export interface RootRouteChildren {
   RedefinirSenhaTokenRoute: typeof RedefinirSenhaTokenRoute
   ApiPublicCertCheckRoute: typeof ApiPublicCertCheckRoute
   ApiPublicLocalImagesRoute: typeof ApiPublicLocalImagesRoute
+  ApiPublicAssetsSplatRoute: typeof ApiPublicAssetsSplatRoute
   ApiPublicCronEmailOutboxRoute: typeof ApiPublicCronEmailOutboxRoute
   ApiPublicCronInboxSyncRoute: typeof ApiPublicCronInboxSyncRoute
   ApiPublicCronSubscriptionsRoute: typeof ApiPublicCronSubscriptionsRoute
@@ -447,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronEmailOutboxRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/assets/$': {
+      id: '/api/public/assets/$'
+      path: '/api/public/assets/$'
+      fullPath: '/api/public/assets/$'
+      preLoaderRoute: typeof ApiPublicAssetsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -477,6 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   RedefinirSenhaTokenRoute: RedefinirSenhaTokenRoute,
   ApiPublicCertCheckRoute: ApiPublicCertCheckRoute,
   ApiPublicLocalImagesRoute: ApiPublicLocalImagesRoute,
+  ApiPublicAssetsSplatRoute: ApiPublicAssetsSplatRoute,
   ApiPublicCronEmailOutboxRoute: ApiPublicCronEmailOutboxRoute,
   ApiPublicCronInboxSyncRoute: ApiPublicCronInboxSyncRoute,
   ApiPublicCronSubscriptionsRoute: ApiPublicCronSubscriptionsRoute,
