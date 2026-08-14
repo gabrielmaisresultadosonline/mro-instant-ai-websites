@@ -430,14 +430,6 @@ function Dashboard() {
           >
             ✏️ Site I.A
           </Link>
-          <Link 
-            to="/sites/$id" 
-            params={{ id: site.id }} 
-            search={{ tab: "standard" }}
-            className="rounded-md border border-amber-500/50 bg-amber-500/5 px-4 py-2 text-sm font-semibold text-amber-600 hover:bg-amber-500/10"
-          >
-            ⭐ Modelo Padrão
-          </Link>
           <button 
             onClick={() => nav({ to: "/sites/$id", params: { id: site.id }, search: { tab: "inbox" } })}
             className="rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent/40"
