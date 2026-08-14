@@ -515,13 +515,24 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
           <div className="sticky top-6 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pré-visualização Mobile</h3>
             <div 
-              className="mx-auto aspect-[9/19] w-full max-w-[300px] overflow-hidden rounded-[3rem] border-[8px] border-zinc-800 bg-black shadow-2xl ring-4 ring-zinc-700/50"
+              className="mx-auto aspect-[9/19] w-full max-w-[300px] overflow-hidden rounded-[3rem] border-[8px] border-zinc-800 bg-black shadow-2xl ring-4 ring-zinc-700/50 relative"
               style={{ 
-                background: form.background_type === "image" ? `url(${form.background_value}) center/cover` : form.background_value,
-                backgroundColor: form.background_type === "color" ? form.background_value : "black"
+                backgroundColor: form.background_type === "image" ? (form.background_color_under_image || "#000000") : (form.background_type === "color" ? form.background_value : "black"),
+                background: form.background_type === "gradient" ? form.background_value : undefined
               }}
             >
-              <div className="flex h-full flex-col items-center justify-center p-6 text-center" style={{ color: form.text_color || "#FFFFFF" }}>
+              {form.background_type === "image" && form.background_value && (
+                <div 
+                  className="absolute inset-0 z-0"
+                  style={{ 
+                    backgroundImage: `url(${form.background_value})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    opacity: form.image_opacity ?? 1
+                  }}
+                />
+              )}
+              <div className="flex h-full flex-col items-center justify-center p-6 text-center relative z-10" style={{ color: form.text_color || "#FFFFFF" }}>
                 {form.logo_url && <img src={form.logo_url} className="mb-8 h-12 w-auto object-contain" alt="Logo" />}
                 <h1 className="font-display text-2xl font-bold drop-shadow-lg leading-tight">{form.title || "Seu Título Aqui"}</h1>
                 <p className="mt-2 text-xs font-medium opacity-90 drop-shadow line-clamp-3">{form.subtitle || "Seu subtítulo explicativo"}</p>
