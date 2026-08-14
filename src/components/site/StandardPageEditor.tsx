@@ -21,6 +21,8 @@ type StandardPageData = {
   logo_url: string;
   fb_pixel_id: string;
   slug: string;
+  image_opacity?: number;
+  background_color_under_image?: string;
 };
 
 export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: { siteId: string; userId: string; activeTab?: string }) {
@@ -47,6 +49,8 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
     logo_url: "",
     fb_pixel_id: "",
     slug: "oferta",
+    image_opacity: 1.0,
+    background_color_under_image: "#000000",
   });
 
   const [isUploading, setIsUploading] = useState<string | null>(null);
@@ -111,6 +115,8 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
         logo_url: page.logo_url || "",
         fb_pixel_id: page.fb_pixel_id || "",
         slug: page.slug || "oferta",
+        image_opacity: (page as any).image_opacity ?? 1.0,
+        background_color_under_image: (page as any).background_color_under_image || "#000000",
       });
     }
   }, [page]);
@@ -377,22 +383,55 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                       )}
 
                       {form.background_type === "image" && (
-                        <div className="flex w-full gap-2">
-                          <input 
-                            value={form.background_value} 
-                            onChange={e => setForm({...form, background_value: e.target.value})}
-                            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
-                            placeholder="Link da imagem..."
-                          />
-                          <input type="file" ref={bgInputRef} onChange={e => handleFileUpload(e, 'background_value')} accept="image/*" className="hidden" />
-                          <button 
-                            onClick={() => bgInputRef.current?.click()}
-                            disabled={!!isUploading}
-                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
-                            title="Fazer upload de imagem"
-                          >
-                            {isUploading === 'background_value' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                          </button>
+                        <div className="flex w-full flex-col gap-3">
+                          <div className="flex gap-2">
+                            <input 
+                              value={form.background_value} 
+                              onChange={e => setForm({...form, background_value: e.target.value})}
+                              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                              placeholder="Link da imagem..."
+                            />
+                            <input type="file" ref={bgInputRef} onChange={e => handleFileUpload(e, 'background_value')} accept="image/*" className="hidden" />
+                            <button 
+                              onClick={() => bgInputRef.current?.click()}
+                              disabled={!!isUploading}
+                              className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+                              title="Fazer upload de imagem"
+                            >
+                              {isUploading === 'background_value' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            </button>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="mb-1 block text-[10px] font-bold uppercase text-muted-foreground">Cor de Fundo</span>
+                              <div className="flex gap-2">
+                                <input 
+                                  type="color"
+                                  value={form.background_color_under_image || "#000000"} 
+                                  onChange={e => setForm({...form, background_color_under_image: e.target.value})}
+                                  className="h-8 w-8 cursor-pointer overflow-hidden rounded-lg border border-border bg-background p-0"
+                                />
+                                <input 
+                                  value={form.background_color_under_image || "#000000"} 
+                                  onChange={e => setForm({...form, background_color_under_image: e.target.value})}
+                                  className="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-[10px] transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <span className="mb-1 block text-[10px] font-bold uppercase text-muted-foreground">Opacidade: {Math.round((form.image_opacity ?? 1) * 100)}%</span>
+                              <input 
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.01"
+                                value={form.image_opacity ?? 1}
+                                onChange={e => setForm({...form, image_opacity: parseFloat(e.target.value)})}
+                                className="h-8 w-full cursor-pointer accent-brand"
+                              />
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -476,13 +515,24 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
           <div className="sticky top-6 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pré-visualização Mobile</h3>
             <div 
-              className="mx-auto aspect-[9/19] w-full max-w-[300px] overflow-hidden rounded-[3rem] border-[8px] border-zinc-800 bg-black shadow-2xl ring-4 ring-zinc-700/50"
+              className="mx-auto aspect-[9/19] w-full max-w-[300px] overflow-hidden rounded-[3rem] border-[8px] border-zinc-800 bg-black shadow-2xl ring-4 ring-zinc-700/50 relative"
               style={{ 
-                background: form.background_type === "image" ? `url(${form.background_value}) center/cover` : form.background_value,
-                backgroundColor: form.background_type === "color" ? form.background_value : "black"
+                backgroundColor: form.background_type === "image" ? (form.background_color_under_image || "#000000") : (form.background_type === "color" ? form.background_value : "black"),
+                background: form.background_type === "gradient" ? form.background_value : undefined
               }}
             >
-              <div className="flex h-full flex-col items-center justify-center p-6 text-center" style={{ color: form.text_color || "#FFFFFF" }}>
+              {form.background_type === "image" && form.background_value && (
+                <div 
+                  className="absolute inset-0 z-0"
+                  style={{ 
+                    backgroundImage: `url(${form.background_value})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    opacity: form.image_opacity ?? 1
+                  }}
+                />
+              )}
+              <div className="flex h-full flex-col items-center justify-center p-6 text-center relative z-10" style={{ color: form.text_color || "#FFFFFF" }}>
                 {form.logo_url && <img src={form.logo_url} className="mb-8 h-12 w-auto object-contain" alt="Logo" />}
                 <h1 className="font-display text-2xl font-bold drop-shadow-lg leading-tight">{form.title || "Seu Título Aqui"}</h1>
                 <p className="mt-2 text-xs font-medium opacity-90 drop-shadow line-clamp-3">{form.subtitle || "Seu subtítulo explicativo"}</p>

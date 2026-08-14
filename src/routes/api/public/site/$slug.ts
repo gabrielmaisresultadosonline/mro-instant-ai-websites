@@ -155,11 +155,13 @@ export const Route = createFileRoute("/api/public/site/$slug")({
               );
             }
 
-            const bg = stdPage.background_type === 'image' 
-              ? `url('${stdPage.background_value}') center/cover fixed no-repeat` 
-              : stdPage.background_type === 'color' 
-                ? stdPage.background_value 
-                : stdPage.background_value;
+            const bgStyle = stdPage.background_type === 'image' 
+              ? `background-color: ${stdPage.background_color_under_image || '#000000'}; position: relative; overflow: hidden;`
+              : `background: ${stdPage.background_type === 'gradient' ? stdPage.background_value : stdPage.background_value};`;
+
+            const imageOverlay = stdPage.background_type === 'image' && stdPage.background_value
+              ? `<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-image: url('${stdPage.background_value}'); background-size: cover; background-position: center; opacity: ${stdPage.image_opacity ?? 1}; pointer-events: none;"></div>`
+              : '';
 
             renderedHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -169,14 +171,18 @@ export const Route = createFileRoute("/api/public/site/$slug")({
     <title>${stdPage.title}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: ${bg}; min-height: 100vh; color: ${stdPage.text_color || '#FFFFFF'}; font-family: system-ui, -apple-system, sans-serif; margin: 0; }
+        body { ${bgStyle} min-height: 100vh; color: ${stdPage.text_color || '#FFFFFF'}; font-family: system-ui, -apple-system, sans-serif; margin: 0; }
         .glass { background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         @keyframes pulse-gold { 0% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(255, 214, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0); } }
         .btn-pulse { animation: pulse-gold 2s infinite; }
+        .content-wrap { position: relative; z-index: 10; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
     </style>
 </head>
-<body class="flex items-center justify-center p-4">
-    <div class="max-w-md w-full glass rounded-[2.5rem] p-8 text-center shadow-2xl overflow-hidden">
+<body>
+    ${imageOverlay}
+    <div class="content-wrap">
+        <div class="max-w-md w-full glass rounded-[2.5rem] p-8 text-center shadow-2xl overflow-hidden">
+
 
         ${stdPage.logo_url ? `<img src="${stdPage.logo_url}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
         <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${stdPage.title}</h1>
@@ -213,6 +219,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         // No e.preventDefault() here means it follows the href naturally.
     });
     </script>
+    </div>
 </body>
 </html>`;
           }
