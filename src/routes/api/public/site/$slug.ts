@@ -159,8 +159,12 @@ export const Route = createFileRoute("/api/public/site/$slug")({
               ? `background-color: ${stdPage.background_color_under_image || '#000000'}; position: relative; overflow: hidden;`
               : `background: ${stdPage.background_type === 'gradient' ? stdPage.background_value : stdPage.background_value};`;
 
+            const bgImageUrl = stdPage.background_value?.startsWith('http') 
+              ? stdPage.background_value 
+              : `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${stdPage.background_value}`;
+
             const imageOverlay = stdPage.background_type === 'image' && stdPage.background_value
-              ? `<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-image: url('${stdPage.background_value}'); background-size: cover; background-position: center; opacity: ${stdPage.image_opacity ?? 1}; pointer-events: none;"></div>`
+              ? `<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-image: url('${bgImageUrl}'); background-size: cover; background-position: center; opacity: ${stdPage.image_opacity ?? 1}; pointer-events: none;"></div>`
               : '';
 
             renderedHtml = `<!DOCTYPE html>
