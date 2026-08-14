@@ -383,22 +383,55 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                       )}
 
                       {form.background_type === "image" && (
-                        <div className="flex w-full gap-2">
-                          <input 
-                            value={form.background_value} 
-                            onChange={e => setForm({...form, background_value: e.target.value})}
-                            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
-                            placeholder="Link da imagem..."
-                          />
-                          <input type="file" ref={bgInputRef} onChange={e => handleFileUpload(e, 'background_value')} accept="image/*" className="hidden" />
-                          <button 
-                            onClick={() => bgInputRef.current?.click()}
-                            disabled={!!isUploading}
-                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
-                            title="Fazer upload de imagem"
-                          >
-                            {isUploading === 'background_value' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                          </button>
+                        <div className="flex w-full flex-col gap-3">
+                          <div className="flex gap-2">
+                            <input 
+                              value={form.background_value} 
+                              onChange={e => setForm({...form, background_value: e.target.value})}
+                              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                              placeholder="Link da imagem..."
+                            />
+                            <input type="file" ref={bgInputRef} onChange={e => handleFileUpload(e, 'background_value')} accept="image/*" className="hidden" />
+                            <button 
+                              onClick={() => bgInputRef.current?.click()}
+                              disabled={!!isUploading}
+                              className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+                              title="Fazer upload de imagem"
+                            >
+                              {isUploading === 'background_value' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            </button>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="mb-1 block text-[10px] font-bold uppercase text-muted-foreground">Cor de Fundo</span>
+                              <div className="flex gap-2">
+                                <input 
+                                  type="color"
+                                  value={form.background_color_under_image || "#000000"} 
+                                  onChange={e => setForm({...form, background_color_under_image: e.target.value})}
+                                  className="h-8 w-8 cursor-pointer overflow-hidden rounded-lg border border-border bg-background p-0"
+                                />
+                                <input 
+                                  value={form.background_color_under_image || "#000000"} 
+                                  onChange={e => setForm({...form, background_color_under_image: e.target.value})}
+                                  className="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-[10px] transition-all focus:border-brand focus:ring-1 focus:ring-brand/20" 
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <span className="mb-1 block text-[10px] font-bold uppercase text-muted-foreground">Opacidade: {Math.round((form.image_opacity ?? 1) * 100)}%</span>
+                              <input 
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.01"
+                                value={form.image_opacity ?? 1}
+                                onChange={e => setForm({...form, image_opacity: parseFloat(e.target.value)})}
+                                className="h-8 w-full cursor-pointer accent-brand"
+                              />
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
