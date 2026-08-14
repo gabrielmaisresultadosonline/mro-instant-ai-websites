@@ -188,7 +188,14 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         <div class="max-w-md w-full glass rounded-[2.5rem] p-8 text-center shadow-2xl overflow-hidden">
 
 
-        ${stdPage.logo_url ? `<img src="${stdPage.logo_url}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
+        const logoUrl = stdPage.logo_url?.startsWith('http') 
+          ? stdPage.logo_url 
+          : `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${stdPage.logo_url}`;
+
+        renderedHtml = `<!DOCTYPE html>
+<html lang="pt-BR">
+...
+        ${stdPage.logo_url ? `<img src="${logoUrl}" class="h-20 mx-auto mb-8 object-contain" alt="Logo">` : ''}
         <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${stdPage.title}</h1>
         <p class="text-lg opacity-90 mb-8 font-medium whitespace-pre-wrap break-words">${stdPage.subtitle || ""}</p>
         
