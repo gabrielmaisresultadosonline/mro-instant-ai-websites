@@ -482,7 +482,7 @@ function Dashboard() {
 
       {!hasHtml && (
         <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-          Seu site ainda não foi gerado. Clique em <strong>Editar site</strong> para criar a primeira versão.
+          Seu site ainda não foi gerado. Clique em <strong>Site I.A</strong> para criar a primeira versão.
         </div>
       )}
 
