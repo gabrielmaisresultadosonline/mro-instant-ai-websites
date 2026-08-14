@@ -219,6 +219,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
         // No e.preventDefault() here means it follows the href naturally.
     });
     </script>
+    </div>
 </body>
 </html>`;
           }
