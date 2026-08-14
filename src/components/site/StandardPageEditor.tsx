@@ -77,9 +77,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
 
       if (error) throw error;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('site-assets-v3')
-        .getPublicUrl(data.path);
+      const publicUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${data.path}`;
 
       // If we're uploading a background and it's currently an image, update the value
       setForm(prev => ({ 
