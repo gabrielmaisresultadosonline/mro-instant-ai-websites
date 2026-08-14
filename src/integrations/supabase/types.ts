@@ -564,6 +564,7 @@ export type Database = {
           id: string
           image_opacity: number | null
           is_active: boolean | null
+          logo_size: number | null
           logo_url: string | null
           owner_id: string
           site_id: string
@@ -585,6 +586,7 @@ export type Database = {
           id?: string
           image_opacity?: number | null
           is_active?: boolean | null
+          logo_size?: number | null
           logo_url?: string | null
           owner_id: string
           site_id: string
@@ -606,6 +608,7 @@ export type Database = {
           id?: string
           image_opacity?: number | null
           is_active?: boolean | null
+          logo_size?: number | null
           logo_url?: string | null
           owner_id?: string
           site_id?: string
