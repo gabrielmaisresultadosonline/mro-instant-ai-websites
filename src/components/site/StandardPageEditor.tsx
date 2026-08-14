@@ -25,6 +25,12 @@ type StandardPageData = {
   background_color_under_image?: string;
 };
 
+function toPublicAssetUrl(value: string): string {
+  if (!value.includes("site-assets-v3/")) return value;
+  const assetPath = value.split("site-assets-v3/").pop()?.replace(/^\/+/, "");
+  return assetPath ? `/api/public/assets/${assetPath}` : value;
+}
+
 export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: { siteId: string; userId: string; activeTab?: string }) {
   const qc = useQueryClient();
   const getPageFn = useServerFn(getStandardPage);
@@ -77,9 +83,7 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
 
       if (error) throw error;
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '') || '';
-      // Ensure we use the full URL with public/ path
-      const publicUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${data.path}`;
+      const publicUrl = `/api/public/assets/${data.path}`;
 
       // If we're uploading a background and it's currently an image, update the value
       setForm(prev => ({ 
@@ -108,11 +112,11 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
         cta_text: page.cta_text || "Quero entrar no grupo",
         cta_link: page.cta_link || "",
         background_type: (page.background_type as any) || "gradient",
-        background_value: page.background_value || "",
+        background_value: toPublicAssetUrl(page.background_value || ""),
         background_gradient_colors: (page as any).background_gradient_colors || ["#1e1e2f", "#000000"],
         background_gradient_direction: (page as any).background_gradient_direction || "135deg",
         text_color: (page as any).text_color || "#FFFFFF",
-        logo_url: page.logo_url || "",
+        logo_url: toPublicAssetUrl(page.logo_url || ""),
         fb_pixel_id: page.fb_pixel_id || "",
         slug: page.slug || "oferta",
         image_opacity: (page as any).image_opacity ?? 1.0,
@@ -536,15 +540,6 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                     backgroundPosition: 'center',
                     opacity: form.image_opacity ?? 1
                   }}
-                  onError={(e) => {
-                    const target = e.target as HTMLDivElement;
-                    const bg = target.style.backgroundImage;
-                    if (bg && bg.includes('site-assets-v3') && !bg.includes('http')) {
-                      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, '');
-                      const cleanPath = bg.split('site-assets-v3/').pop()?.replace(/['")]/g, '');
-                      target.style.backgroundImage = `url(${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath})`;
-                    }
-                  }}
                 />
               )}
               <div className="flex h-full flex-col items-center justify-center p-6 text-center relative z-10" style={{ color: form.text_color || "#FFFFFF" }}>
@@ -553,14 +548,6 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                     src={form.logo_url} 
                     className="mb-8 h-12 w-auto object-contain" 
                     alt="Logo" 
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      if (target.src.includes('site-assets-v3') && !target.src.startsWith('http')) {
-                        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, '');
-                        const cleanPath = target.src.split('site-assets-v3/').pop();
-                        target.src = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
-                      }
-                    }}
                   />
                 )}
                 <h1 className="font-display text-2xl font-bold drop-shadow-lg leading-tight">{form.title || "Seu Título Aqui"}</h1>

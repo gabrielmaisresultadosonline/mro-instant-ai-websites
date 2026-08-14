@@ -163,10 +163,9 @@ export const Route = createFileRoute("/api/public/site/$slug")({
             let bgImageUrl = stdPage.background_value || '';
             if (stdPage.background_type === 'image' && bgImageUrl) {
               if (bgImageUrl.includes('site-assets-v3')) {
-                // Robust extraction of the path after site-assets-v3
                 const parts = bgImageUrl.split('site-assets-v3/');
                 const cleanPath = parts[parts.length - 1].replace(/^\/+/, '');
-                bgImageUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
+                bgImageUrl = `/api/public/assets/${cleanPath}`;
               }
             }
 
@@ -180,7 +179,7 @@ export const Route = createFileRoute("/api/public/site/$slug")({
               if (logoUrl.includes('site-assets-v3')) {
                 const parts = logoUrl.split('site-assets-v3/');
                 const cleanPath = parts[parts.length - 1].replace(/^\/+/, '');
-                logoUrl = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
+                logoUrl = `/api/public/assets/${cleanPath}`;
               }
             }
 
