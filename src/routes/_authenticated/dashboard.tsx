@@ -92,11 +92,12 @@ function Dashboard() {
       return created;
     },
     onSuccess: (created) => {
-      toast.success("Site criado com sucesso!");
+      toast.success("Site criado com sucesso! Agora escolha o tipo de site.");
       qc.invalidateQueries({ queryKey: ["my-sites", user.id] });
-      nav({ to: "/sites/$id", params: { id: created.id }, replace: true });
+      setJustCreated({ id: created.id, slug: created.slug });
     },
     onError: (e: Error) => toast.error(e.message),
+
   });
 
   const updateSiteMut = useMutation({
