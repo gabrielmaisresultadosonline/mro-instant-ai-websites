@@ -535,10 +535,33 @@ export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: {
                     backgroundPosition: 'center',
                     opacity: form.image_opacity ?? 1
                   }}
+                  onError={(e) => {
+                    const target = e.target as HTMLDivElement;
+                    const bg = target.style.backgroundImage;
+                    if (bg && bg.includes('site-assets-v3') && !bg.includes('http')) {
+                      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, '');
+                      const cleanPath = bg.split('site-assets-v3/').pop()?.replace(/['")]/g, '');
+                      target.style.backgroundImage = `url(${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath})`;
+                    }
+                  }}
                 />
               )}
               <div className="flex h-full flex-col items-center justify-center p-6 text-center relative z-10" style={{ color: form.text_color || "#FFFFFF" }}>
-                {form.logo_url && <img src={form.logo_url} className="mb-8 h-12 w-auto object-contain" alt="Logo" />}
+                {form.logo_url && (
+                  <img 
+                    src={form.logo_url} 
+                    className="mb-8 h-12 w-auto object-contain" 
+                    alt="Logo" 
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target.src.includes('site-assets-v3') && !target.src.startsWith('http')) {
+                        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, '');
+                        const cleanPath = target.src.split('site-assets-v3/').pop();
+                        target.src = `${supabaseUrl}/storage/v1/object/public/site-assets-v3/${cleanPath}`;
+                      }
+                    }}
+                  />
+                )}
                 <h1 className="font-display text-2xl font-bold drop-shadow-lg leading-tight">{form.title || "Seu Título Aqui"}</h1>
                 <p className="mt-2 text-xs font-medium opacity-90 drop-shadow line-clamp-3">{form.subtitle || "Seu subtítulo explicativo"}</p>
                 
