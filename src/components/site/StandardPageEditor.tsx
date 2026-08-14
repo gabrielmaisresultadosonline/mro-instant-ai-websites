@@ -21,6 +21,8 @@ type StandardPageData = {
   logo_url: string;
   fb_pixel_id: string;
   slug: string;
+  image_opacity?: number;
+  background_color_under_image?: string;
 };
 
 export function StandardPageEditor({ siteId, userId, activeTab = "standard" }: { siteId: string; userId: string; activeTab?: string }) {
