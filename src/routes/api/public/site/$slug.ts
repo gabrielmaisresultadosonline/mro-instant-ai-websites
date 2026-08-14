@@ -92,13 +92,33 @@ export const Route = createFileRoute("/api/public/site/$slug")({
           renderedHtml = site.html;
         } else {
           // 2. If no AI site, check for a Standard Page
-          // We check for both active and published standard pages
-          const { data: stdPage, error: pageError } = await publicDb
+          // Priority 1: Check if the slug itself is a standard page
+          let { data: stdPage, error: pageError } = await publicDb
             .from("site_pages")
             .select("*")
             .eq("slug", slug)
             .eq("is_active", true)
             .maybeSingle();
+
+          // Priority 2: If not found by slug, check if the slug is the SITE slug and get its first active page
+          if (!stdPage) {
+            const { data: siteRecord } = await publicDb
+              .from("sites")
+              .select("id")
+              .eq("slug", slug)
+              .maybeSingle();
+            
+            if (siteRecord) {
+              const { data: firstPage } = await publicDb
+                .from("site_pages")
+                .select("*")
+                .eq("site_id", siteRecord.id)
+                .eq("is_active", true)
+                .limit(1)
+                .maybeSingle();
+              stdPage = firstPage;
+            }
+          }
 
           if (stdPage) {
             siteId = stdPage.site_id;
