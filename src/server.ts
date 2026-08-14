@@ -43,8 +43,19 @@ export default {
     const host = (request.headers.get("host") || "").toLowerCase();
 
     // Handle subdomains (slug.mro.bio) — reescreve internamente para /api/public/site/<slug>
-    if (host.endsWith(".mro.bio") && !host.startsWith("www.") && host !== "mro.bio") {
+    // IMPORTANTE: rotas internas (assets, api, estáticos) NÃO podem ser reescritas,
+    // senão imagens (logo/fundo) do site publicado quebram no subdomínio.
+    const isInternalPath =
+      url.pathname.startsWith("/api/") ||
+      url.pathname.startsWith("/_serverFn") ||
+      url.pathname.startsWith("/_build/") ||
+      url.pathname.startsWith("/assets/") ||
+      url.pathname.startsWith("/__l5e/") ||
+      url.pathname === "/favicon.ico";
+
+    if (!isInternalPath && host.endsWith(".mro.bio") && !host.startsWith("www.") && host !== "mro.bio") {
       const slug = host.split(".")[0];
+
       if (slug) {
         url.pathname = `/api/public/site/${slug}`;
         const newRequest = new Request(url.toString(), request);
