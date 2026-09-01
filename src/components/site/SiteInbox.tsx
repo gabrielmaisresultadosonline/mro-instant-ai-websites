@@ -12,8 +12,13 @@ export interface SiteInboxProps {
   onOpen: (id: string) => void;
 }
 
-/** Remetentes considerados "Meta" (Facebook/Instagram) para o modo de espera. */
-const META_SENDER = /(facebook|facebookmail|instagram|meta)\./i;
+/** Remetentes reconhecidos em cada modo de espera de código. */
+const PROVIDER_SENDER: Record<"meta" | "lovable", RegExp> = {
+  meta: /(facebook|facebookmail|instagram|meta)\./i,
+  lovable: /lovable/i,
+};
+
+type Provider = keyof typeof PROVIDER_SENDER;
 
 /**
  * Caixa de entrada somente leitura do site.
@@ -24,18 +29,19 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
   const [openId, setOpenId] = useState<string | null>(null);
   const open = messages.find((m) => m.id === openId) ?? null;
 
-  // ----- Modo "aguardando código do Facebook" -------------------------------
-  const [waiting, setWaiting] = useState(false);
+  // ----- Modo "aguardando código" (Facebook/Meta ou Lovable) ----------------
+  const [waiting, setWaiting] = useState<Provider | null>(null);
   const [checking, setChecking] = useState(false);
   const startedAtRef = useRef<number>(0);
 
-  /** Código Meta que chegou DEPOIS que o cliente clicou em "aguardar". */
-  const metaCode = useMemo(() => {
+  /** Código do provedor que chegou DEPOIS que o cliente clicou em "aguardar". */
+  const waitingCode = useMemo(() => {
     if (!waiting) return null;
+    const sender = PROVIDER_SENDER[waiting];
     const found = messages.find(
       (m) =>
         m.verification_code &&
-        META_SENDER.test(m.from_address || "") &&
+        sender.test(`${m.from_address || ""} ${m.from_name || ""} ${m.subject || ""}`) &&
         new Date(m.received_at).getTime() >= startedAtRef.current - 120_000,
     );
     return found ?? null;
@@ -43,13 +49,13 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
 
   // Enquanto aguarda, consulta o servidor a cada 6s (máx. 10 min).
   useEffect(() => {
-    if (!waiting || metaCode) return;
+    if (!waiting || waitingCode) return;
     let cancelled = false;
 
     const tick = async () => {
       if (cancelled) return;
       if (Date.now() - startedAtRef.current > 10 * 60_000) {
-        setWaiting(false);
+        setWaiting(null);
         toast.info("Parei de aguardar. Clique de novo se o código ainda não chegou.");
         return;
       }
@@ -69,11 +75,11 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
       cancelled = true;
       clearInterval(timer);
     };
-  }, [waiting, metaCode, onRefresh]);
+  }, [waiting, waitingCode, onRefresh]);
 
   useEffect(() => {
-    if (metaCode) toast.success(`Código recebido: ${metaCode.verification_code}`);
-  }, [metaCode]);
+    if (waitingCode) toast.success(`Código recebido: ${waitingCode.verification_code}`);
+  }, [waitingCode]);
 
 
 
