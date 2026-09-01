@@ -595,3 +595,119 @@ export const adminUpdateUserQuota = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+// ============================================================
+// Caixas de e-mail do painel (criar endereço e aguardar código)
+// ============================================================
+
+/** Normaliza a parte local do endereço: minúsculo, sem espaços/acentos e sem @. */
+function normalizeLocalPart(raw: string): string {
+  const value = raw
+    .trim()
+    .toLowerCase()
+    .split("@")[0]!
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9._-]/g, "");
+  if (value.length < 2 || value.length > 40) {
+    throw new Error("Use de 2 a 40 caracteres (letras, números, ponto, hífen).");
+  }
+  return value;
+}
+
+const RESERVED_LOCAL_PARTS = new Set([
+  "postmaster", "abuse", "admin", "administrador", "administracao", "root", "webmaster",
+  "hostmaster", "suporte", "support", "contato", "contact", "no-reply", "noreply",
+  "inbox", "mail", "email", "billing", "financeiro", "security", "seguranca", "www", "api", "app",
+]);
+
+function inboxDomain() {
+  return (process.env.INBOX_DOMAIN || "mro.bio").toLowerCase();
+}
+
+export const adminListInboxes = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string }) => z.object({ token: z.string() }).parse(i))
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("admin_inboxes")
+      .select("id, local_part, label, created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return {
+      domain: inboxDomain(),
+      inboxes: (rows ?? []).map((r) => ({ ...r, address: `${r.local_part}@${inboxDomain()}` })),
+    };
+  });
+
+export const adminCreateInbox = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; localPart: string; label?: string }) =>
+    z.object({ token: z.string(), localPart: z.string().min(1), label: z.string().max(120).optional() }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const localPart = normalizeLocalPart(data.localPart);
+    if (RESERVED_LOCAL_PARTS.has(localPart)) throw new Error("Este endereço é reservado pelo sistema.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Evita conflito com o endereço automático de um site já existente.
+    const { data: site } = await supabaseAdmin.from("sites").select("id").eq("slug", localPart).maybeSingle();
+    if (site) throw new Error("Já existe um site usando este endereço.");
+
+    const { data: created, error } = await supabaseAdmin
+      .from("admin_inboxes")
+      .insert({ local_part: localPart, label: data.label?.trim() || null })
+      .select("id, local_part, label, created_at")
+      .single();
+    if (error) {
+      if (error.code === "23505") throw new Error("Esta caixa já existe.");
+      throw new Error(error.message);
+    }
+    return { inbox: { ...created, address: `${created.local_part}@${inboxDomain()}` } };
+  });
+
+export const adminDeleteInbox = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; inboxId: string }) =>
+    z.object({ token: z.string(), inboxId: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("admin_inboxes").delete().eq("id", data.inboxId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Lista as mensagens de uma caixa. Quando `sync` é true, faz uma leitura IMAP
+ * imediata antes de responder (usado pelo botão "Aguardar código").
+ */
+export const adminListInboxMessages = createServerFn({ method: "POST" })
+  .inputValidator((i: { token: string; inboxId: string; sync?: boolean }) =>
+    z.object({ token: z.string(), inboxId: z.string().uuid(), sync: z.boolean().optional() }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    if (!(await verifyToken(data.token))) throw new Error("Não autorizado");
+
+    if (data.sync) {
+      try {
+        const { runInboxSync } = await import("@/lib/inbox-sync.server");
+        await runInboxSync();
+      } catch (err) {
+        // Falha pontual de IMAP não deve impedir a leitura do que já está gravado.
+        console.error("[ADMIN_INBOX] sync falhou:", err instanceof Error ? err.message : err);
+      }
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("admin_inbox_messages")
+      .select("id, to_address, from_address, from_name, subject, body_text, verification_code, received_at")
+      .eq("inbox_id", data.inboxId)
+      .order("received_at", { ascending: false })
+      .limit(30);
+    if (error) throw new Error(error.message);
+    return { messages: rows ?? [] };
+  });
