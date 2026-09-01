@@ -154,7 +154,19 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           .limit(candidates.length);
 
         const site = matchedSites?.[0];
-        if (!site) {
+
+        // Caixas criadas pelo painel /administracao (não pertencem a nenhum site).
+        const { data: matchedInboxes } = site
+          ? { data: null }
+          : await supabaseAdmin
+              .from("admin_inboxes")
+              .select("id, local_part")
+              .in("local_part", candidates)
+              .limit(candidates.length);
+
+        const adminInbox = matchedInboxes?.[0] ?? null;
+
+        if (!site && !adminInbox) {
           skipped++;
           continue;
         }
@@ -166,10 +178,7 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           (parsed.from as { value?: { address?: string }[] } | undefined)?.value?.[0]?.address ?? "desconhecido";
         const fromName = (parsed.from as { value?: { name?: string }[] } | undefined)?.value?.[0]?.name || null;
 
-        const { error: insertError } = await supabaseAdmin.from("site_inbox").insert({
-          site_id: site.id,
-          owner_id: site.owner_id,
-          to_address: `${site.slug}@${domain}`,
+        const common = {
           from_address: fromAddress,
           from_name: fromName,
           subject,
@@ -178,7 +187,20 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           verification_code: extractVerificationCode(subject, bodyText || bodyHtml || ""),
           message_uid: `${SYNC_ID}:${message.uid}`,
           received_at: (parsed.date ?? new Date()).toISOString(),
-        });
+        };
+
+        const { error: insertError } = site
+          ? await supabaseAdmin.from("site_inbox").insert({
+              ...common,
+              site_id: site.id,
+              owner_id: site.owner_id,
+              to_address: `${site.slug}@${domain}`,
+            })
+          : await supabaseAdmin.from("admin_inbox_messages").insert({
+              ...common,
+              inbox_id: adminInbox!.id,
+              to_address: `${adminInbox!.local_part}@${domain}`,
+            });
 
         if (insertError) {
           // 23505 = duplicado (mensagem já sincronizada): não é erro real.

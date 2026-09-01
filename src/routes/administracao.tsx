@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AdminInboxes } from "@/components/admin/AdminInboxes";
 
 import { adminLogin, adminListUsers, adminListSites, adminDeleteSite, adminDeleteUser, adminGetSettings, adminSaveSettings, adminResetUserGenerations, adminListSubscriptions, adminListEmailOutbox, adminListKiwifyLog, adminGrantSubscription, adminRevokeSubscription, adminRetryEmail, adminDashboardStats, adminGetKiwifyWebhookUrl, adminSendTestEmail, adminCreateManualUser, adminUpdateUserQuota, adminListResellerOrders, adminResendResellerAccess, adminMarkResellerPaid } from "@/lib/admin.functions";
 
@@ -111,7 +112,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const resellerResendFn = useServerFn(adminResendResellerAccess);
   const resellerMarkPaidFn = useServerFn(adminMarkResellerPaid);
 
-  type Tab = "dashboard" | "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "reseller" | "settings";
+  type Tab = "dashboard" | "users" | "sites" | "subscriptions" | "outbox" | "kiwify" | "reseller" | "inboxes" | "settings";
   const [tab, setTab] = useState<Tab>("dashboard");
   const [resellerOrders, setResellerOrders] = useState<Array<{ id: string; order_nsu: string; name: string; email: string; whatsapp: string; amount_cents: number; status: string; checkout_url: string | null; user_id: string | null; paid_at: string | null; provisioned_at: string | null; last_error: string | null; created_at: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; whatsapp: string; cpf: string; created_at: string; site_count: number; max_sites?: number; is_reseller?: boolean; created_by_admin?: boolean }>>([]);
@@ -243,6 +244,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
     { key: "outbox", label: "Fila de e-mails" },
     { key: "kiwify", label: "Webhooks Kiwify" },
     { key: "reseller", label: "Revenda" },
+    { key: "inboxes", label: "📬 E-mails" },
     { key: "settings", label: "Configurações" },
   ];
 
@@ -442,6 +444,8 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           </table>
         </div>
       )}
+
+      {tab === "inboxes" && <AdminInboxes token={token} />}
 
       {tab === "settings" && (
         <div className="max-w-xl space-y-5 rounded-xl border border-white/10 bg-white/5 p-6">

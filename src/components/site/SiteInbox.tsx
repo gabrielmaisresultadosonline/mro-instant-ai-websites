@@ -12,8 +12,13 @@ export interface SiteInboxProps {
   onOpen: (id: string) => void;
 }
 
-/** Remetentes considerados "Meta" (Facebook/Instagram) para o modo de espera. */
-const META_SENDER = /(facebook|facebookmail|instagram|meta)\./i;
+/** Remetentes reconhecidos em cada modo de espera de código. */
+const PROVIDER_SENDER: Record<"meta" | "lovable", RegExp> = {
+  meta: /(facebook|facebookmail|instagram|meta)\./i,
+  lovable: /lovable/i,
+};
+
+type Provider = keyof typeof PROVIDER_SENDER;
 
 /**
  * Caixa de entrada somente leitura do site.
@@ -24,18 +29,19 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
   const [openId, setOpenId] = useState<string | null>(null);
   const open = messages.find((m) => m.id === openId) ?? null;
 
-  // ----- Modo "aguardando código do Facebook" -------------------------------
-  const [waiting, setWaiting] = useState(false);
+  // ----- Modo "aguardando código" (Facebook/Meta ou Lovable) ----------------
+  const [waiting, setWaiting] = useState<Provider | null>(null);
   const [checking, setChecking] = useState(false);
   const startedAtRef = useRef<number>(0);
 
-  /** Código Meta que chegou DEPOIS que o cliente clicou em "aguardar". */
-  const metaCode = useMemo(() => {
+  /** Código do provedor que chegou DEPOIS que o cliente clicou em "aguardar". */
+  const waitingCode = useMemo(() => {
     if (!waiting) return null;
+    const sender = PROVIDER_SENDER[waiting];
     const found = messages.find(
       (m) =>
         m.verification_code &&
-        META_SENDER.test(m.from_address || "") &&
+        sender.test(`${m.from_address || ""} ${m.from_name || ""} ${m.subject || ""}`) &&
         new Date(m.received_at).getTime() >= startedAtRef.current - 120_000,
     );
     return found ?? null;
@@ -43,13 +49,13 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
 
   // Enquanto aguarda, consulta o servidor a cada 6s (máx. 10 min).
   useEffect(() => {
-    if (!waiting || metaCode) return;
+    if (!waiting || waitingCode) return;
     let cancelled = false;
 
     const tick = async () => {
       if (cancelled) return;
       if (Date.now() - startedAtRef.current > 10 * 60_000) {
-        setWaiting(false);
+        setWaiting(null);
         toast.info("Parei de aguardar. Clique de novo se o código ainda não chegou.");
         return;
       }
@@ -69,11 +75,11 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
       cancelled = true;
       clearInterval(timer);
     };
-  }, [waiting, metaCode, onRefresh]);
+  }, [waiting, waitingCode, onRefresh]);
 
   useEffect(() => {
-    if (metaCode) toast.success(`Código recebido: ${metaCode.verification_code}`);
-  }, [metaCode]);
+    if (waitingCode) toast.success(`Código recebido: ${waitingCode.verification_code}`);
+  }, [waitingCode]);
 
 
 
@@ -123,74 +129,105 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
         </p>
       </div>
 
-      {/* Campo dedicado: código de autenticação do Facebook/Meta */}
-      <div className="rounded-lg border border-border bg-blue-500/5 p-4 ring-1 ring-blue-500/20">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold">📘 Receber código de autenticação do Facebook</span>
-              <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase text-blue-600">Meta Portfolio</span>
+      {/* Campos dedicados: códigos de autenticação (Facebook/Meta e Lovable) */}
+      {([
+        {
+          key: "meta" as Provider,
+          title: "📘 Receber código de autenticação do Facebook",
+          badge: "Meta Portfolio",
+          description: (
+            <>
+              Este e-mail é direcionado à <strong>Meta Portfolio de Negócios</strong> para receber o código de
+              verificação do Facebook. Cadastre{" "}
+              <span className="font-mono font-semibold text-foreground">{address}</span> na Meta, clique em "Aguardar
+              código" e peça o envio.
+            </>
+          ),
+        },
+        {
+          key: "lovable" as Provider,
+          title: "💜 Receber código de acesso do Lovable",
+          badge: "Lovable",
+          description: (
+            <>
+              Use <span className="font-mono font-semibold text-foreground">{address}</span> para criar ou entrar na sua
+              conta do <strong>Lovable</strong>. Clique em "Aguardar código", peça o envio no Lovable e o código
+              aparecerá aqui.
+            </>
+          ),
+        },
+      ]).map((provider) => (
+        <div
+          key={provider.key}
+          className="rounded-lg border border-border bg-accent/10 p-4 ring-1 ring-border/60"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold">{provider.title}</span>
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-black uppercase text-primary">
+                  {provider.badge}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{provider.description}</p>
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Este e-mail é direcionado exclusivamente à <strong>Meta Portfolio de Negócios</strong> para receber o código de verificação do Facebook para verificar o portfólio.
-              Cadastre <span className="font-mono font-semibold text-foreground">{address}</span> na Meta, clique em "Aguardar código" e peça o envio.
-            </p>
-          </div>
 
-          {!waiting ? (
-            <button
-              onClick={() => {
-                startedAtRef.current = Date.now();
-                setWaiting(true);
-              }}
-              className="shrink-0 rounded-md btn-brand px-4 py-2 text-sm font-semibold"
-            >
-              Aguardar código
-            </button>
-          ) : (
-            <button
-              onClick={() => setWaiting(false)}
-              className="shrink-0 rounded-md border border-border px-4 py-2 text-sm font-semibold hover:bg-accent/40"
-            >
-              Cancelar
-            </button>
-          )}
-        </div>
-
-        {waiting && (
-          <div className="mt-4 rounded-md border border-border bg-accent/20 p-4 text-center">
-            {metaCode?.verification_code ? (
-              <>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Código recebido
-                </p>
-                <button
-                  onClick={() => copyCode(metaCode.verification_code!)}
-                  className="mt-2 rounded-lg bg-primary/15 px-5 py-2 font-mono text-3xl font-black tracking-widest text-primary"
-                  title="Clique para copiar"
-                >
-                  {metaCode.verification_code}
-                </button>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  De {metaCode.from_address} — clique no código para copiar.
-                </p>
-              </>
+            {waiting !== provider.key ? (
+              <button
+                onClick={() => {
+                  startedAtRef.current = Date.now();
+                  setWaiting(provider.key);
+                }}
+                className="shrink-0 rounded-md btn-brand px-4 py-2 text-sm font-semibold"
+              >
+                Aguardar código
+              </button>
             ) : (
-              <>
-                <span
-                  className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"
-                  aria-hidden
-                />
-                <p className="mt-3 text-sm font-semibold">Aguardando o código do Facebook…</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {checking ? "Verificando a caixa de entrada…" : "Verificamos a cada 6 segundos."} Mantenha esta
-                  aba aberta.
-                </p>
-              </>
+              <button
+                onClick={() => setWaiting(null)}
+                className="shrink-0 rounded-md border border-border px-4 py-2 text-sm font-semibold hover:bg-accent/40"
+              >
+                Cancelar
+              </button>
             )}
           </div>
-        )}
-      </div>
+
+          {waiting === provider.key && (
+            <div className="mt-4 rounded-md border border-border bg-accent/20 p-4 text-center">
+              {waitingCode?.verification_code ? (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Código recebido
+                  </p>
+                  <button
+                    onClick={() => copyCode(waitingCode.verification_code!)}
+                    className="mt-2 rounded-lg bg-primary/15 px-5 py-2 font-mono text-3xl font-black tracking-widest text-primary"
+                    title="Clique para copiar"
+                  >
+                    {waitingCode.verification_code}
+                  </button>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    De {waitingCode.from_address} — clique no código para copiar.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"
+                    aria-hidden
+                  />
+                  <p className="mt-3 text-sm font-semibold">Aguardando o código…</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {checking ? "Verificando a caixa de entrada…" : "Verificamos a cada 6 segundos."} Mantenha esta
+                    aba aberta.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+
 
 
 

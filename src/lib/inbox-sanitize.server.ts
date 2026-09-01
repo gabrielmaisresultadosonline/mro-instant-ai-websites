@@ -70,9 +70,14 @@ export function extractVerificationCode(subject: string, text: string): string |
   const haystack = `${subject}\n${text}`;
 
   const keyed = haystack.match(
-    /(?:c[oó]digo|code|verifica(?:[cç][aã]o|tion)?|confirma(?:[cç][aã]o|tion)?|otp|pin|token)[^\d]{0,40}(\d{4,8})/i,
+    /(?:c[oó]digo|code|verifica(?:[cç][aã]o|tion)?|confirma(?:[cç][aã]o|tion)?|otp|pin|token|log\s?in|sign[\s-]?in|acesso|entrar)[^\d]{0,40}(\d{4,8})/i,
   );
   if (keyed?.[1]) return keyed[1];
+
+  // Lovable e outros provedores enviam o código isolado numa linha própria.
+  const ownLine = haystack.match(/^\s*(\d{6})\s*$/m);
+  if (ownLine?.[1]) return ownLine[1];
+
 
   const spaced = haystack.match(/\b(\d{3}[\s-]\d{3})\b/);
   if (spaced?.[1]) return spaced[1].replace(/[\s-]/g, "");

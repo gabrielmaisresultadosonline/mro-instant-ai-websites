@@ -55,6 +55,80 @@ export type Database = {
           },
         ]
       }
+      admin_inbox_messages: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          from_address: string
+          from_name: string | null
+          id: string
+          inbox_id: string
+          message_uid: string
+          received_at: string
+          subject: string
+          to_address: string
+          verification_code: string | null
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          from_address: string
+          from_name?: string | null
+          id?: string
+          inbox_id: string
+          message_uid: string
+          received_at?: string
+          subject?: string
+          to_address: string
+          verification_code?: string | null
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          from_address?: string
+          from_name?: string | null
+          id?: string
+          inbox_id?: string
+          message_uid?: string
+          received_at?: string
+          subject?: string
+          to_address?: string
+          verification_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_inbox_messages_inbox_id_fkey"
+            columns: ["inbox_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inboxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_inboxes: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          local_part: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          local_part: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          local_part?: string
+        }
+        Relationships: []
+      }
       admin_settings: {
         Row: {
           claude_token: string | null
