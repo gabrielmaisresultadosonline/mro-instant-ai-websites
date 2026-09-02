@@ -102,18 +102,31 @@ export function AdminInboxes({ token }: AdminInboxesProps) {
     };
   }, [waiting, selected, loadMessages]);
 
-  const freshCode = waiting
+  /** Extrai todos os links de verificação do corpo do e-mail (Lovable envia link, não código). */
+  function extractLinks(text: string | null): string[] {
+    if (!text) return [];
+    const found = text.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? [];
+    const unique = Array.from(new Set(found.map((u) => u.replace(/[.,;]+$/, ""))));
+    // Prioriza links de verificação/autenticação.
+    return unique.sort((a, b) => Number(/auth|verify|confirm|login|magic|oobCode|token/i.test(b)) - Number(/auth|verify|confirm|login|magic|oobCode|token/i.test(a)));
+  }
+
+  const fresh = waiting
     ? messages.find(
-        (m) => m.verification_code && new Date(m.received_at).getTime() >= startedAtRef.current - 120_000,
+        (m) =>
+          (m.verification_code || extractLinks(m.body_text).length > 0) &&
+          new Date(m.received_at).getTime() >= startedAtRef.current - 120_000,
       ) ?? null
     : null;
+  const freshCode = fresh;
 
   useEffect(() => {
-    if (freshCode) {
+    if (fresh) {
       setWaiting(false);
-      toast.success(`Código recebido: ${freshCode.verification_code}`);
+      toast.success(fresh.verification_code ? `Código recebido: ${fresh.verification_code}` : "E-mail recebido: veja o link abaixo.");
     }
-  }, [freshCode]);
+  }, [fresh]);
+
 
   async function handleCreate() {
     if (!localPart.trim()) return;
