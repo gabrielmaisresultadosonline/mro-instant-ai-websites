@@ -290,37 +290,90 @@ export function AdminInboxes({ token }: AdminInboxesProps) {
 
           <ul className="mt-3 divide-y divide-white/10">
             {messages.length === 0 && <li className="py-3 text-sm text-white/60">Nenhuma mensagem.</li>}
-            {messages.map((m) => (
-              <li key={m.id} className="flex items-start justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">{m.subject || "(sem assunto)"}</div>
-                  <div className="truncate text-xs text-white/50">
-                    {m.from_name ? `${m.from_name} — ` : ""}
-                    {m.from_address}
+            {messages.map((m) => {
+              const links = extractLinks(m.body_text);
+              const isOpen = expandedId === m.id;
+              return (
+                <li key={m.id} className="py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">{m.subject || "(sem assunto)"}</div>
+                      <div className="truncate text-xs text-white/50">
+                        {m.from_name ? `${m.from_name} — ` : ""}
+                        {m.from_address}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {m.verification_code && (
+                        <button
+                          onClick={() => copy(m.verification_code!)}
+                          className="mb-1 block rounded bg-brand/20 px-2 py-0.5 font-mono text-sm font-bold text-brand"
+                          title="Clique para copiar"
+                        >
+                          {m.verification_code}
+                        </button>
+                      )}
+                      <span className="text-[11px] text-white/50">
+                        {new Date(m.received_at).toLocaleString("pt-BR")}
+                      </span>
+                    </div>
                   </div>
+
+                  {links.length > 0 && (
+                    <div className="mt-2 space-y-2 rounded-md border border-white/10 bg-black/30 p-3">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-white/50">
+                        Links do e-mail
+                      </div>
+                      {links.map((url) => (
+                        <div key={url} className="space-y-1">
+                          <p className="break-all font-mono text-[11px] leading-relaxed text-brand">{url}</p>
+                          <div className="flex gap-2">
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="rounded-md bg-brand px-3 py-1 text-[11px] font-semibold text-brand-foreground"
+                            >
+                              Abrir link
+                            </a>
+                            <button
+                              onClick={() => copy(url)}
+                              className="rounded-md border border-white/15 px-3 py-1 text-[11px] font-semibold hover:bg-white/10"
+                            >
+                              Copiar link
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {m.body_text && (
-                    <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-white/60">{m.body_text}</p>
+                    <>
+                      <button
+                        onClick={() => setExpandedId(isOpen ? null : m.id)}
+                        className="mt-2 text-[11px] font-semibold text-white/60 underline hover:text-white"
+                      >
+                        {isOpen ? "Ocultar e-mail completo" : "Ver e-mail completo"}
+                      </button>
+                      <pre
+                        className={
+                          isOpen
+                            ? "mt-2 max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded-md border border-white/10 bg-black/30 p-3 text-xs text-white/70"
+                            : "mt-1 line-clamp-3 whitespace-pre-wrap break-all text-xs text-white/60"
+                        }
+                      >
+                        {m.body_text}
+                      </pre>
+                    </>
                   )}
-                </div>
-                <div className="shrink-0 text-right">
-                  {m.verification_code && (
-                    <button
-                      onClick={() => copy(m.verification_code!)}
-                      className="mb-1 block rounded bg-brand/20 px-2 py-0.5 font-mono text-sm font-bold text-brand"
-                      title="Clique para copiar"
-                    >
-                      {m.verification_code}
-                    </button>
-                  )}
-                  <span className="text-[11px] text-white/50">
-                    {new Date(m.received_at).toLocaleString("pt-BR")}
-                  </span>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
     </div>
   );
 }
+
