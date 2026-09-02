@@ -51,6 +51,8 @@ export function AdminInboxes({ token }: AdminInboxesProps) {
   const [waiting, setWaiting] = useState(false);
   const [checking, setChecking] = useState(false);
   const startedAtRef = useRef(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
 
   const reload = useCallback(async () => {
     try {
