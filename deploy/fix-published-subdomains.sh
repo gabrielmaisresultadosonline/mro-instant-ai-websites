@@ -91,6 +91,7 @@ apt-get install -y certbot dnsutils curl
 APEX_CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 WILDCARD_CERT_NAME="$DOMAIN-wildcard"
 WILDCARD_CERT_FILE="/etc/letsencrypt/live/$WILDCARD_CERT_NAME/fullchain.pem"
+WILDCARD_RENEWAL_FILE="/etc/letsencrypt/renewal/$WILDCARD_CERT_NAME.conf"
 NGINX_SOURCE="$(dirname "$0")/nginx/mro.bio.conf"
 NGINX_TARGET="/etc/nginx/sites-available/mro.bio"
 AUTH_HOOK_SOURCE="$(dirname "$0")/hostinger-dns-auth.sh"
@@ -105,9 +106,13 @@ CREDENTIALS_FILE="/etc/letsencrypt/hostinger-mro-bio.ini"
 WILDCARD_READY=false
 if [[ -f "$WILDCARD_CERT_FILE" ]] && openssl x509 -checkend 2592000 -noout -in "$WILDCARD_CERT_FILE" >/dev/null 2>&1; then
   CERT_SANS="$(openssl x509 -in "$WILDCARD_CERT_FILE" -noout -ext subjectAltName)"
-  if grep -Fq "DNS:*.$DOMAIN" <<<"$CERT_SANS"; then
+  if grep -Fq "DNS:*.$DOMAIN" <<<"$CERT_SANS" && \
+     [[ -f "$WILDCARD_RENEWAL_FILE" ]] && \
+     grep -Fq "/etc/letsencrypt/renewal-hooks/mro-bio/hostinger-dns-auth.sh" "$WILDCARD_RENEWAL_FILE"; then
     WILDCARD_READY=true
-    ok "O certificado exclusivo dos subdomínios está válido por mais de 30 dias."
+    ok "O certificado e sua renovação automática estão configurados."
+  elif grep -Fq "DNS:*.$DOMAIN" <<<"$CERT_SANS"; then
+    log "O certificado está válido, mas ainda usa renovação manual; migrando para automática"
   fi
 fi
 
