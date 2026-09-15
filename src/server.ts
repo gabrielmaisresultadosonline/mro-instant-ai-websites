@@ -50,6 +50,7 @@ export default {
       url.pathname.startsWith("/_serverFn") ||
       url.pathname.startsWith("/_build/") ||
       url.pathname.startsWith("/assets/") ||
+      url.pathname.startsWith("/uploads/") ||
       url.pathname.startsWith("/__l5e/") ||
       url.pathname === "/favicon.ico";
 
