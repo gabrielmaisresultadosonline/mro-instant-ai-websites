@@ -35,31 +35,17 @@ read -p "Pronto para gerar o código? Pressione [Enter]..."
 # Forçamos a solicitação para garantir que o Wildcard (*.mro.bio) seja incluído
 echo "Solicitando/Atualizando certificado para incluir Wildcard..."
 # Tenta obter o certificado. Se já existir e for válido, o Certbot perguntará o que fazer.
-sudo certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" -d "*.$DOMAIN" --agree-tos -m "$EMAIL" --no-eff-email
+sudo certbot certonly --manual --preferred-challenges dns \
+  --cert-name "$DOMAIN" --expand \
+  -d "$DOMAIN" -d "*.$DOMAIN" \
+  --agree-tos -m "$EMAIL" --no-eff-email
 
 
-# 3. Localizar o certificado correto usando o próprio Certbot
-echo "Localizando certificado para $DOMAIN..."
-# Pegamos o certificado que contém explicitamente o wildcard e as linhas seguintes
-CERT_INFO=$(sudo certbot certificates | grep -A 5 "Domains:.*\*.$DOMAIN")
-CERT_PATH=$(echo "$CERT_INFO" | grep "Certificate Path:" | head -n 1 | sed 's/.*Certificate Path: //')
-KEY_PATH=$(echo "$CERT_INFO" | grep "Private Key Path:" | head -n 1 | sed 's/.*Private Key Path: //')
+# 3. O --cert-name mantém o caminho já usado pelo Nginx.
+CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 
-# Fallback manual se o certbot certificates falhar ou não encontrar
-if [ -z "$CERT_PATH" ]; then
-    CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
-    KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
-    
-    if [ -f "/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem" ]; then
-        CERT_PATH="/etc/letsencrypt/live/$DOMAIN-0001/fullchain.pem"
-        KEY_PATH="/etc/letsencrypt/live/$DOMAIN-0001/privkey.pem"
-        echo "Usando fallback: certificado wildcard encontrado em $DOMAIN-0001"
-    fi
-else
-    echo "Certbot confirmou o certificado em: $CERT_PATH"
-fi
-
-if [ -f "$CERT_PATH" ]; then
+if [ -f "$CERT_PATH" ] && sudo openssl x509 -in "$CERT_PATH" -noout -ext subjectAltName | grep -Fq "DNS:*.$DOMAIN"; then
     echo "--------------------------------------------------------"
     echo "Sucesso! Certificado localizado."
     echo "Atualizando configuração do Nginx..."
@@ -67,10 +53,7 @@ if [ -f "$CERT_PATH" ]; then
     # Atualiza o arquivo de configuração no servidor
     NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
     if [ -f "$NGINX_CONF" ]; then
-        echo "Limpando e atualizando $NGINX_CONF..."
-        # Forçamos a substituição das linhas de SSL para garantir que o caminho esteja certo
-        sudo sed -i "s|^[[:space:]]*ssl_certificate[[:space:]].*|    ssl_certificate     $CERT_PATH;|g" "$NGINX_CONF"
-        sudo sed -i "s|^[[:space:]]*ssl_certificate_key[[:space:]].*|    ssl_certificate_key $KEY_PATH;|g" "$NGINX_CONF"
+        echo "Mantendo $NGINX_CONF e usando o certificado no caminho já configurado."
     fi
     
     sudo nginx -t && sudo systemctl reload nginx
@@ -78,6 +61,6 @@ if [ -f "$CERT_PATH" ]; then
     echo "--------------------------------------------------------"
 else
     echo "--------------------------------------------------------"
-    echo "O certificado não foi gerado. Tente novamente garantindo que o registro TXT foi salvo no painel da Hostinger."
+    echo "O certificado wildcard não foi gerado. Nenhuma configuração do Nginx foi alterada."
     echo "--------------------------------------------------------"
 fi
