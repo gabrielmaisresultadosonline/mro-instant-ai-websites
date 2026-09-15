@@ -14,29 +14,24 @@ echo "--------------------------------------------------------"
 # 1. Instalar dependências
 if ! command -v certbot &> /dev/null || ! command -v dig &> /dev/null; then
     sudo apt-get update
-    sudo apt-get install -y certbot dnsutils
+    sudo apt-get install -y certbot dnsutils python3-requests
 fi
 
-echo ""
-echo "!!! AÇÃO NECESSÁRIA NO PAINEL DA HOSTINGER !!!"
-echo "1. O Certbot vai gerar um código (token) de verificação."
-echo "2. Vá no painel da Hostinger -> DNS -> Gerenciar Registros."
-echo "3. Crie um registro TXT:"
-echo "   - Nome: _acme-challenge"
-echo "   - Conteúdo: (o código que aparecerá abaixo)"
-echo "   - TTL: 300 (se possível) ou o menor valor disponível."
-echo ""
-echo "DICA: Abra outro terminal e execute este comando para verificar a propagação:"
-echo "watch -n 5 dig +short TXT _acme-challenge.$DOMAIN"
-echo ""
-read -p "Pronto para gerar o código? Pressione [Enter]..."
 
+echo ""
+echo "!!! AUTOMAÇÃO DNS-01 VIA CNAME (ACME-DNS) !!!"
+echo "1. Este script agora usa delegação CNAME para automação total."
+echo "2. Na primeira execução, ele gerará um endereço CNAME único."
+echo "3. Você deverá configurar esse CNAME uma única vez na Hostinger."
+echo "4. Após isso, as renovações serão 100% automáticas."
+echo ""
+read -p "Iniciar processo? Pressione [Enter]..."
 # 2. Solicitar o certificado e aguardar a propagação pelo hook de DNS.
 sudo certbot certonly --manual --preferred-challenges dns \
   --cert-name "$DOMAIN-wildcard" --force-renewal \
   -d "*.$DOMAIN" \
   --agree-tos -m "$EMAIL" --no-eff-email \
-  --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
+  --manual-auth-hook "$(dirname "$0")/acme-dns-auth.py" --manual-public-ip-logging-ok
 
 # 3. Verificação de segurança antes de aplicar
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN-wildcard/fullchain.pem"
