@@ -585,23 +585,33 @@ function SiteEditor() {
                   <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                     <div className="text-xs">
                       <span className="rounded-md bg-foreground px-2 py-1 font-semibold text-background">
-                        I.A: {PROVIDER_LABEL[preview.provider] ?? preview.provider}
+                        {preview.provider === "custom_html" ? "Versão" : "I.A"}: {PROVIDER_LABEL[preview.provider] ?? preview.provider}
                       </span>
-                      <span className="ml-2 text-muted-foreground">Gostou? Ative para usar como seu site. Quer outra ideia? Gere de novo (usa outro modelo).</span>
+                      <span className="ml-2 text-muted-foreground">
+                        {preview.provider === "custom_html"
+                          ? "Confira seu HTML e ative para usar como seu site."
+                          : "Gostou? Ative para usar como seu site. Quer outra ideia? Gere de novo (usa outro modelo)."}
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => setPreview(null)}
                         className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40">
                         Fechar
                       </button>
-                      <button onClick={openGenerateFlow} disabled={generating || monthlyLeft <= 0}
-                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40 disabled:opacity-60">
-                        🔄 Gerar outra ({monthlyLeft} restantes)
-                      </button>
-                      <button onClick={() => { setSelectedGenId(preview.id); setTab("edit"); }}
-                        className="rounded-md border border-brand/50 bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand/20">
-                        ✏️ Editar
-                      </button>
+                      {preview.provider === "custom_html" ? (
+                        <Button type="button" size="sm" variant="outline" onClick={() => setTab("custom_html")}>Editar código</Button>
+                      ) : (
+                        <>
+                          <button onClick={openGenerateFlow} disabled={generating || monthlyLeft <= 0}
+                            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent/40 disabled:opacity-60">
+                            🔄 Gerar outra ({monthlyLeft} restantes)
+                          </button>
+                          <button onClick={() => { setSelectedGenId(preview.id); setTab("edit"); }}
+                            className="rounded-md border border-brand/50 bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand/20">
+                            ✏️ Editar
+                          </button>
+                        </>
+                      )}
                       <button onClick={() => activateMut.mutate(preview.id)} disabled={activateMut.isPending}
                         className="rounded-md btn-brand px-3 py-1.5 text-xs font-semibold">
                         ✓ Ativar esta versão
