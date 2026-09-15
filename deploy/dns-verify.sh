@@ -9,15 +9,23 @@ set -Eeuo pipefail
 TOKEN="${CERTBOT_VALIDATION:?Token do Certbot ausente}"
 BASE_DOMAIN="${CERTBOT_DOMAIN#\*.}"
 CHALLENGE_DOMAIN="_acme-challenge.$BASE_DOMAIN"
+TTY="/dev/tty"
 
-echo ""
-echo "------------------------------------------------------------"
-echo "NOVO TOKEN DNS GERADO"
-echo "Domínio: $CHALLENGE_DOMAIN"
-echo "Valor:   $TOKEN"
-echo "------------------------------------------------------------"
-echo "Ação: Adicione este registro TXT no painel da Hostinger."
-echo "Aguardando propagação para evitar falha no Certbot..."
+show() {
+    printf '%s\n' "$*" > "$TTY"
+}
+
+show ""
+show "============================================================"
+show "NOVO VALOR TXT — COPIE EXATAMENTE"
+show "Tipo:  TXT"
+show "Nome:  _acme-challenge"
+show "Valor: $TOKEN"
+show "Domínio verificado: $CHALLENGE_DOMAIN"
+show "============================================================"
+show "Adicione este valor na Hostinger e mantenha o terminal aberto."
+show "O processo continuará sozinho quando o DNS estiver correto."
+show ""
 
 # A Hostinger pode manter o valor anterior durante a propagação. Por isso,
 # procuramos o token exato entre todos os TXT retornados em dois DNS públicos.
@@ -29,16 +37,16 @@ while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
     
     if grep -Fxq "$TOKEN" <<<"$GOOGLE_VALUES" && \
        grep -Fxq "$TOKEN" <<<"$CLOUDFLARE_VALUES"; then
-        echo "✔ Registro correto confirmado no Google e Cloudflare DNS!"
+        show "✔ Registro correto confirmado no Google e Cloudflare DNS!"
         sleep 10
         exit 0
     fi
     
-    echo "[$ATTEMPT/$MAX_ATTEMPTS] Aguardando o TXT correto... (nova consulta em 20s)"
+    show "[$ATTEMPT/$MAX_ATTEMPTS] Aguardando o TXT correto... (nova consulta em 20s)"
     sleep 20
     ATTEMPT=$((ATTEMPT + 1))
 done
 
-echo "✘ O TXT correto não apareceu em até 30 minutos."
-echo "O Certbot será interrompido sem trocar o certificado atual."
+show "✘ O TXT correto não apareceu em até 30 minutos."
+show "O Certbot será interrompido sem trocar o certificado atual."
 exit 1
