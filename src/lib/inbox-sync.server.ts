@@ -13,6 +13,13 @@
 
 const SYNC_ID = "catchall";
 const MAX_MESSAGES_PER_RUN = 25;
+const RECOVERY_LOOKBACK_UIDS = 100;
+
+type MailboxTarget = {
+  path: string;
+  stateId: string;
+  messagePrefix: string;
+};
 
 function mailDomain() {
   return (process.env.INBOX_DOMAIN || "mro.bio").toLowerCase();
@@ -120,15 +127,6 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
   const { ImapFlow } = await import("imapflow");
   const { simpleParser } = await import("mailparser");
 
-  // Ponto de retomada: só lemos mensagens com UID acima do último processado.
-  const { data: state } = await supabaseAdmin
-    .from("inbox_sync_state")
-    .select("last_uid")
-    .eq("id", SYNC_ID)
-    .maybeSingle();
-
-  const lastUid = Number(state?.last_uid ?? 0);
-
   const client = new ImapFlow({
     host,
     port,
@@ -139,21 +137,43 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
 
   let inserted = 0;
   let skipped = 0;
-  let maxUid = lastUid;
+  let latestUid = 0;
 
   try {
     await client.connect();
-    const lock = await client.getMailboxLock("INBOX");
+    const listedMailboxes = await client.list();
+    const junkMailbox = listedMailboxes.find(
+      (mailbox) => mailbox.specialUse === "\\Junk" || /(^|\.)junk$/i.test(mailbox.path),
+    );
+    const mailboxes: MailboxTarget[] = [
+      { path: "INBOX", stateId: SYNC_ID, messagePrefix: SYNC_ID },
+      ...(junkMailbox
+        ? [{ path: junkMailbox.path, stateId: `${SYNC_ID}:junk`, messagePrefix: `${SYNC_ID}:junk` }]
+        : []),
+    ];
 
-    try {
-      const range = `${lastUid + 1}:*`;
+    for (const mailbox of mailboxes) {
+      // Cada pasta possui UIDs independentes; por isso mantém seu próprio cursor.
+      const { data: state } = await supabaseAdmin
+        .from("inbox_sync_state")
+        .select("last_uid")
+        .eq("id", mailbox.stateId)
+        .maybeSingle();
+      const lastUid = Number(state?.last_uid ?? 0);
+      let maxUid = lastUid;
+      const lock = await client.getMailboxLock(mailbox.path);
+
+      try {
+      // Reexamina uma janela recente para recuperar mensagens que chegaram antes
+      // de uma regra de destinatário ser corrigida. A chave única evita duplicatas.
+      const rangeStart = Math.max(1, lastUid - RECOVERY_LOOKBACK_UIDS);
+      const range = `${rangeStart}:*`;
       const messages: { uid: number; source: Buffer }[] = [];
 
       for await (const msg of client.fetch({ uid: range }, { uid: true, source: true }, { uid: true })) {
-        // O IMAP pode devolver a última mensagem mesmo quando não há novidade.
-        if (!msg.uid || msg.uid <= lastUid || !msg.source) continue;
+        if (!msg.uid || !msg.source) continue;
         messages.push({ uid: msg.uid, source: msg.source as Buffer });
-        if (messages.length >= MAX_MESSAGES_PER_RUN) break;
+        if (messages.length > MAX_MESSAGES_PER_RUN) messages.shift();
       }
 
       for (const message of messages) {
@@ -227,7 +247,7 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           body_text: bodyText,
           body_html: bodyHtml || null,
           verification_code: extractVerificationCode(subject, bodyText || bodyHtml || ""),
-          message_uid: `${SYNC_ID}:${message.uid}`,
+          message_uid: `${mailbox.messagePrefix}:${message.uid}`,
           received_at: (parsed.date ?? new Date()).toISOString(),
         };
 
@@ -260,8 +280,21 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           inserted++;
         }
       }
-    } finally {
-      lock.release();
+      } finally {
+        lock.release();
+      }
+
+      latestUid = Math.max(latestUid, maxUid);
+      const { error: stateError } = await supabaseAdmin.from("inbox_sync_state").upsert(
+        {
+          id: mailbox.stateId,
+          last_uid: maxUid,
+          last_run_at: new Date().toISOString(),
+          last_error: null,
+        },
+        { onConflict: "id" },
+      );
+      if (stateError) throw new Error(`Falha ao salvar cursor IMAP: ${stateError.message}`);
     }
 
     await client.logout();
@@ -273,17 +306,16 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
     } catch {
       /* conexão já encerrada */
     }
-    await supabaseAdmin
-      .from("inbox_sync_state")
-      .update({ last_run_at: new Date().toISOString(), last_error: messageText.slice(0, 500) })
-      .eq("id", SYNC_ID);
+    await supabaseAdmin.from("inbox_sync_state").upsert(
+      {
+        id: SYNC_ID,
+        last_run_at: new Date().toISOString(),
+        last_error: messageText.slice(0, 500),
+      },
+      { onConflict: "id" },
+    );
     return { ok: false, inserted, skipped, error: messageText };
   }
 
-  await supabaseAdmin
-    .from("inbox_sync_state")
-    .update({ last_uid: maxUid, last_run_at: new Date().toISOString(), last_error: null })
-    .eq("id", SYNC_ID);
-
-  return { ok: true, inserted, skipped, lastUid: maxUid };
+  return { ok: true, inserted, skipped, lastUid: latestUid };
 }
