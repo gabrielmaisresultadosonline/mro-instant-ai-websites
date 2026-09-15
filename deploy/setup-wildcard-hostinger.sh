@@ -8,7 +8,7 @@ DOMAIN="mro.bio"
 EMAIL="admin@mro.bio"
 
 echo "--------------------------------------------------------"
-echo "Configurando SSL para $DOMAIN e *.$DOMAIN (inclui www.$DOMAIN)"
+echo "Configurando SSL exclusivo para todos os subdomínios *.$DOMAIN"
 echo "--------------------------------------------------------"
 
 # 1. Instalar dependências
@@ -33,13 +33,13 @@ read -p "Pronto para gerar o código? Pressione [Enter]..."
 
 # 2. Solicitar o certificado e aguardar a propagação pelo hook de DNS.
 sudo certbot certonly --manual --preferred-challenges dns \
-  --cert-name "$DOMAIN" --expand \
-  -d "$DOMAIN" -d "*.$DOMAIN" \
+  --cert-name "$DOMAIN-wildcard" --force-renewal \
+  -d "*.$DOMAIN" \
   --agree-tos -m "$EMAIL" --no-eff-email \
   --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
 
 # 3. Verificação de segurança antes de aplicar
-CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+CERT_PATH="/etc/letsencrypt/live/$DOMAIN-wildcard/fullchain.pem"
 
 if [ -f "$CERT_PATH" ]; then
     echo "--------------------------------------------------------"
@@ -47,7 +47,10 @@ if [ -f "$CERT_PATH" ]; then
     
     # Valida se o wildcard está presente
     if sudo openssl x509 -in "$CERT_PATH" -noout -ext subjectAltName | grep -Fq "DNS:*.$DOMAIN"; then
-        echo "Validando configuração do Nginx..."
+        echo "Aplicando a configuração exclusiva do MRO.BIO..."
+        sudo cp -a /etc/nginx/sites-available/mro.bio "/etc/nginx/sites-available/mro.bio.backup-$(date +%Y%m%d-%H%M%S)" 2>/dev/null || true
+        sudo install -m 0644 "$(dirname "$0")/nginx/mro.bio.conf" /etc/nginx/sites-available/mro.bio
+        sudo ln -sfn /etc/nginx/sites-available/mro.bio /etc/nginx/sites-enabled/mro.bio
         if sudo nginx -t; then
             sudo systemctl reload nginx
             echo "SSL Ativado e Nginx recarregado com segurança!"

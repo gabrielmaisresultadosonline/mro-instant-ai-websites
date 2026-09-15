@@ -89,53 +89,61 @@ log "Instalando o Certbot, caso ainda não exista"
 apt-get update -y
 apt-get install -y certbot dnsutils
 
-CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
-if [[ -f "$CERT_FILE" ]] && openssl x509 -checkend 2592000 -noout -in "$CERT_FILE" >/dev/null 2>&1; then
-  CERT_SANS="$(openssl x509 -in "$CERT_FILE" -noout -ext subjectAltName)"
-  if grep -Fq "DNS:$DOMAIN" <<<"$CERT_SANS" && grep -Fq "DNS:*.$DOMAIN" <<<"$CERT_SANS"; then
-    ok "O certificado wildcard já está válido por mais de 30 dias; renovação dispensada."
-    if nginx -t; then
-      systemctl reload nginx
-      ok "HTTPS wildcard e subdomínios continuam ativos."
-      exit 0
-    fi
-    fail "Configuração do Nginx inválida. Nenhum serviço foi recarregado."
+APEX_CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+WILDCARD_CERT_NAME="$DOMAIN-wildcard"
+WILDCARD_CERT_FILE="/etc/letsencrypt/live/$WILDCARD_CERT_NAME/fullchain.pem"
+NGINX_SOURCE="$(dirname "$0")/nginx/mro.bio.conf"
+NGINX_TARGET="/etc/nginx/sites-available/mro.bio"
+
+[[ -f "$APEX_CERT_FILE" ]] || fail "O certificado principal de $DOMAIN não foi encontrado."
+
+WILDCARD_READY=false
+if [[ -f "$WILDCARD_CERT_FILE" ]] && openssl x509 -checkend 2592000 -noout -in "$WILDCARD_CERT_FILE" >/dev/null 2>&1; then
+  CERT_SANS="$(openssl x509 -in "$WILDCARD_CERT_FILE" -noout -ext subjectAltName)"
+  if grep -Fq "DNS:*.$DOMAIN" <<<"$CERT_SANS"; then
+    WILDCARD_READY=true
+    ok "O certificado exclusivo dos subdomínios está válido por mais de 30 dias."
   fi
 fi
 
-printf '\n\033[1;36m!!! AÇÃO DNS NECESSÁRIA !!!\033[0m\n'
-printf '1. O Certbot pedirá para criar um registro TXT: _acme-challenge.%s\n' "$DOMAIN"
-printf '2. Adicione-o no painel da Hostinger.\n'
-printf '3. \033[1mNÃO aperte Enter no Certbot imediatamente.\033[0m\n'
-printf '4. Em outro terminal, você pode validar com: dig +short TXT _acme-challenge.%s\n\n' "$DOMAIN"
+if [[ "$WILDCARD_READY" != true ]]; then
+  printf '\n\033[1;36m!!! AÇÃO DNS NECESSÁRIA !!!\033[0m\n'
+  printf 'Será gerado UM novo valor TXT para _acme-challenge.%s.\n' "$DOMAIN"
+  printf 'Adicione o NOVO valor mostrado; valores antigos não emitem um certificado novo.\n\n'
 
-log "Emitindo certificado para $DOMAIN e *.$DOMAIN (inclui www.$DOMAIN)"
-certbot certonly \
-  --manual \
-  --non-interactive \
-  --preferred-challenges dns \
-  --cert-name "$DOMAIN" \
-  --expand \
-  -d "$DOMAIN" \
-  -d "*.$DOMAIN" \
-  --agree-tos \
-  -m "$EMAIL" \
-  --no-eff-email \
-  --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
+  log "Emitindo certificado exclusivo para todos os sites *.$DOMAIN"
+  certbot certonly \
+    --manual \
+    --non-interactive \
+    --preferred-challenges dns \
+    --cert-name "$WILDCARD_CERT_NAME" \
+    --force-renewal \
+    -d "*.$DOMAIN" \
+    --agree-tos \
+    -m "$EMAIL" \
+    --no-eff-email \
+    --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
+fi
 
-[[ -f "$CERT_FILE" ]] || fail "O certificado não foi encontrado em $CERT_FILE."
+[[ -f "$WILDCARD_CERT_FILE" ]] || fail "O certificado wildcard não foi criado."
 
 log "Validando integridade do certificado"
-CERT_SANS="$(openssl x509 -in "$CERT_FILE" -noout -ext subjectAltName)"
-grep -Fq "DNS:$DOMAIN" <<<"$CERT_SANS" || \
-  fail "O certificado foi criado sem $DOMAIN. O Nginx não foi recarregado."
+CERT_SANS="$(openssl x509 -in "$WILDCARD_CERT_FILE" -noout -ext subjectAltName)"
 grep -Fq "DNS:*.$DOMAIN" <<<"$CERT_SANS" || \
   fail "O certificado foi criado sem *.$DOMAIN. O Nginx não foi recarregado."
+
+log "Aplicando o certificado somente ao site MRO.BIO"
+[[ -f "$NGINX_SOURCE" ]] || fail "Configuração do MRO.BIO não encontrada."
+if [[ -f "$NGINX_TARGET" ]]; then
+  cp -a "$NGINX_TARGET" "$NGINX_TARGET.backup-$(date +%Y%m%d-%H%M%S)"
+fi
+install -m 0644 "$NGINX_SOURCE" "$NGINX_TARGET"
+ln -sfn "$NGINX_TARGET" /etc/nginx/sites-enabled/mro.bio
 
 log "Validando o Nginx e recarregando com segurança"
 if nginx -t; then
   systemctl reload nginx
-  ok "HTTPS wildcard e subdomínios ativados com sucesso."
+  ok "HTTPS wildcard ativado para todos os subdomínios MRO.BIO."
 else
   fail "Configuração do Nginx inválida. O serviço não foi recarregado para evitar queda."
 fi
@@ -143,4 +151,4 @@ fi
 printf '\nTeste final:\n'
 printf '  https://%s\n' "$DOMAIN"
 printf '  https://www.%s\n' "$DOMAIN"
-printf '  https://rosaenforma.%s\n\n' "$DOMAIN"
+printf '  https://qualquer-site.%s\n\n' "$DOMAIN"
