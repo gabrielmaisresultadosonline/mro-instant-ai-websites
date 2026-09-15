@@ -1,8 +1,10 @@
 /**
  * Sincronização IMAP da caixa catch-all (*@mro.bio).
  *
- * Cada e-mail recebido é distribuído para o site correspondente
- * (nomedosite@mro.bio -> sites.slug = nomedosite).
+ * Cada e-mail recebido é distribuído para o site correspondente.
+ * Formatos aceitos:
+ * - nomedosite@mro.bio
+ * - suporte@nomedosite.mro.bio
  *
  * Somente LEITURA: nada é enviado a partir dos endereços dos clientes.
  * Usado tanto pelo cron (/api/public/cron/inbox-sync) quanto pelo botão
@@ -65,6 +67,41 @@ function collectLocalParts(values: (string | null | undefined)[]): string[] {
     }
   }
   return out;
+}
+
+type SiteRecipient = {
+  slug: string;
+  address: string;
+};
+
+/** Resolve os dois formatos públicos de e-mail aceitos por cada site. */
+function collectSiteRecipients(values: (string | null | undefined)[]): SiteRecipient[] {
+  const domain = mailDomain();
+  const escapedDomain = domain.replace(/\./g, "\\.");
+  const directPattern = new RegExp(`([a-z0-9][a-z0-9._-]{0,63})@${escapedDomain}`, "gi");
+  const supportPattern = new RegExp(`suporte@([a-z0-9][a-z0-9-]{0,62})\\.${escapedDomain}`, "gi");
+  const recipients = new Map<string, SiteRecipient>();
+
+  for (const value of values) {
+    if (!value) continue;
+
+    for (const match of value.matchAll(directPattern)) {
+      const slug = match[1]?.toLowerCase();
+      if (!slug || BLOCKED_LOCAL_PARTS.has(slug)) continue;
+      recipients.set(`${slug}@${domain}`, { slug, address: `${slug}@${domain}` });
+    }
+
+    for (const match of value.matchAll(supportPattern)) {
+      const slug = match[1]?.toLowerCase();
+      if (!slug) continue;
+      recipients.set(`suporte@${slug}.${domain}`, {
+        slug,
+        address: `suporte@${slug}.${domain}`,
+      });
+    }
+  }
+
+  return [...recipients.values()];
 }
 
 export async function runInboxSync(): Promise<InboxSyncResult> {
@@ -140,8 +177,10 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           String(headers.get("envelope-to") ?? ""),
         ];
 
-        const candidates = collectLocalParts(rawTo).filter((l) => !BLOCKED_LOCAL_PARTS.has(l));
-        if (candidates.length === 0) {
+        const siteRecipients = collectSiteRecipients(rawTo);
+        const directLocalParts = collectLocalParts(rawTo).filter((local) => !BLOCKED_LOCAL_PARTS.has(local));
+        const siteCandidates = [...new Set(siteRecipients.map((recipient) => recipient.slug))];
+        if (siteCandidates.length === 0 && directLocalParts.length === 0) {
           skipped++;
           continue;
         }
@@ -150,10 +189,13 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
         const { data: matchedSites } = await supabaseAdmin
           .from("sites")
           .select("id, owner_id, slug")
-          .in("slug", candidates)
-          .limit(candidates.length);
+          .in("slug", siteCandidates)
+          .limit(siteCandidates.length);
 
         const site = matchedSites?.[0];
+        const siteRecipient = site
+          ? siteRecipients.find((recipient) => recipient.slug === site.slug)
+          : null;
 
         // Caixas criadas pelo painel /administracao (não pertencem a nenhum site).
         const { data: matchedInboxes } = site
@@ -161,8 +203,8 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           : await supabaseAdmin
               .from("admin_inboxes")
               .select("id, local_part")
-              .in("local_part", candidates)
-              .limit(candidates.length);
+              .in("local_part", directLocalParts)
+              .limit(directLocalParts.length);
 
         const adminInbox = matchedInboxes?.[0] ?? null;
 
@@ -194,12 +236,12 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
               ...common,
               site_id: site.id,
               owner_id: site.owner_id,
-              to_address: `${site.slug}@${domain}`,
+              to_address: siteRecipient?.address ?? `${site.slug}@${domain}`,
             })
           : await supabaseAdmin.from("admin_inbox_messages").insert({
               ...common,
-              inbox_id: adminInbox!.id,
-              to_address: `${adminInbox!.local_part}@${domain}`,
+              inbox_id: adminInbox?.id,
+              to_address: `${adminInbox?.local_part}@${domain}`,
             });
 
         if (insertError) {
