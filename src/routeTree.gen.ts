@@ -15,6 +15,7 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AdministracaoRouteImport } from './routes/administracao'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UploadsSplatRouteImport } from './routes/uploads/$'
 import { Route as RedefinirSenhaTokenRouteImport } from './routes/redefinir-senha.$token'
 import { Route as ObObrigadoRouteImport } from './routes/ob/obrigado'
 import { Route as AtivarTokenRouteImport } from './routes/ativar.$token'
@@ -59,6 +60,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UploadsSplatRoute = UploadsSplatRouteImport.update({
+  id: '/uploads/$',
+  path: '/uploads/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RedefinirSenhaTokenRoute = RedefinirSenhaTokenRouteImport.update({
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
   '/redefinir-senha/$token': typeof RedefinirSenhaTokenRoute
+  '/uploads/$': typeof UploadsSplatRoute
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
   '/redefinir-senha/$token': typeof RedefinirSenhaTokenRoute
+  '/uploads/$': typeof UploadsSplatRoute
   '/sites/$id': typeof AuthenticatedSitesIdRoute
   '/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/ativar/$token': typeof AtivarTokenRoute
   '/ob/obrigado': typeof ObObrigadoRoute
   '/redefinir-senha/$token': typeof RedefinirSenhaTokenRoute
+  '/uploads/$': typeof UploadsSplatRoute
   '/_authenticated/sites/$id': typeof AuthenticatedSitesIdRoute
   '/_authenticated/sites/novo': typeof AuthenticatedSitesNovoRoute
   '/api/public/cert-check': typeof ApiPublicCertCheckRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/ativar/$token'
     | '/ob/obrigado'
     | '/redefinir-senha/$token'
+    | '/uploads/$'
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/ativar/$token'
     | '/ob/obrigado'
     | '/redefinir-senha/$token'
+    | '/uploads/$'
     | '/sites/$id'
     | '/sites/novo'
     | '/api/public/cert-check'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/ativar/$token'
     | '/ob/obrigado'
     | '/redefinir-senha/$token'
+    | '/uploads/$'
     | '/_authenticated/sites/$id'
     | '/_authenticated/sites/novo'
     | '/api/public/cert-check'
@@ -299,6 +311,7 @@ export interface RootRouteChildren {
   AtivarTokenRoute: typeof AtivarTokenRoute
   ObObrigadoRoute: typeof ObObrigadoRoute
   RedefinirSenhaTokenRoute: typeof RedefinirSenhaTokenRoute
+  UploadsSplatRoute: typeof UploadsSplatRoute
   ApiPublicCertCheckRoute: typeof ApiPublicCertCheckRoute
   ApiPublicLocalImagesRoute: typeof ApiPublicLocalImagesRoute
   ApiPublicAssetsSplatRoute: typeof ApiPublicAssetsSplatRoute
@@ -353,6 +366,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/uploads/$': {
+      id: '/uploads/$'
+      path: '/uploads/$'
+      fullPath: '/uploads/$'
+      preLoaderRoute: typeof UploadsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/redefinir-senha/$token': {
@@ -495,6 +515,7 @@ const rootRouteChildren: RootRouteChildren = {
   AtivarTokenRoute: AtivarTokenRoute,
   ObObrigadoRoute: ObObrigadoRoute,
   RedefinirSenhaTokenRoute: RedefinirSenhaTokenRoute,
+  UploadsSplatRoute: UploadsSplatRoute,
   ApiPublicCertCheckRoute: ApiPublicCertCheckRoute,
   ApiPublicLocalImagesRoute: ApiPublicLocalImagesRoute,
   ApiPublicAssetsSplatRoute: ApiPublicAssetsSplatRoute,
