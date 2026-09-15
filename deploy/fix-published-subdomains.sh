@@ -1,7 +1,7 @@
 #!/bin/env bash
 # Corrige dois pontos dos sites publicados em *.mro.bio:
 # 1. leitura pública dos projetos marcados como publicados;
-# 2. certificado TLS que inclui mro.bio, www.mro.bio e *.mro.bio.
+# 2. certificado TLS que inclui mro.bio e *.mro.bio (o wildcard já cobre www).
 #
 # Este script não altera server blocks, portas ou contêineres de outros sites.
 
@@ -95,28 +95,29 @@ printf '2. Adicione-o no painel da Hostinger.\n'
 printf '3. \033[1mNÃO aperte Enter no Certbot imediatamente.\033[0m\n'
 printf '4. Em outro terminal, você pode validar com: dig +short TXT _acme-challenge.%s\n\n' "$DOMAIN"
 
-log "Emitindo certificado para %s, www.%s e *.%s" "$DOMAIN" "$DOMAIN" "$DOMAIN"
+log "Emitindo certificado para $DOMAIN e *.$DOMAIN (inclui www.$DOMAIN)"
 certbot certonly \
   --manual \
+  --non-interactive \
   --preferred-challenges dns \
   --cert-name "$DOMAIN" \
   --expand \
   -d "$DOMAIN" \
-  -d "www.$DOMAIN" \
   -d "*.$DOMAIN" \
   --agree-tos \
   -m "$EMAIL" \
   --no-eff-email \
-  --manual-public-ip-logging-ok \
   --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
 
 CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 [[ -f "$CERT_FILE" ]] || fail "O certificado não foi encontrado em $CERT_FILE."
 
 log "Validando integridade do certificado"
-if ! openssl x509 -in "$CERT_FILE" -noout -ext subjectAltName | grep -Fq "DNS:*.$DOMAIN"; then
+CERT_SANS="$(openssl x509 -in "$CERT_FILE" -noout -ext subjectAltName)"
+grep -Fq "DNS:$DOMAIN" <<<"$CERT_SANS" || \
+  fail "O certificado foi criado sem $DOMAIN. O Nginx não foi recarregado."
+grep -Fq "DNS:*.$DOMAIN" <<<"$CERT_SANS" || \
   fail "O certificado foi criado sem *.$DOMAIN. O Nginx não foi recarregado."
-fi
 
 log "Validando o Nginx e recarregando com segurança"
 if nginx -t; then

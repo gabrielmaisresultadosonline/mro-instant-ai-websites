@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script para configurar SSL Wildcard (*.mro.bio) no Hostinger VPS
-# Inclui mro.bio, www.mro.bio e *.mro.bio
+# Inclui mro.bio e *.mro.bio; o wildcard já cobre www.mro.bio.
 
 set -e
 
@@ -8,7 +8,7 @@ DOMAIN="mro.bio"
 EMAIL="admin@mro.bio"
 
 echo "--------------------------------------------------------"
-echo "Configurando SSL para $DOMAIN, www.$DOMAIN e *.$DOMAIN"
+echo "Configurando SSL para $DOMAIN e *.$DOMAIN (inclui www.$DOMAIN)"
 echo "--------------------------------------------------------"
 
 # 1. Instalar dependências
@@ -36,9 +36,8 @@ read -p "Pronto para gerar o código? Pressione [Enter]..."
   --manual-auth-hook "$(dirname "$0")/dns-verify.sh" para reduzir prompts
 sudo certbot certonly --manual --preferred-challenges dns \
   --cert-name "$DOMAIN" --expand \
-  -d "$DOMAIN" -d "www.$DOMAIN" -d "*.$DOMAIN" \
+  -d "$DOMAIN" -d "*.$DOMAIN" \
   --agree-tos -m "$EMAIL" --no-eff-email \
-  --manual-public-ip-logging-ok \
   --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
 
 # 3. Verificação de segurança antes de aplicar
