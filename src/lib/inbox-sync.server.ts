@@ -231,18 +231,26 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           received_at: (parsed.date ?? new Date()).toISOString(),
         };
 
-        const { error: insertError } = site
-          ? await supabaseAdmin.from("site_inbox").insert({
-              ...common,
-              site_id: site.id,
-              owner_id: site.owner_id,
-              to_address: siteRecipient?.address ?? `${site.slug}@${domain}`,
-            })
-          : await supabaseAdmin.from("admin_inbox_messages").insert({
-              ...common,
-              inbox_id: adminInbox?.id,
-              to_address: `${adminInbox?.local_part}@${domain}`,
-            });
+        let insertError: { code?: string; message: string } | null;
+        if (site) {
+          const result = await supabaseAdmin.from("site_inbox").insert({
+            ...common,
+            site_id: site.id,
+            owner_id: site.owner_id,
+            to_address: siteRecipient?.address ?? `${site.slug}@${domain}`,
+          });
+          insertError = result.error;
+        } else if (adminInbox) {
+          const result = await supabaseAdmin.from("admin_inbox_messages").insert({
+            ...common,
+            inbox_id: adminInbox.id,
+            to_address: `${adminInbox.local_part}@${domain}`,
+          });
+          insertError = result.error;
+        } else {
+          skipped++;
+          continue;
+        }
 
         if (insertError) {
           // 23505 = duplicado (mensagem já sincronizada): não é erro real.
