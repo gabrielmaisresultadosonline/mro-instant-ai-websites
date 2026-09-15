@@ -920,13 +920,15 @@ function SiteEditor() {
               messages={inboxMessages}
               isLoading={inboxLoading}
               onRefresh={async () => {
+                let result = { ok: false, inserted: 0 };
                 try {
                   // Força leitura IMAP na hora, sem esperar o cron de 1 minuto.
-                  await refreshInboxFn({ data: { siteId: id } });
+                  result = await refreshInboxFn({ data: { siteId: id } });
                 } catch {
                   /* se o IMAP falhar, ainda recarregamos o que já está salvo */
                 }
                 await qc.invalidateQueries({ queryKey: ["site-inbox", id] });
+                return result;
               }}
               onOpen={async (messageId) => {
                 try {

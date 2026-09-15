@@ -8,7 +8,7 @@ export interface SiteInboxProps {
   messages: InboxMessage[];
   isLoading: boolean;
   /** Busca imediata no servidor (IMAP) + recarga da lista. */
-  onRefresh: () => void | Promise<void>;
+  onRefresh: () => Promise<{ ok: boolean; inserted: number }>;
   onOpen: (id: string) => void;
 }
 
@@ -33,6 +33,8 @@ export function SiteInbox({ addresses, messages, isLoading, onRefresh, onOpen }:
   // ----- Modo "aguardando código" (Facebook/Meta ou Lovable) ----------------
   const [waiting, setWaiting] = useState<Provider | null>(null);
   const [checking, setChecking] = useState(false);
+  const [connectionState, setConnectionState] = useState<"idle" | "ok" | "error">("idle");
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const startedAtRef = useRef<number>(0);
 
   /** Código do provedor que chegou DEPOIS que o cliente clicou em "aguardar". */
@@ -62,7 +64,9 @@ export function SiteInbox({ addresses, messages, isLoading, onRefresh, onOpen }:
       }
       setChecking(true);
       try {
-        await onRefresh();
+        const result = await onRefresh();
+        setConnectionState(result.ok ? "ok" : "error");
+        setLastCheckedAt(new Date());
       } catch {
         /* falha de rede pontual: tentamos de novo no próximo ciclo */
       } finally {
@@ -102,6 +106,28 @@ export function SiteInbox({ addresses, messages, isLoading, onRefresh, onOpen }:
     }
   }
 
+  async function handleManualRefresh() {
+    setChecking(true);
+    try {
+      const result = await onRefresh();
+      setConnectionState(result.ok ? "ok" : "error");
+      setLastCheckedAt(new Date());
+      if (!result.ok) {
+        toast.error("A caixa de e-mail não conseguiu conectar. Confira a configuração do servidor.");
+      } else if (result.inserted > 0) {
+        toast.success(`${result.inserted} nova${result.inserted === 1 ? " mensagem recebida" : "s mensagens recebidas"}.`);
+      } else {
+        toast.success("Caixa conectada. Nenhuma mensagem nova encontrada.");
+      }
+    } catch {
+      setConnectionState("error");
+      setLastCheckedAt(new Date());
+      toast.error("Não foi possível verificar a caixa de e-mail agora.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
   return (
     <div className="space-y-4 p-5">
       <div className="rounded-lg border border-border bg-accent/20 p-4">
@@ -128,11 +154,18 @@ export function SiteInbox({ addresses, messages, isLoading, onRefresh, onOpen }:
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
-            onClick={onRefresh}
-            className="rounded-md border border-border px-2 py-1 text-xs font-semibold hover:bg-accent/40"
+            onClick={handleManualRefresh}
+            disabled={checking}
+            className="rounded-md border border-border px-2 py-1 text-xs font-semibold hover:bg-accent/40 disabled:opacity-60"
           >
-            Atualizar
+            {checking ? "Verificando…" : "Atualizar"}
           </button>
+          {connectionState !== "idle" && (
+            <span className={`text-xs font-semibold ${connectionState === "ok" ? "text-primary" : "text-destructive"}`}>
+              {connectionState === "ok" ? "Caixa conectada" : "Falha ao conectar"}
+              {lastCheckedAt ? ` · ${lastCheckedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}
+            </span>
+          )}
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           Use qualquer um destes endereços para receber códigos de verificação (Facebook, Instagram, Google e outros).
