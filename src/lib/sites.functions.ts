@@ -832,6 +832,65 @@ export const deleteGeneration = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const saveCustomHtml = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { siteId: string; html: string }) => z.object({
+    siteId: z.string().uuid(),
+    html: z.string().trim().min(40, "Cole um HTML completo.").max(1_000_000, "O HTML pode ter no máximo 1 MB."),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const html = data.html.trim();
+
+    if (!/<html(?:\s|>)/i.test(html) || !/<body(?:\s|>)/i.test(html) || !/<\/html>\s*$/i.test(html)) {
+      throw new Error("Cole o documento HTML completo, incluindo <html>, <body> e </html>.");
+    }
+    if (/<meta[^>]+http-equiv\s*=\s*["']?refresh/i.test(html)) {
+      throw new Error("O HTML contém redirecionamento automático, que não é permitido.");
+    }
+    if (/\b(?:href|src|action)\s*=\s*["']\s*javascript:/i.test(html)) {
+      throw new Error("O HTML contém um link javascript: que não é permitido.");
+    }
+
+    const { data: site, error: siteError } = await supabase
+      .from("sites")
+      .select("id")
+      .eq("id", data.siteId)
+      .eq("owner_id", userId)
+      .maybeSingle();
+    if (siteError || !site) throw new Error("Site não encontrado.");
+
+    // O HTML manual usa o mesmo histórico, mas não consome a cota de geração por I.A.
+    // @ts-expect-error generic client type from helper
+    await cleanupOldGenerations(supabase, data.siteId, userId);
+    const { count, error: countError } = await supabase
+      .from("site_generations")
+      .select("id", { count: "exact", head: true })
+      .eq("site_id", data.siteId)
+      .eq("owner_id", userId);
+    if (countError) throw new Error(countError.message);
+    if ((count ?? 0) >= HISTORY_LIMIT) {
+      throw new Error(`Seu histórico está cheio (${HISTORY_LIMIT}/${HISTORY_LIMIT}). Exclua uma versão inativa antes de salvar o HTML.`);
+    }
+
+    const { data: generation, error } = await supabase
+      .from("site_generations")
+      .insert({
+        site_id: data.siteId,
+        owner_id: userId,
+        provider: "custom_html",
+        prompt: "HTML personalizado",
+        brief: "HTML completo inserido manualmente pelo cliente.",
+        html,
+        is_active: false,
+      })
+      .select("id, provider, created_at")
+      .single();
+    if (error || !generation) throw new Error(error?.message || "Não foi possível salvar o HTML.");
+
+    return { generationId: generation.id, provider: generation.provider, html };
+  });
+
 export const generateSiteHtml = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { id: string; prompt: string; images?: { url: string; label: string }[]; confirmDeleteIds?: string[] }) =>
