@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import type { InboxMessage } from "@/lib/inbox.functions";
 
 export interface SiteInboxProps {
-  /** Endereço derivado do slug do site (ex.: sadel@mro.bio). */
-  address: string;
+  /** Endereços derivados do slug (ex.: sadel@mro.bio e suporte@sadel.mro.bio). */
+  addresses: string[];
   messages: InboxMessage[];
   isLoading: boolean;
   /** Busca imediata no servidor (IMAP) + recarga da lista. */
@@ -25,9 +25,10 @@ type Provider = keyof typeof PROVIDER_SENDER;
  * O HTML já chega sanitizado do servidor e ainda é renderizado dentro de um
  * iframe com sandbox vazio — sem scripts, sem formulários, sem navegação.
  */
-export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: SiteInboxProps) {
+export function SiteInbox({ addresses, messages, isLoading, onRefresh, onOpen }: SiteInboxProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const open = messages.find((m) => m.id === openId) ?? null;
+  const preferredAddress = addresses[1] ?? addresses[0] ?? "";
 
   // ----- Modo "aguardando código" (Facebook/Meta ou Lovable) ----------------
   const [waiting, setWaiting] = useState<Provider | null>(null);
@@ -83,7 +84,7 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
 
 
 
-  async function copyAddress() {
+  async function copyAddress(address: string) {
     try {
       await navigator.clipboard.writeText(address);
       toast.success("Endereço copiado.");
@@ -105,16 +106,27 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
     <div className="space-y-4 p-5">
       <div className="rounded-lg border border-border bg-accent/20 p-4">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          E-mail deste site
+          E-mails deste site
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <code className="rounded bg-background px-2 py-1 font-mono text-sm font-semibold">{address}</code>
-          <button
-            onClick={copyAddress}
-            className="rounded-md border border-border px-2 py-1 text-xs font-semibold hover:bg-accent/40"
-          >
-            Copiar
-          </button>
+        <div className="mt-2 space-y-2">
+          {addresses.map((address, index) => (
+            <div key={address} className="flex flex-wrap items-center gap-2">
+              <span className="w-24 text-xs text-muted-foreground">
+                {index === 0 ? "E-mail direto" : "E-mail suporte"}
+              </span>
+              <code className="min-w-0 break-all rounded bg-background px-2 py-1 font-mono text-sm font-semibold">
+                {address}
+              </code>
+              <button
+                onClick={() => copyAddress(address)}
+                className="rounded-md border border-border px-2 py-1 text-xs font-semibold hover:bg-accent/40"
+              >
+                Copiar
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             onClick={onRefresh}
             className="rounded-md border border-border px-2 py-1 text-xs font-semibold hover:bg-accent/40"
@@ -123,7 +135,7 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
           </button>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Use este endereço para receber códigos de verificação (Facebook, Instagram, Google e outros).
+          Use qualquer um destes endereços para receber códigos de verificação (Facebook, Instagram, Google e outros).
           A caixa é <strong>somente leitura</strong>: não é possível responder ou enviar mensagens por aqui.
           Novas mensagens aparecem em até 1 minuto.
         </p>
@@ -137,9 +149,9 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
           badge: "Meta Portfolio",
           description: (
             <>
-              Este e-mail é direcionado à <strong>Meta Portfolio de Negócios</strong> para receber o código de
-              verificação do Facebook. Cadastre{" "}
-              <span className="font-mono font-semibold text-foreground">{address}</span> na Meta, clique em "Aguardar
+               Este e-mail é direcionado à <strong>Meta Portfolio de Negócios</strong> para receber o código de
+               verificação do Facebook. Cadastre{" "}
+               <span className="break-all font-mono font-semibold text-foreground">{preferredAddress}</span> na Meta, clique em "Aguardar
               código" e peça o envio.
             </>
           ),
@@ -150,7 +162,7 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
           badge: "Lovable",
           description: (
             <>
-              Use <span className="font-mono font-semibold text-foreground">{address}</span> para criar ou entrar na sua
+               Use <span className="break-all font-mono font-semibold text-foreground">{preferredAddress}</span> para criar ou entrar na sua
               conta do <strong>Lovable</strong>. Clique em "Aguardar código", peça o envio no Lovable e o código
               aparecerá aqui.
             </>
@@ -237,7 +249,7 @@ export function SiteInbox({ address, messages, isLoading, onRefresh, onOpen }: S
         <div className="rounded-lg border border-dashed border-border p-8 text-center">
           <p className="text-sm font-semibold">Nenhuma mensagem ainda</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Cadastre <span className="font-mono">{address}</span> no serviço desejado e o código aparecerá aqui.
+             Cadastre um dos e-mails acima no serviço desejado e o código aparecerá aqui.
           </p>
         </div>
       ) : (

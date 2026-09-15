@@ -916,7 +916,7 @@ function SiteEditor() {
 
           {tab === "inbox" && (
             <SiteInbox
-              address={`${site.slug}@mro.bio`}
+              addresses={[`${site.slug}@mro.bio`, `suporte@${site.slug}.mro.bio`]}
               messages={inboxMessages}
               isLoading={inboxLoading}
               onRefresh={async () => {
