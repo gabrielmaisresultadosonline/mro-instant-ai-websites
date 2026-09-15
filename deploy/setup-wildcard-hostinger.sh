@@ -31,9 +31,7 @@ echo "watch -n 5 dig +short TXT _acme-challenge.$DOMAIN"
 echo ""
 read -p "Pronto para gerar o código? Pressione [Enter]..."
 
-# 2. Solicitar o certificado
-# Usamos --manual-public-ip-logging-ok \
-  --manual-auth-hook "$(dirname "$0")/dns-verify.sh" para reduzir prompts
+# 2. Solicitar o certificado e aguardar a propagação pelo hook de DNS.
 sudo certbot certonly --manual --preferred-challenges dns \
   --cert-name "$DOMAIN" --expand \
   -d "$DOMAIN" -d "*.$DOMAIN" \
