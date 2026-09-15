@@ -11,6 +11,7 @@ MARKER="/etc/postfix/.mro-bio-subdomain-mail"
 DOMAINS_FILE="/etc/postfix/mro-bio-virtual-domains"
 ALIASES_FILE="/etc/postfix/mro-bio-virtual-aliases"
 SASL_FILE="/etc/postfix/mro-bio-sasl-password"
+GENERIC_FILE="/etc/postfix/mro-bio-sender-generic"
 
 log() { printf '\n\033[1;33m▶ %s\033[0m\n' "$*"; }
 ok() { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
@@ -96,7 +97,10 @@ EOF
 cat > "$SASL_FILE" <<EOF
 [smtp.hostinger.com]:465 ${SMTP_USER_VALUE}:${SMTP_PASS_VALUE}
 EOF
-chmod 600 "$DOMAINS_FILE" "$ALIASES_FILE" "$SASL_FILE"
+cat > "$GENERIC_FILE" <<EOF
+/.*/ ${SMTP_USER_VALUE}
+EOF
+chmod 600 "$DOMAINS_FILE" "$ALIASES_FILE" "$SASL_FILE" "$GENERIC_FILE"
 postmap "$SASL_FILE"
 chmod 600 "${SASL_FILE}.db"
 
@@ -113,6 +117,7 @@ postconf -e "relayhost = [smtp.hostinger.com]:465"
 postconf -e "smtp_sasl_auth_enable = yes"
 postconf -e "smtp_sasl_password_maps = hash:$SASL_FILE"
 postconf -e "smtp_sasl_security_options = noanonymous"
+postconf -e "smtp_generic_maps = pcre:$GENERIC_FILE"
 postconf -e "smtp_tls_security_level = encrypt"
 postconf -e "smtp_tls_wrappermode = yes"
 postconf -e "smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt"
