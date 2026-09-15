@@ -4,6 +4,7 @@
 
 DOMAIN="mro.bio"
 EMAIL="contato@mro.bio"
+CERT_NAME="mro.bio-wildcard"
 
 echo "--------------------------------------------------------"
 echo "Configurando SSL Wildcard para $DOMAIN e *.$DOMAIN"
@@ -31,18 +32,14 @@ echo "   - TTL: Deixe o padrão (3600 ou 14400)"
 echo ""
 read -p "Pronto para gerar o código? Pressione [Enter]..."
 
-# 2. Solicitar o certificado (Manual DNS)
-# Forçamos a solicitação para garantir que o Wildcard (*.mro.bio) seja incluído
-echo "Solicitando/Atualizando certificado para incluir Wildcard..."
-# Tenta obter o certificado. Se já existir e for válido, o Certbot perguntará o que fazer.
-sudo certbot certonly --manual --preferred-challenges dns \
-  --cert-name "$DOMAIN" --expand \
-  -d "$DOMAIN" -d "*.$DOMAIN" \
-  --agree-tos -m "$EMAIL" --no-eff-email
+# A rotina principal também aguarda a propagação do TXT correto e preserva o
+# certificado atual em caso de falha. Mantemos um único fluxo seguro.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec sudo bash "$SCRIPT_DIR/fix-published-subdomains.sh"
 
 
 # 3. O --cert-name mantém o caminho já usado pelo Nginx.
-CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+CERT_PATH="/etc/letsencrypt/live/$CERT_NAME/fullchain.pem"
 KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 
 if [ -f "$CERT_PATH" ] && sudo openssl x509 -in "$CERT_PATH" -noout -ext subjectAltName | grep -Fq "DNS:*.$DOMAIN"; then
