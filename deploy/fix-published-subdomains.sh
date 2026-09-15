@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/env bash
 # Corrige dois pontos dos sites publicados em *.mro.bio:
 # 1. leitura pública dos projetos marcados como publicados;
-# 2. certificado TLS que inclui mro.bio e *.mro.bio.
+# 2. certificado TLS que inclui mro.bio, www.mro.bio e *.mro.bio.
 #
 # Este script não altera server blocks, portas ou contêineres de outros sites.
 
@@ -20,6 +20,7 @@ fi
 
 command -v docker >/dev/null || fail "Docker não encontrado."
 command -v nginx >/dev/null || fail "Nginx não encontrado."
+command -v dig >/dev/null || fail "Ferramenta 'dig' não encontrada. Instale com: apt install dnsutils"
 
 log "Localizando somente o PostgreSQL do MRO.BIO"
 DB_CONTAINER="$(
@@ -86,38 +87,46 @@ docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -P pager=off -c \
 
 log "Instalando o Certbot, caso ainda não exista"
 apt-get update -y
-apt-get install -y certbot
+apt-get install -y certbot dnsutils
 
-printf '\nO Certbot exibirá um valor TXT.\n'
-printf 'Na Hostinger, crie temporariamente este registro DNS:\n'
-printf '  Tipo: TXT\n  Nome: _acme-challenge\n  Valor: o valor mostrado pelo Certbot\n\n'
-printf 'Aguarde a Hostinger salvar o registro antes de pressionar Enter no Certbot.\n\n'
+printf '\n\033[1;36m!!! AÇÃO DNS NECESSÁRIA !!!\033[0m\n'
+printf '1. O Certbot pedirá para criar um registro TXT: _acme-challenge.%s\n' "$DOMAIN"
+printf '2. Adicione-o no painel da Hostinger.\n'
+printf '3. \033[1mNÃO aperte Enter no Certbot imediatamente.\033[0m\n'
+printf '4. Em outro terminal, você pode validar com: dig +short TXT _acme-challenge.%s\n\n' "$DOMAIN"
 
-log "Emitindo certificado exclusivo para mro.bio e todos os seus subdomínios"
+log "Emitindo certificado para %s, www.%s e *.%s" "$DOMAIN" "$DOMAIN" "$DOMAIN"
 certbot certonly \
   --manual \
   --preferred-challenges dns \
   --cert-name "$DOMAIN" \
   --expand \
   -d "$DOMAIN" \
+  -d "www.$DOMAIN" \
   -d "*.$DOMAIN" \
   --agree-tos \
   -m "$EMAIL" \
-  --no-eff-email
+  --no-eff-email \
+  --manual-public-ip-logging-ok \
+  --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
 
 CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 [[ -f "$CERT_FILE" ]] || fail "O certificado não foi encontrado em $CERT_FILE."
 
+log "Validando integridade do certificado"
 if ! openssl x509 -in "$CERT_FILE" -noout -ext subjectAltName | grep -Fq "DNS:*.$DOMAIN"; then
   fail "O certificado foi criado sem *.$DOMAIN. O Nginx não foi recarregado."
 fi
 
-log "Validando o Nginx antes de aplicar o novo certificado"
-nginx -t
-systemctl reload nginx
-ok "HTTPS wildcard ativado sem substituir configurações de outros sites."
+log "Validando o Nginx e recarregando com segurança"
+if nginx -t; then
+  systemctl reload nginx
+  ok "HTTPS wildcard e subdomínios ativados com sucesso."
+else
+  fail "Configuração do Nginx inválida. O serviço não foi recarregado para evitar queda."
+fi
 
 printf '\nTeste final:\n'
-printf '  https://rosaenforma.mro.bio\n\n'
-printf 'Observação: certificado manual precisa ser renovado antes de vencer.\n'
-printf 'Execute este mesmo script novamente quando o Certbot avisar sobre a renovação.\n'
+printf '  https://%s\n' "$DOMAIN"
+printf '  https://www.%s\n' "$DOMAIN"
+printf '  https://rosaenforma.%s\n\n' "$DOMAIN"
