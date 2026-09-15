@@ -7,11 +7,12 @@ import { toast } from "sonner";
 import {
   getSite, saveSite, deleteSite, generateSiteHtml, getSiteInsights,
   listGenerations, getGenerationHtml, activateGeneration, deleteGeneration,
-  editGeneration, getEditQuota, getStandardPage, saveStandardPage,
+  editGeneration, getEditQuota, getStandardPage, saveStandardPage, saveCustomHtml,
 } from "@/lib/sites.functions";
 import { listSiteInbox, markInboxRead, refreshSiteInbox, type InboxMessage } from "@/lib/inbox.functions";
 import { SiteInbox } from "@/components/site/SiteInbox";
 import { StandardPageEditor } from "@/components/site/StandardPageEditor";
+import { Button } from "@/components/ui/button";
 
 
 
@@ -32,6 +33,7 @@ const PROVIDER_LABEL: Record<string, string> = {
   claude: "Modelo 2",
   openai: "Modelo 3",
   fallback: "Modelo seguro",
+  custom_html: "HTML personalizado",
 };
 
 function getFriendlyGenerationError(error: unknown) {
@@ -71,6 +73,7 @@ function SiteEditor() {
   const refreshInboxFn = useServerFn(refreshSiteInbox);
   const getStandardPageFn = useServerFn(getStandardPage);
   const saveStandardPageFn = useServerFn(saveStandardPage);
+  const saveCustomHtmlFn = useServerFn(saveCustomHtml);
 
 
   const { data: site, isLoading } = useQuery({
@@ -116,12 +119,14 @@ function SiteEditor() {
   const [pixels, setPixels] = useState<Pixels>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
-  const [tab, setTab] = useState<"preview" | "edit" | "history" | "inbox" | "settings" | "insights" | "standard" | "standard_settings" | "standard_insights">((initialTab as any) || "preview");
+  const [tab, setTab] = useState<"preview" | "custom_html" | "edit" | "history" | "inbox" | "settings" | "insights" | "standard" | "standard_settings" | "standard_insights">((initialTab as any) || "preview");
 
   const [preview, setPreview] = useState<{ id: string; provider: string; html: string } | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [editSelected, setEditSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState(false);
+  const [customHtml, setCustomHtml] = useState("");
+  const [customHtmlView, setCustomHtmlView] = useState<"code" | "preview">("code");
   const [confirmInfo, setConfirmInfo] = useState(false);   // popup pre-generate (info check)
   const [confirmRules, setConfirmRules] = useState(false); // popup mensal explanation
   const [rulesSeen, setRulesSeen] = useState(false);
@@ -250,6 +255,18 @@ function SiteEditor() {
       qc.invalidateQueries({ queryKey: ["generations", id] });
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveCustomHtmlMut = useMutation({
+    mutationFn: () => saveCustomHtmlFn({ data: { siteId: id, html: customHtml } }),
+    onSuccess: (result) => {
+      setPreview({ id: result.generationId, provider: result.provider, html: result.html });
+      setSelectedGenId(result.generationId);
+      setTab("preview");
+      qc.invalidateQueries({ queryKey: ["generations", id] });
+      toast.success("HTML salvo no histórico. Confira a prévia e ative esta versão.");
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const deleteGenMut = useMutation({
@@ -529,9 +546,9 @@ function SiteEditor() {
         {/* RIGHT: tabs */}
         <section className="rounded-xl border border-border bg-card">
           <div className="sticky top-0 z-20 -mt-px flex flex-wrap gap-1 rounded-t-xl border-b border-border bg-card/95 p-1.5 backdrop-blur">
-            {(["preview", "edit", "history", "standard", "inbox", "settings", "insights", "standard_settings", "standard_insights"] as const)
+            {(["preview", "custom_html", "edit", "history", "standard", "inbox", "settings", "insights", "standard_settings", "standard_insights"] as const)
               .filter((t) => {
-                const iaTabs = ["preview", "edit", "history"];
+                const iaTabs = ["preview", "custom_html", "edit", "history"];
                 const standardTabs = ["standard", "standard_settings", "standard_insights"];
                 const globalTabs = ["settings", "insights"]; 
                 
@@ -545,6 +562,7 @@ function SiteEditor() {
                 <button key={t} onClick={() => setTab(t)}
                   className={`rounded-md px-3 py-1 text-xs font-semibold ${tab === t ? "bg-foreground text-background" : "hover:bg-accent/40"}`}>
                 {t === "preview" ? "Pré-visualização"
+                  : t === "custom_html" ? "</> HTML personalizado"
                   : t === "edit" ? `✏️ Site I.A${(selectedGenId || activeGen) ? ` (${editsLeft}/${editsLimit})` : ""}`
                   : t === "history" ? `Histórico (${gens?.generations.length ?? 0}/4)`
                   : t === "standard" ? "⭐ Modelo Padrão"
@@ -590,17 +608,66 @@ function SiteEditor() {
                       </button>
                     </div>
                   </div>
-                  <iframe title="Preview" srcDoc={preview.html} sandbox="allow-scripts allow-same-origin"
+                  <iframe title="Preview" srcDoc={preview.html} sandbox="allow-scripts allow-forms allow-popups"
                     className="h-[70vh] w-full rounded-md border border-border bg-white" />
                 </div>
               ) : html ? (
-                <iframe title="Preview" srcDoc={html} sandbox="allow-scripts allow-same-origin"
+                <iframe title="Preview" srcDoc={html} sandbox="allow-scripts allow-forms allow-popups"
                   className="h-[70vh] w-full rounded-md border border-border bg-white" />
               ) : (
                 <div className="grid h-[70vh] place-items-center text-center text-sm text-muted-foreground">
                   Descreva o site e clique em <strong className="mx-1">Gerar com I.A</strong>.
                 </div>
               )}
+            </div>
+          )}
+
+          {tab === "custom_html" && (
+            <div className="space-y-4 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-lg font-bold">HTML personalizado</h2>
+                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                    Cole um documento HTML completo criado fora da plataforma. Ele será salvo no histórico sem gastar suas gerações de I.A.
+                  </p>
+                </div>
+                <div className="flex rounded-md border border-border bg-background p-1">
+                  <Button type="button" size="sm" variant={customHtmlView === "code" ? "default" : "ghost"} onClick={() => setCustomHtmlView("code")}>Código</Button>
+                  <Button type="button" size="sm" variant={customHtmlView === "preview" ? "default" : "ghost"} onClick={() => setCustomHtmlView("preview")} disabled={!customHtml.trim()}>Prévia</Button>
+                </div>
+              </div>
+
+              {customHtmlView === "code" ? (
+                <textarea
+                  value={customHtml}
+                  onChange={(event) => setCustomHtml(event.target.value)}
+                  rows={24}
+                  maxLength={1_000_000}
+                  spellCheck={false}
+                  placeholder={'<!doctype html>\n<html lang="pt-BR">\n<head>...</head>\n<body>...</body>\n</html>'}
+                  className="min-h-[60vh] w-full resize-y rounded-md border border-border bg-background p-4 font-mono text-xs leading-relaxed focus:border-brand focus:outline-none"
+                />
+              ) : (
+                <iframe
+                  title="Prévia do HTML personalizado"
+                  srcDoc={customHtml}
+                  sandbox="allow-scripts allow-forms allow-popups"
+                  className="h-[70vh] w-full rounded-md border border-border bg-white"
+                />
+              )}
+
+              <div className="flex flex-col justify-between gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
+                <p className="text-xs text-muted-foreground">
+                  O site só será publicado depois que você salvar e clicar em <strong>Ativar esta versão</strong> na prévia.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => saveCustomHtmlMut.mutate()}
+                  disabled={saveCustomHtmlMut.isPending || customHtml.trim().length < 40}
+                >
+                  {saveCustomHtmlMut.isPending ? "Salvando…" : "Salvar e visualizar"}
+                </Button>
+              </div>
             </div>
           )}
 
