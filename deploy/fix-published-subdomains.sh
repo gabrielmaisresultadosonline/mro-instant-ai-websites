@@ -139,11 +139,34 @@ fi
 if [[ "$WILDCARD_READY" != true ]]; then
   printf '\nO TXT será criado e atualizado automaticamente pela API Hostinger.\n'
 
+  log "Testando o acesso automático ao DNS da Hostinger"
+  HOSTINGER_API_TOKEN="$(sed -n 's/^[[:space:]]*dns_hostinger_api_token[[:space:]]*=[[:space:]]*//p' "$CREDENTIALS_FILE" | head -n 1)"
+  [[ -n "$HOSTINGER_API_TOKEN" ]] || fail "O token salvo está vazio."
+  API_TEST_FILE="$(mktemp)"
+  API_TEST_STATUS="$(curl --ipv4 --silent --show-error \
+    --connect-timeout 10 \
+    --max-time 45 \
+    --output "$API_TEST_FILE" \
+    --write-out '%{http_code}' \
+    --header "Authorization: Bearer $HOSTINGER_API_TOKEN" \
+    "https://developers.hostinger.com/api/dns/v1/zones/$DOMAIN")" || {
+      rm -f "$API_TEST_FILE"
+      unset HOSTINGER_API_TOKEN
+      fail "O VPS não conseguiu acessar a API Hostinger."
+    }
+  unset HOSTINGER_API_TOKEN
+  if [[ ! "$API_TEST_STATUS" =~ ^2 ]]; then
+    rm -f "$API_TEST_FILE"
+    fail "A Hostinger recusou o token salvo (HTTP $API_TEST_STATUS). Apague $CREDENTIALS_FILE e execute novamente."
+  fi
+  rm -f "$API_TEST_FILE"
+  ok "Token confirmado; o DNS de $DOMAIN pode ser atualizado."
+
   log "Emitindo certificado exclusivo para todos os sites *.$DOMAIN"
   if ! timeout --foreground 15m certbot certonly \
     --manual \
     --non-interactive \
-    --manual-public-ip-logging-ok \
+    --verbose \
     --preferred-challenges dns \
     --cert-name "$WILDCARD_CERT_NAME" \
     --force-renewal \
