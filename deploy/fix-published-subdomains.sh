@@ -143,6 +143,7 @@ if [[ "$WILDCARD_READY" != true ]]; then
   if ! timeout --foreground 15m certbot certonly \
     --manual \
     --non-interactive \
+    --manual-public-ip-logging-ok \
     --preferred-challenges dns \
     --cert-name "$WILDCARD_CERT_NAME" \
     --force-renewal \

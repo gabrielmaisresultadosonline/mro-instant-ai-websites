@@ -29,7 +29,7 @@ request() {
     --request "$method" \
     --header "Authorization: Bearer $HOSTINGER_API_TOKEN" \
     --header "Content-Type: application/json" \
-    --data "$body" \
+    --connect-timeout 10 --max-time 30 --data "$body" \
     "$API_URL")"; then
     echo "Não foi possível acessar a API Hostinger em até 45 segundos." >&2
     echo "Confira a internet do VPS e se o token possui acesso ao DNS." >&2
@@ -49,7 +49,7 @@ request() {
 
 # Remove e recria exclusivamente o TXT temporário da validação.
 request DELETE '{"filters":[{"name":"_acme-challenge","type":"TXT"}]}'
-PAYLOAD="$(printf '{"zone":[{"name":"%s","type":"TXT","ttl":60,"records":[{"content":"%s"}]}],"overwrite":false}' \
+PAYLOAD="$(printf '{"zone":[{"name":"%s","type":"TXT","ttl":60,"value":"%s"}],"overwrite":false}' \
   "$CHALLENGE_NAME" "$CERTBOT_VALIDATION")"
 request PUT "$PAYLOAD"
 
