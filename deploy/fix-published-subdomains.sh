@@ -140,9 +140,10 @@ if [[ "$WILDCARD_READY" != true ]]; then
   printf '\nO TXT será criado e atualizado automaticamente pela API Hostinger.\n'
 
   log "Emitindo certificado exclusivo para todos os sites *.$DOMAIN"
-  certbot certonly \
+  if ! timeout --foreground 15m certbot certonly \
     --manual \
     --non-interactive \
+    --manual-public-ip-logging-ok \
     --preferred-challenges dns \
     --cert-name "$WILDCARD_CERT_NAME" \
     --force-renewal \
@@ -151,7 +152,9 @@ if [[ "$WILDCARD_READY" != true ]]; then
     -m "$EMAIL" \
     --no-eff-email \
     --manual-auth-hook "$AUTH_HOOK" \
-    --manual-cleanup-hook "$CLEANUP_HOOK"
+    --manual-cleanup-hook "$CLEANUP_HOOK"; then
+    fail "A emissão não concluiu. Consulte: tail -n 80 /var/log/letsencrypt/letsencrypt.log"
+  fi
 fi
 
 log "Ativando renovação automática"

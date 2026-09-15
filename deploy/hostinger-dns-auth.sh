@@ -19,12 +19,23 @@ request() {
   local body="$2"
   local response_file status
   response_file="$(mktemp)"
-  status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
+
+  echo "Conectando à Hostinger para atualizar o DNS..." >&2
+  if ! status="$(curl --ipv4 --silent --show-error \
+    --connect-timeout 10 \
+    --max-time 45 \
+    --output "$response_file" \
+    --write-out '%{http_code}' \
     --request "$method" \
     --header "Authorization: Bearer $HOSTINGER_API_TOKEN" \
     --header "Content-Type: application/json" \
     --data "$body" \
-    "$API_URL")"
+    "$API_URL")"; then
+    echo "Não foi possível acessar a API Hostinger em até 45 segundos." >&2
+    echo "Confira a internet do VPS e se o token possui acesso ao DNS." >&2
+    rm -f "$response_file"
+    exit 1
+  fi
 
   if [[ ! "$status" =~ ^2 ]]; then
     echo "A API Hostinger recusou a atualização DNS (HTTP $status)." >&2
@@ -33,6 +44,7 @@ request() {
     exit 1
   fi
   rm -f "$response_file"
+  echo "Atualização DNS aceita pela Hostinger." >&2
 }
 
 # Remove e recria exclusivamente o TXT temporário da validação.
@@ -42,6 +54,7 @@ PAYLOAD="$(printf '{"zone":[{"name":"%s","type":"TXT","ttl":60,"records":[{"cont
 request PUT "$PAYLOAD"
 
 CHALLENGE_FQDN="$CHALLENGE_NAME.$DOMAIN"
+echo "Aguardando o TXT aparecer nos resolvedores públicos..." >&2
 for attempt in $(seq 1 60); do
   google="$(dig @8.8.8.8 TXT "$CHALLENGE_FQDN" +short | tr -d '"' || true)"
   cloudflare="$(dig @1.1.1.1 TXT "$CHALLENGE_FQDN" +short | tr -d '"' || true)"
@@ -50,7 +63,11 @@ for attempt in $(seq 1 60); do
     sleep 10
     exit 0
   fi
-  echo "Aguardando propagação DNS automática ($attempt/60)..."
+  echo "Aguardando propagação DNS automática ($attempt/60)..." >&2
+  if (( attempt % 6 == 0 )); then
+    echo "Google DNS retornou: ${google:-nenhum TXT}" >&2
+    echo "Cloudflare DNS retornou: ${cloudflare:-nenhum TXT}" >&2
+  fi
   sleep 10
 done
 
