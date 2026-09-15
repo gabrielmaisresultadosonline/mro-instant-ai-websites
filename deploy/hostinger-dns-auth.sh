@@ -54,6 +54,7 @@ PAYLOAD="$(printf '{"zone":[{"name":"%s","type":"TXT","ttl":60,"value":"%s"}],"o
 request PUT "$PAYLOAD"
 
 CHALLENGE_FQDN="$CHALLENGE_NAME.$DOMAIN"
+echo "Aguardando o TXT aparecer nos resolvedores públicos..." >&2
 for attempt in $(seq 1 60); do
   google="$(dig @8.8.8.8 TXT "$CHALLENGE_FQDN" +short | tr -d '"' || true)"
   cloudflare="$(dig @1.1.1.1 TXT "$CHALLENGE_FQDN" +short | tr -d '"' || true)"
@@ -62,7 +63,11 @@ for attempt in $(seq 1 60); do
     sleep 10
     exit 0
   fi
-  echo "Aguardando propagação DNS automática ($attempt/60)..."
+  echo "Aguardando propagação DNS automática ($attempt/60)..." >&2
+  if (( attempt % 6 == 0 )); then
+    echo "Google DNS retornou: ${google:-nenhum TXT}" >&2
+    echo "Cloudflare DNS retornou: ${cloudflare:-nenhum TXT}" >&2
+  fi
   sleep 10
 done
 
