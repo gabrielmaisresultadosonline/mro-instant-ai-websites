@@ -20,7 +20,6 @@ fi
 
 command -v docker >/dev/null || fail "Docker não encontrado."
 command -v nginx >/dev/null || fail "Nginx não encontrado."
-command -v dig >/dev/null || fail "Ferramenta 'dig' não encontrada. Instale com: apt install dnsutils"
 
 log "Localizando somente o PostgreSQL do MRO.BIO"
 DB_CONTAINER="$(
@@ -85,15 +84,21 @@ log "Conferindo o projeto rosaenforma"
 docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -P pager=off -c \
   "SELECT slug, is_published, length(COALESCE(html, '')) AS tamanho_html FROM public.sites WHERE slug = 'rosaenforma';"
 
-log "Instalando o Certbot, caso ainda não exista"
+log "Instalando ferramentas de certificado, caso ainda não existam"
 apt-get update -y
-apt-get install -y certbot dnsutils
+apt-get install -y certbot dnsutils curl
 
 APEX_CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 WILDCARD_CERT_NAME="$DOMAIN-wildcard"
 WILDCARD_CERT_FILE="/etc/letsencrypt/live/$WILDCARD_CERT_NAME/fullchain.pem"
 NGINX_SOURCE="$(dirname "$0")/nginx/mro.bio.conf"
 NGINX_TARGET="/etc/nginx/sites-available/mro.bio"
+AUTH_HOOK_SOURCE="$(dirname "$0")/hostinger-dns-auth.sh"
+CLEANUP_HOOK_SOURCE="$(dirname "$0")/hostinger-dns-cleanup.sh"
+HOOK_DIR="/etc/letsencrypt/renewal-hooks/mro-bio"
+AUTH_HOOK="$HOOK_DIR/hostinger-dns-auth.sh"
+CLEANUP_HOOK="$HOOK_DIR/hostinger-dns-cleanup.sh"
+CREDENTIALS_FILE="/etc/letsencrypt/hostinger-mro-bio.ini"
 
 [[ -f "$APEX_CERT_FILE" ]] || fail "O certificado principal de $DOMAIN não foi encontrado."
 
@@ -106,10 +111,28 @@ if [[ -f "$WILDCARD_CERT_FILE" ]] && openssl x509 -checkend 2592000 -noout -in "
   fi
 fi
 
+[[ -f "$AUTH_HOOK_SOURCE" ]] || fail "Automação DNS da Hostinger não encontrada."
+[[ -f "$CLEANUP_HOOK_SOURCE" ]] || fail "Automação de limpeza DNS não encontrada."
+install -d -m 0700 "$HOOK_DIR"
+install -m 0700 "$AUTH_HOOK_SOURCE" "$AUTH_HOOK"
+install -m 0700 "$CLEANUP_HOOK_SOURCE" "$CLEANUP_HOOK"
+
+if [[ ! -s "$CREDENTIALS_FILE" ]]; then
+  printf '\n\033[1;36mCONFIGURAÇÃO ÚNICA DA HOSTINGER\033[0m\n'
+  printf 'Crie um token no painel Hostinger em Conta > API, com acesso ao DNS.\n'
+  printf 'O token ficará protegido neste VPS e não será mostrado.\n'
+  read -r -s -p 'Cole o token da API Hostinger: ' HOSTINGER_TOKEN < /dev/tty
+  printf '\n' > /dev/tty
+  [[ -n "$HOSTINGER_TOKEN" ]] || fail "Nenhum token foi informado."
+  umask 077
+  printf 'dns_hostinger_api_token = %s\n' "$HOSTINGER_TOKEN" > "$CREDENTIALS_FILE"
+  unset HOSTINGER_TOKEN
+  chmod 0600 "$CREDENTIALS_FILE"
+  ok "Token protegido no VPS."
+fi
+
 if [[ "$WILDCARD_READY" != true ]]; then
-  printf '\n\033[1;36m!!! AÇÃO DNS NECESSÁRIA !!!\033[0m\n'
-  printf 'Será gerado UM novo valor TXT para _acme-challenge.%s.\n' "$DOMAIN"
-  printf 'Adicione o NOVO valor mostrado; valores antigos não emitem um certificado novo.\n\n'
+  printf '\nO TXT será criado e atualizado automaticamente pela API Hostinger.\n'
 
   log "Emitindo certificado exclusivo para todos os sites *.$DOMAIN"
   certbot certonly \
@@ -122,8 +145,22 @@ if [[ "$WILDCARD_READY" != true ]]; then
     --agree-tos \
     -m "$EMAIL" \
     --no-eff-email \
-    --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
+    --manual-auth-hook "$AUTH_HOOK" \
+    --manual-cleanup-hook "$CLEANUP_HOOK"
 fi
+
+log "Ativando renovação automática"
+install -d -m 0755 /etc/letsencrypt/renewal-hooks/deploy
+cat > /etc/letsencrypt/renewal-hooks/deploy/mro-bio-reload-nginx.sh <<'HOOK'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+if [[ "${RENEWED_LINEAGE:-}" == "/etc/letsencrypt/live/mro.bio-wildcard" ]]; then
+  nginx -t && systemctl reload nginx
+fi
+HOOK
+chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/mro-bio-reload-nginx.sh
+systemctl enable --now certbot.timer >/dev/null 2>&1 || true
+ok "Renovação automática ativada; não será necessário trocar TXT manualmente."
 
 [[ -f "$WILDCARD_CERT_FILE" ]] || fail "O certificado wildcard não foi criado."
 
