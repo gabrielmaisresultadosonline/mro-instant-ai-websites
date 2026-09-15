@@ -36,28 +36,3 @@ read -p "Pronto para gerar o código? Pressione [Enter]..."
 # certificado atual em caso de falha. Mantemos um único fluxo seguro.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 exec sudo bash "$SCRIPT_DIR/fix-published-subdomains.sh"
-
-
-# 3. O --cert-name mantém o caminho já usado pelo Nginx.
-CERT_PATH="/etc/letsencrypt/live/$CERT_NAME/fullchain.pem"
-KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
-
-if [ -f "$CERT_PATH" ] && sudo openssl x509 -in "$CERT_PATH" -noout -ext subjectAltName | grep -Fq "DNS:*.$DOMAIN"; then
-    echo "--------------------------------------------------------"
-    echo "Sucesso! Certificado localizado."
-    echo "Atualizando configuração do Nginx..."
-    
-    # Atualiza o arquivo de configuração no servidor
-    NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
-    if [ -f "$NGINX_CONF" ]; then
-        echo "Mantendo $NGINX_CONF e usando o certificado no caminho já configurado."
-    fi
-    
-    sudo nginx -t && sudo systemctl reload nginx
-    echo "SSL Ativado! Agora todos os novos sites em *.mro.bio estarão seguros."
-    echo "--------------------------------------------------------"
-else
-    echo "--------------------------------------------------------"
-    echo "O certificado wildcard não foi gerado. Nenhuma configuração do Nginx foi alterada."
-    echo "--------------------------------------------------------"
-fi
