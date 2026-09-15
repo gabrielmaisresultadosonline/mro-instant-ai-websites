@@ -59,9 +59,18 @@ WILDCARD_MX="$(dig +short MX "teste-email-mro.$DOMAIN" @1.1.1.1 | tr '[:upper:]'
 
 if [[ "$MAIL_A" != "$PUBLIC_IP" ]] || ! grep -Fq "mail.$DOMAIN." <<<"$WILDCARD_MX"; then
   printf '\n\033[1;36mAÇÃO NECESSÁRIA NO DNS DA HOSTINGER\033[0m\n'
-  printf 'Adicione estes dois registros sem apagar os MX atuais de %s:\n\n' "$DOMAIN"
-  printf '  Tipo A   | Nome mail | Valor %s\n' "$PUBLIC_IP"
-  printf '  Tipo MX  | Nome *    | Prioridade 10 | Destino mail.%s\n\n' "$DOMAIN"
+  printf 'Adicione somente os registros indicados abaixo, sem apagar os MX atuais de %s:\n\n' "$DOMAIN"
+  if [[ "$MAIL_A" != "$PUBLIC_IP" ]]; then
+    printf '  Tipo A   | Nome mail | Valor %s\n' "$PUBLIC_IP"
+  else
+    printf '  ✔ O registro A de mail.%s já está correto.\n' "$DOMAIN"
+  fi
+  if ! grep -Fq "mail.$DOMAIN." <<<"$WILDCARD_MX"; then
+    printf '  Tipo MX  | Nome *    | Prioridade 10 | Destino mail.%s\n' "$DOMAIN"
+  else
+    printf '  ✔ O registro MX curinga já está correto.\n'
+  fi
+  printf '\n'
   printf 'Depois aguarde a propagação e execute este mesmo comando novamente.\n'
   printf 'Nenhum serviço foi alterado nesta tentativa.\n'
   exit 2

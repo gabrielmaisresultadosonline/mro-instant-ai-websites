@@ -89,6 +89,20 @@ log "Instalando o Certbot, caso ainda não exista"
 apt-get update -y
 apt-get install -y certbot dnsutils
 
+CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+if [[ -f "$CERT_FILE" ]] && openssl x509 -checkend 2592000 -noout -in "$CERT_FILE" >/dev/null 2>&1; then
+  CERT_SANS="$(openssl x509 -in "$CERT_FILE" -noout -ext subjectAltName)"
+  if grep -Fq "DNS:$DOMAIN" <<<"$CERT_SANS" && grep -Fq "DNS:*.$DOMAIN" <<<"$CERT_SANS"; then
+    ok "O certificado wildcard já está válido por mais de 30 dias; renovação dispensada."
+    if nginx -t; then
+      systemctl reload nginx
+      ok "HTTPS wildcard e subdomínios continuam ativos."
+      exit 0
+    fi
+    fail "Configuração do Nginx inválida. Nenhum serviço foi recarregado."
+  fi
+fi
+
 printf '\n\033[1;36m!!! AÇÃO DNS NECESSÁRIA !!!\033[0m\n'
 printf '1. O Certbot pedirá para criar um registro TXT: _acme-challenge.%s\n' "$DOMAIN"
 printf '2. Adicione-o no painel da Hostinger.\n'
@@ -109,7 +123,6 @@ certbot certonly \
   --no-eff-email \
   --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
 
-CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 [[ -f "$CERT_FILE" ]] || fail "O certificado não foi encontrado em $CERT_FILE."
 
 log "Validando integridade do certificado"
