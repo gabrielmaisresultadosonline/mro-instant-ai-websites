@@ -107,7 +107,8 @@ certbot certonly \
   --agree-tos \
   -m "$EMAIL" \
   --no-eff-email \
-  --manual-public-ip-logging-ok
+  --manual-public-ip-logging-ok \
+  --manual-auth-hook "$(dirname "$0")/dns-verify.sh"
 
 CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 [[ -f "$CERT_FILE" ]] || fail "O certificado não foi encontrado em $CERT_FILE."
