@@ -14,6 +14,12 @@
 const SYNC_ID = "catchall";
 const MAX_MESSAGES_PER_RUN = 25;
 
+type MailboxTarget = {
+  path: string;
+  stateId: string;
+  messagePrefix: string;
+};
+
 function mailDomain() {
   return (process.env.INBOX_DOMAIN || "mro.bio").toLowerCase();
 }
@@ -120,15 +126,6 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
   const { ImapFlow } = await import("imapflow");
   const { simpleParser } = await import("mailparser");
 
-  // Ponto de retomada: só lemos mensagens com UID acima do último processado.
-  const { data: state } = await supabaseAdmin
-    .from("inbox_sync_state")
-    .select("last_uid")
-    .eq("id", SYNC_ID)
-    .maybeSingle();
-
-  const lastUid = Number(state?.last_uid ?? 0);
-
   const client = new ImapFlow({
     host,
     port,
@@ -139,13 +136,33 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
 
   let inserted = 0;
   let skipped = 0;
-  let maxUid = lastUid;
+  let latestUid = 0;
 
   try {
     await client.connect();
-    const lock = await client.getMailboxLock("INBOX");
+    const listedMailboxes = await client.list();
+    const junkMailbox = listedMailboxes.find(
+      (mailbox) => mailbox.specialUse === "\\Junk" || /(^|\.)junk$/i.test(mailbox.path),
+    );
+    const mailboxes: MailboxTarget[] = [
+      { path: "INBOX", stateId: SYNC_ID, messagePrefix: SYNC_ID },
+      ...(junkMailbox
+        ? [{ path: junkMailbox.path, stateId: `${SYNC_ID}:junk`, messagePrefix: `${SYNC_ID}:junk` }]
+        : []),
+    ];
 
-    try {
+    for (const mailbox of mailboxes) {
+      // Cada pasta possui UIDs independentes; por isso mantém seu próprio cursor.
+      const { data: state } = await supabaseAdmin
+        .from("inbox_sync_state")
+        .select("last_uid")
+        .eq("id", mailbox.stateId)
+        .maybeSingle();
+      const lastUid = Number(state?.last_uid ?? 0);
+      let maxUid = lastUid;
+      const lock = await client.getMailboxLock(mailbox.path);
+
+      try {
       const range = `${lastUid + 1}:*`;
       const messages: { uid: number; source: Buffer }[] = [];
 
@@ -227,7 +244,7 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           body_text: bodyText,
           body_html: bodyHtml || null,
           verification_code: extractVerificationCode(subject, bodyText || bodyHtml || ""),
-          message_uid: `${SYNC_ID}:${message.uid}`,
+          message_uid: `${mailbox.messagePrefix}:${message.uid}`,
           received_at: (parsed.date ?? new Date()).toISOString(),
         };
 
@@ -260,8 +277,21 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
           inserted++;
         }
       }
-    } finally {
-      lock.release();
+      } finally {
+        lock.release();
+      }
+
+      latestUid = Math.max(latestUid, maxUid);
+      const { error: stateError } = await supabaseAdmin.from("inbox_sync_state").upsert(
+        {
+          id: mailbox.stateId,
+          last_uid: maxUid,
+          last_run_at: new Date().toISOString(),
+          last_error: null,
+        },
+        { onConflict: "id" },
+      );
+      if (stateError) throw new Error(`Falha ao salvar cursor IMAP: ${stateError.message}`);
     }
 
     await client.logout();
@@ -273,17 +303,16 @@ export async function runInboxSync(): Promise<InboxSyncResult> {
     } catch {
       /* conexão já encerrada */
     }
-    await supabaseAdmin
-      .from("inbox_sync_state")
-      .update({ last_run_at: new Date().toISOString(), last_error: messageText.slice(0, 500) })
-      .eq("id", SYNC_ID);
+    await supabaseAdmin.from("inbox_sync_state").upsert(
+      {
+        id: SYNC_ID,
+        last_run_at: new Date().toISOString(),
+        last_error: messageText.slice(0, 500),
+      },
+      { onConflict: "id" },
+    );
     return { ok: false, inserted, skipped, error: messageText };
   }
 
-  await supabaseAdmin
-    .from("inbox_sync_state")
-    .update({ last_uid: maxUid, last_run_at: new Date().toISOString(), last_error: null })
-    .eq("id", SYNC_ID);
-
-  return { ok: true, inserted, skipped, lastUid: maxUid };
+  return { ok: true, inserted, skipped, lastUid: latestUid };
 }
